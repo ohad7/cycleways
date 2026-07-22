@@ -127,6 +127,39 @@ tampered.manifest.registryDigest = "tampered";
 const rejected = await createSession(tampered);
 assert.equal(await rejected.restoreHybridRoutePayload(payload), null);
 
+// Legacy identity can be valid even after one of its anchor edges has been
+// retired. In that case current share resolution fails and restoration must
+// continue through the separately verified historical anchor archive.
+const retiredLegacyCompatibility = structuredClone(compatibility);
+retiredLegacyCompatibility.cwBaseIndex.segments[174] = [[8, 0]];
+const retiredLegacyArchive = {
+  schemaVersion: 1,
+  graphVersions: {
+    [graphHash]: {
+      registryDigest: "b".repeat(64),
+      archivedEdges: {
+        8: {
+          edgeId: "retired-legacy-edge",
+          coordinates: [[35, 33], [35.01, 33]],
+        },
+      },
+      routeIntents: {},
+    },
+  },
+};
+const retiredLegacy = await createSession(
+  retiredLegacyCompatibility,
+  retiredLegacyArchive,
+);
+const retiredLegacyRestored = await retiredLegacy.restoreHybridRoutePayload(payload);
+assert.ok(retiredLegacyRestored, "proved legacy identity falls back to archived anchors");
+assert.equal(retiredLegacyRestored.requiresReview, true);
+assert.equal(retiredLegacyRestored.restoreDisposition, "replanned-current-policy");
+assert.equal(
+  retiredLegacyRestored.routingValidation.traversalSlices[0].policyState,
+  "allowed",
+);
+
 const archivedGraphHash = "a1b2c3d4";
 const archivedPayload = {
   ...payload,

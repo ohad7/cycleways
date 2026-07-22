@@ -21,6 +21,12 @@
   physical line at detailed zoom instead of an invisible logical source line.
 - [x] Add shared/build/web/mobile regressions for bidirectional collapsing,
   separated direction arrows, zoom-aware styling, and interaction ownership.
+- [x] Carry the clicked logical segment id from visible map geometry into
+  route-point snapping and preserve it across later recalculations.
+- [x] Prefer nearby allowed base edges carrying that segment's
+  direction-scoped membership, while retaining ordinary snapping as a fallback.
+- [x] Add regressions for dense parallel CW segments and the map-to-router
+  segment-identity handoff.
 
 ## 2026-07-22 amendment — historical V6 anchor compatibility
 

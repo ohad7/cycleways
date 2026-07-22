@@ -1686,6 +1686,8 @@ class RouteManager {
         : this.snapThresholdMeters;
     const edgeFilter =
       typeof options.edgeFilter === "function" ? options.edgeFilter : null;
+    const preferredCwSegmentId = Number(point.preferredCwSegmentId);
+    const hasPreferredCwSegment = Number.isSafeInteger(preferredCwSegmentId);
     const bestByEdge = new Map();
 
     for (const candidate of this._baseRoutingCandidates(normalizedPoint)) {
@@ -1745,14 +1747,30 @@ class RouteManager {
       MAX_BASE_SNAP_CANDIDATES,
       Math.max(1, Number(options.maxCandidates) || DEFAULT_BASE_SNAP_CANDIDATES),
     );
-    return [...bestByEdge.values()]
-      .sort(
-        (first, second) =>
-          first.distanceMeters - second.distanceMeters ||
-          String(first.baseEdgeId).localeCompare(String(second.baseEdgeId)) ||
-          first.baseEdgeDistanceMeters - second.baseEdgeDistanceMeters,
-      )
-      .slice(0, limit);
+    const sortedCandidates = [...bestByEdge.values()].sort(
+      (first, second) =>
+        first.distanceMeters - second.distanceMeters ||
+        String(first.baseEdgeId).localeCompare(String(second.baseEdgeId)) ||
+        first.baseEdgeDistanceMeters - second.baseEdgeDistanceMeters,
+    );
+    if (hasPreferredCwSegment) {
+      const preferredCandidates = sortedCandidates.filter((candidate) => {
+        const edge = this.baseRoutingEdges.get(candidate.baseEdgeId);
+        return (candidate.snapProvenance?.allowedDirections || []).some((direction) =>
+          this._cwMembershipsForDirection(edge, direction).some(
+            (membership) => Number(membership.segmentId) === preferredCwSegmentId,
+          ),
+        );
+      });
+      // A click on a visible CW line is an explicit choice of that logical
+      // segment. Keep all ordinary fallback behavior when its current mapping
+      // has no nearby routable edge, but do not silently migrate a valid click
+      // to a parallel CW segment or roundabout approach.
+      if (preferredCandidates.length > 0) {
+        return preferredCandidates.slice(0, limit);
+      }
+    }
+    return sortedCandidates.slice(0, limit);
   }
 
   _snapToBaseRoutingNetwork(point, thresholdMeters = null, options = {}) {
@@ -1760,6 +1778,9 @@ class RouteManager {
     const normalizedPoint = {
       lat: Number(point.lat),
       lng: Number(point.lng),
+      ...(Number.isSafeInteger(Number(point.preferredCwSegmentId))
+        ? { preferredCwSegmentId: Number(point.preferredCwSegmentId) }
+        : {}),
     };
     const metersPerPixel = Number(point.metersPerPixel);
     const hasPixelScale = Number.isFinite(metersPerPixel) && metersPerPixel > 0;
@@ -1950,6 +1971,9 @@ class RouteManager {
           requestedCoordinate: {
             lat: Number(point.lat),
             lng: Number(point.lng),
+            ...(Number.isSafeInteger(Number(point.preferredCwSegmentId))
+              ? { preferredCwSegmentId: Number(point.preferredCwSegmentId) }
+              : {}),
           },
         }),
       ),

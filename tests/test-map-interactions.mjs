@@ -12,13 +12,17 @@ import {
 // buildNetworkSegments keeps only named segments with >= 2 finite coords.
 {
   const segs = buildNetworkSegments([
-    { properties: { name: "A" }, geometry: { coordinates: [[0, 0], [1, 1]] } },
+    {
+      properties: { id: 159, name: "A" },
+      geometry: { coordinates: [[0, 0], [1, 1]] },
+    },
     { properties: { name: "B" }, geometry: { coordinates: [[0, 0]] } }, // too short
     { properties: {}, geometry: { coordinates: [[0, 0], [1, 1]] } }, // unnamed
     { properties: { name: "J", networkRole: "junction", interactive: false }, geometry: { coordinates: [[0, 0], [1, 1]] } },
   ]);
   assert.equal(segs.length, 1, "only the valid named multi-point segment survives");
   assert.equal(segs[0].segmentName, "A");
+  assert.equal(segs[0].segmentId, 159);
   assert.equal(segs[0].coordinates.length, 2);
 }
 
@@ -31,7 +35,12 @@ import {
       geometry: { coordinates: [[0, 0], [1, 0]] },
     },
     {
-      properties: { name: "physical", interactionMinZoom: 10.5 },
+      properties: {
+        segmentId: 159,
+        name: "physical",
+        alignmentKey: "aToB",
+        interactionMinZoom: 10.5,
+      },
       geometry: { coordinates: [[0, 0.1], [1, 0.1]] },
     },
   ]);
@@ -48,6 +57,14 @@ import {
   assert.equal(
     findClosestRouteSegment(mapAt(12), event, segments)?.segmentName,
     "physical",
+  );
+  assert.equal(
+    findClosestRouteSegment(mapAt(12), event, segments)?.segmentId,
+    159,
+  );
+  assert.equal(
+    findClosestRouteSegment(mapAt(12), event, segments)?.alignmentKey,
+    "aToB",
   );
 }
 

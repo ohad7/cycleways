@@ -2,12 +2,15 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
+import { resolve } from "node:path";
 import RouteManager from "../packages/core/route-manager.js";
 import {
   createRouteManager,
   expandHybridRoutePayload,
-  restoreRoute,
 } from "../packages/core/src/routing/routeActions.js";
+import { createShardedRouteSession } from "../packages/core/src/routing/shardedRouteSession.js";
+import { decodeCompactBaseRoutingShard } from "../packages/core/src/routing/compactBaseRoutingShard.js";
+import { decodeMessagePack } from "../packages/core/src/routing/messagePack.js";
 import { decodeRoutePayload } from "../packages/core/src/utils/route-encoding.js";
 import {
   getBaseRoutingDecodeAssets,
@@ -43,7 +46,8 @@ assert.equal(
 assert.equal(Object.keys(index.segments).length, 284);
 
 const { geoJsonData, segmentsData } = await loadFeaturedAssetsFromDisk();
-const { baseRoutingNetwork } = await getBaseRoutingDecodeAssets();
+const decodeAssets = await getBaseRoutingDecodeAssets();
+const { baseRoutingNetwork } = decodeAssets;
 const manager = await createRouteManager(
   RouteManager,
   geoJsonData,
@@ -51,26 +55,55 @@ const manager = await createRouteManager(
   baseRoutingNetwork,
 );
 const expanded = expandHybridRoutePayload(decodedA, index);
-assert.equal(manager.restoreBaseRouteFromPayload(expanded), true);
-let diagnostics = manager.getBaseRouteDiagnostics();
-assert.ok(Math.abs(diagnostics.distance - fixture.knownBadExactReplay.distanceMeters) < 0.001);
-assert.equal(diagnostics.traversals.length, fixture.knownBadExactReplay.traversalCount);
-let edge370 = diagnostics.traversals.filter(
-  (traversal) => traversal.edgeShareId === 370 && traversal.direction === "reverse",
+assert.equal(
+  manager.restoreBaseRouteFromPayload(expanded),
+  false,
+  "the historical unsafe traversal must not replay against the current graph",
 );
-assert.ok(Math.abs(edge370.reduce((sum, value) => sum + value.distanceMeters, 0) - 547.3) < 0.001);
 
-restoreRoute(
-  manager,
-  fixture.coordinateReplan.coordinates.map((point, index) => ({ ...point, id: `fixture-${index}` })),
+const routeAnchorCompatibility = JSON.parse(
+  readFileSync("data/routing-compat/route-anchor-compatibility.json", "utf8"),
+);
+const session = await createShardedRouteSession(
+  RouteManager,
+  geoJsonData,
   segmentsData,
+  decodeAssets.shardManifest,
+  async (entry) => {
+    const bytes = readFileSync(resolve(decodeAssets.shardsDir, entry.path));
+    if (entry.format === "compact") return decodeCompactBaseRoutingShard(bytes);
+    if (entry.format === "msgpack") return decodeMessagePack(bytes);
+    return JSON.parse(new TextDecoder().decode(bytes));
+  },
+  {
+    paddingShards: 1,
+    cwBaseIndex: decodeAssets.cwBaseIndex,
+    legacyRoutingCompatibility: decodeAssets.legacyRoutingCompatibility,
+    routeAnchorCompatibility,
+  },
 );
-diagnostics = manager.getBaseRouteDiagnostics();
-assert.equal(diagnostics.failure, null);
-edge370 = diagnostics.traversals.filter(
-  (traversal) => traversal.edgeShareId === 370 && traversal.direction === "reverse",
+const recovered = await session.restoreRouteParam(fixture.token);
+assert.ok(recovered, "the released reported-ride token must preserve its waypoint intent");
+assert.equal(recovered.requiresReview, true);
+assert.match(recovered.restoreDisposition, /^replanned-current-policy/);
+assert.equal(recovered.routeFailure, null);
+assert.ok(recovered.geometry.length >= 2);
+assert.equal(
+  recovered.routingValidation.traversalSlices.every(
+    (slice) => slice.policyState === "allowed",
+  ),
+  true,
+  "historical recovery must use only current-policy allowed traversals",
 );
-assert.ok(Math.abs(edge370.reduce((sum, value) => sum + value.distanceMeters, 0) - 547.3) < 0.001);
+assert.equal(
+  recovered.routingValidation.traversalSlices.some(
+    (slice) =>
+      Number(slice.edgeShareId) === 370 &&
+      Number(slice.fromFractionQ) > Number(slice.toFractionQ),
+  ),
+  false,
+  "historical recovery must not restore the forbidden Road 99 reverse",
+);
 
 const audit = spawnSync("node", ["scripts/audit-bicycle-traversal-baseline.mjs", "--check"], {
   cwd: process.cwd(),

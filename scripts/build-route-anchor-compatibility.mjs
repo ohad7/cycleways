@@ -33,6 +33,18 @@ const RELEASED_ROUTE_SOURCES = Object.freeze({
   "naftali-dishon-yosha": "cc9883c0",
 });
 
+// The July 13 reported ride is a released user-owned V6 link rather than a
+// catalog entry. Its token was captured later as a regression fixture, while
+// its graph/registry/shards come from the public-data release that the rider
+// used. Keep both commits explicit so archive regeneration never depends on
+// mutable working-tree data.
+const REPORTED_RIDE_SOURCE = Object.freeze({
+  slug: "reported-road-99-ride",
+  tokenCommit: "8a61dff",
+  tokenPath: "tests/fixtures/bicycle-traversal/road-99-ride.json",
+  graphCommit: "69611a22d5e30c6e2cc6e85aefb36db38c5fc4de",
+});
+
 function gitShow(commit, relativePath, { binary = false } = {}) {
   return execFileSync("git", ["show", `${commit}:${relativePath}`], {
     cwd: repoRoot,
@@ -274,16 +286,42 @@ async function main() {
   const graphVersions = {};
 
   await mkdir(registryHistoryDir, { recursive: true });
-  for (const [slug, requestedCommit] of Object.entries(RELEASED_ROUTE_SOURCES)) {
-    const commit = execFileSync("git", ["rev-parse", requestedCommit], {
+  const routeSources = [
+    ...Object.entries(RELEASED_ROUTE_SOURCES).map(([slug, commit]) => ({
+      slug,
+      graphCommit: commit,
+      catalogCommit: commit,
+    })),
+    REPORTED_RIDE_SOURCE,
+  ];
+  for (const source of routeSources) {
+    const { slug } = source;
+    const commit = execFileSync("git", ["rev-parse", source.graphCommit], {
       cwd: repoRoot,
       encoding: "utf8",
     }).trim();
-    const releasedCatalog = JSON.parse(gitShow(commit, "public-data/route-catalog.json"));
-    const releasedEntry = (releasedCatalog.entries || []).find((entry) => entry.slug === slug);
-    if (!releasedEntry?.route) throw new Error(`${slug} is missing at release commit ${commit}`);
+    let routeToken = null;
+    if (source.tokenPath) {
+      const tokenCommit = execFileSync("git", ["rev-parse", source.tokenCommit], {
+        cwd: repoRoot,
+        encoding: "utf8",
+      }).trim();
+      routeToken = JSON.parse(gitShow(tokenCommit, source.tokenPath)).token;
+    } else {
+      const catalogCommit = execFileSync("git", ["rev-parse", source.catalogCommit], {
+        cwd: repoRoot,
+        encoding: "utf8",
+      }).trim();
+      const releasedCatalog = JSON.parse(
+        gitShow(catalogCommit, "public-data/route-catalog.json"),
+      );
+      routeToken = (releasedCatalog.entries || []).find(
+        (entry) => entry.slug === slug,
+      )?.route;
+    }
+    if (!routeToken) throw new Error(`${slug} has no released route token`);
 
-    const payload = decodeRoutePayload(releasedEntry.route);
+    const payload = decodeRoutePayload(routeToken);
     if (payload.type !== "hybrid_route_v6") {
       throw new Error(`${slug} is not a hybrid_route_v6 token`);
     }

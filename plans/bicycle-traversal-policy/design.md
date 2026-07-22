@@ -37,6 +37,14 @@ points on the physical corridor. The logical and physical interaction ranges
 follow the same zoom transition as their paint, so an invisible source line
 cannot capture a detailed-map click.
 
+The selected logical segment id is also routing input. When a click is close to
+several CW mappings, the snapper first uses nearby allowed base edges carrying
+the clicked segment's direction-scoped membership. This prevents parallel
+roads and roundabout approaches from silently moving the point onto a different
+CW segment. If that identity has no nearby routable mapping, ordinary
+base-network snapping remains the fallback so stale display data fails usable
+rather than trapping the click.
+
 Published junction footprints remain visible as ordinary CW network geometry
 throughout the transition. Direction arrows are shown only for genuinely
 direction-limited physical edges/alignments; the map does not draw every

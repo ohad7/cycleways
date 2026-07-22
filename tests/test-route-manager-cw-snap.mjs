@@ -176,4 +176,91 @@ function buildNetwork({ cwLat }) {
   );
 }
 
+// Case 7: clicking a specifically rendered CW segment keeps that identity in
+// a dense parallel network. This is stronger than the generic "prefer any CW"
+// rule: the closer edge belongs to segment 20, but the visible line the user
+// selected belongs to segment 10.
+{
+  const manager = new RouteManager();
+  await manager.load(geoJsonData, segmentsData, {
+    schemaVersion: 1,
+    nodes: [
+      { id: "ten-a", coord: [35, 33.0001] },
+      { id: "ten-b", coord: [35.002, 33.0001] },
+      { id: "twenty-a", coord: [35, 33.00005] },
+      { id: "twenty-b", coord: [35.002, 33.00005] },
+    ],
+    edges: [
+      {
+        id: "cw-10",
+        shareId: 10,
+        from: "ten-a",
+        to: "ten-b",
+        distanceMeters: 186,
+        coordinates: [[35, 33.0001], [35.002, 33.0001]],
+        routeClass: "path_track",
+        cwAlignments: {
+          forward: [{ segmentId: 10, alignmentKey: "aToB" }],
+          reverse: [{ segmentId: 10, alignmentKey: "bToA" }],
+        },
+      },
+      {
+        id: "cw-20",
+        shareId: 20,
+        from: "twenty-a",
+        to: "twenty-b",
+        distanceMeters: 186,
+        coordinates: [[35, 33.00005], [35.002, 33.00005]],
+        routeClass: "path_track",
+        cwAlignments: {
+          forward: [{ segmentId: 20, alignmentKey: "aToB" }],
+          reverse: [{ segmentId: 20, alignmentKey: "bToA" }],
+        },
+      },
+    ],
+  });
+
+  const preferred = manager.snapToNetwork({
+    lat: 33.000055,
+    lng: 35.001,
+    preferredCwSegmentId: 10,
+  });
+  assert.equal(
+    preferred?.baseEdgeId,
+    "cw-10",
+    "a click on segment 10 must not migrate to the closer segment 20 edge",
+  );
+
+  manager.addPoint({
+    lat: 33.000055,
+    lng: 35.0005,
+    preferredCwSegmentId: 10,
+  });
+  manager.addPoint({
+    lat: 33.000055,
+    lng: 35.0015,
+    preferredCwSegmentId: 10,
+  });
+  const routeInfo = manager.getRouteInfo();
+  assert.equal(routeInfo.failure, null);
+  assert.equal(routeInfo.points[0].baseEdgeId, "cw-10");
+  assert.equal(routeInfo.points[1].baseEdgeId, "cw-10");
+  assert.equal(
+    routeInfo.points[0].requestedCoordinate?.preferredCwSegmentId,
+    10,
+    "the first point must retain its clicked-segment preference after later recalculation",
+  );
+
+  const fallback = manager.snapToNetwork({
+    lat: 33.000055,
+    lng: 35.001,
+    preferredCwSegmentId: 999,
+  });
+  assert.equal(
+    fallback?.baseEdgeId,
+    "cw-20",
+    "a stale or unavailable segment identity must fall back to normal snapping",
+  );
+}
+
 console.log("RouteManager CW snap preference tests passed");

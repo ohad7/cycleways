@@ -423,20 +423,32 @@ class ShardedRouteSession {
     } = {},
   ) {
     if (!Array.isArray(anchors) || anchors.length === 0) return null;
-    const resolved = anchors.every(hasLngLat)
+    let resolved = anchors.every(hasLngLat)
       ? anchors.map((anchor) => ({
           ...anchor,
           lat: Number(anchor.lat),
           lng: Number(anchor.lng),
         }))
-      : identityProven &&
-          typeof this.manager?.resolveShareAnchorPoints === "function"
-        ? this.manager.resolveShareAnchorPoints(anchors)
-        : this.resolveCompatibleShareAnchorPoints(
-            anchors,
-            anchorCompatibility,
-            routeIntentKey,
-          );
+      : null;
+    if (
+      !resolved &&
+      identityProven &&
+      typeof this.manager?.resolveShareAnchorPoints === "function"
+    ) {
+      resolved = this.manager.resolveShareAnchorPoints(anchors);
+    }
+    // Proven legacy identity permits exact expansion, but it does not imply
+    // that every historical anchor edge still exists in the current graph.
+    // When current-edge resolution fails, continue to the independently
+    // digest-bound historical archive instead of making the old token
+    // unrecoverable.
+    if (!resolved) {
+      resolved = this.resolveCompatibleShareAnchorPoints(
+        anchors,
+        anchorCompatibility,
+        routeIntentKey,
+      );
+    }
     if (!resolved) {
       // Anchors carry only baseEdgeShareId+baseEdgeFraction (no lat/lng), so
       // without a current-graph resolution they cannot be re-routed.

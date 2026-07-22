@@ -383,6 +383,7 @@ function MapSurface({
         lng: closest?.point?.lng ?? event.lngLat.lng,
         lat: closest?.point?.lat ?? event.lngLat.lat,
         metersPerPixel: clickMetersPerPixel(map, event.lngLat),
+        preferredCwSegmentId: closest.segmentId,
       });
     };
 

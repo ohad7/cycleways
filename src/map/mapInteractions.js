@@ -20,6 +20,12 @@ export function buildNetworkSegments(features) {
 
       return {
         segmentName: feature.properties?.name || null,
+        segmentId: Number.isFinite(
+          Number(feature.properties?.segmentId ?? feature.properties?.id),
+        )
+          ? Number(feature.properties?.segmentId ?? feature.properties?.id)
+          : null,
+        alignmentKey: feature.properties?.alignmentKey || null,
         coordinates,
         minZoom: Number.isFinite(Number(feature.properties?.interactionMinZoom))
           ? Number(feature.properties.interactionMinZoom)
@@ -66,6 +72,8 @@ export function findClosestRouteSegment(map, event, networkSegments, thresholdPi
         minPixelDistance = distance;
         closest = {
           segmentName: segment.segmentName,
+          segmentId: segment.segmentId,
+          alignmentKey: segment.alignmentKey,
           point: getClosestPointOnLineSegment(
             { lat: event.lngLat.lat, lng: event.lngLat.lng },
             start,
