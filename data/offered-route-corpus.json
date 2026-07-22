@@ -5,20 +5,20 @@
   "entries": [
     {
       "slug": "banias-gan-hatsafon",
-      "acceptedFingerprint": "sha256-2b1f5831b1cbc7f17f794cbe0ca0920b3682803bb0d7a23306c9b9d4fd657d5c",
-      "distanceMeters": 14747.07439688716,
+      "acceptedFingerprint": "sha256-d88dbf74ed7ffbb19535eb970f89e56e226d1eae1654492aee3a49300de56390",
+      "distanceMeters": 14746.992373540852,
       "distanceToleranceMeters": 1
     },
     {
       "slug": "sovev-beit-hillel",
-      "acceptedFingerprint": "sha256-f9f15898239ba6eb2104b1e7f01737f5250b67b7d0557b0932e2a3d9be6888e9",
+      "acceptedFingerprint": "sha256-a8663d25544066d4874ab3be7b440303709596b1def6f0df9d331e3c4c533512",
       "distanceMeters": 6478.210389868009,
       "distanceToleranceMeters": 1
     },
     {
       "slug": "historic-jordan",
-      "acceptedFingerprint": "sha256-8efd2d020981003bf7760d3f3ca52b3eac1e57c24531a90cf8d0c65417f35b31",
-      "distanceMeters": 23865.06928664072,
+      "acceptedFingerprint": "sha256-70fd7178e2126ff1a6bc56b9611b80c6e6703b1d3e75439914c46a3a7b1c7c28",
+      "distanceMeters": 23865.09061264972,
       "distanceToleranceMeters": 1
     },
     {
@@ -29,26 +29,26 @@
     },
     {
       "slug": "sovev-dafna",
-      "acceptedFingerprint": "sha256-8b2e99bf6f594ef3124a6cd0acbce92fed8f9607109c14d709c962050fdef6f0",
-      "distanceMeters": 7060.070319676508,
+      "acceptedFingerprint": "sha256-e0804de7d1903fb18eb8a6efd87e193972d1018651f4a9ac093d476d6d25254d",
+      "distanceMeters": 7060.005395590143,
       "distanceToleranceMeters": 1
     },
     {
       "slug": "roman-roads",
-      "acceptedFingerprint": "sha256-8213d4259f58af06e9bb215eb8b9b237279bc176f1f74e39b835c07fec88e576",
-      "distanceMeters": 27305.286060883496,
+      "acceptedFingerprint": "sha256-4351774052ab0bfb09fe6dd90c0fd7f1660062459200b9d062f4e5640a77d468",
+      "distanceMeters": 27305.310241855503,
       "distanceToleranceMeters": 1
     },
     {
       "slug": "sovev-shear-yeshuv",
-      "acceptedFingerprint": "sha256-d4394ff0df0b39aeddcbc8c21fef6f7c04a124b14078f034a4dc95d6f7a6b78f",
-      "distanceMeters": 5795.583387502861,
+      "acceptedFingerprint": "sha256-9d142b982659ee1ab91e55bca118ba01bd5b51d6dda446bcd3252396083f4a8d",
+      "distanceMeters": 5795.543956664377,
       "distanceToleranceMeters": 1
     },
     {
       "slug": "naftali-dishon-yosha",
-      "acceptedFingerprint": "sha256-17ed93aca0441f0dc57e5b87509683902a05611adf7847cc98dc4c3632792433",
-      "distanceMeters": 54260.91394064241,
+      "acceptedFingerprint": "sha256-e16ede5939c942c2fdc5fc38f4218fdba1e601f9490c1fb8707f77a610317891",
+      "distanceMeters": 54260.75538567177,
       "distanceToleranceMeters": 1
     }
   ]

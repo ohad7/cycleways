@@ -37492,7 +37492,7 @@
         "sourceMappingStatus": "accepted_auto_match",
         "sourceSchemaVersion": 1
       },
-      "navigable": true,
+      "navigable": false,
       "segmentId": 328,
       "segmentName": "צומת חורשת טל",
       "sourceGeometryDigest": "2e27550df6639760e7a1ecb9411c9ac015ff1c696d3040fbef232e83301c9fec"
@@ -37601,7 +37601,7 @@
         "sourceMappingStatus": "accepted_auto_match",
         "sourceSchemaVersion": 1
       },
-      "navigable": true,
+      "navigable": false,
       "segmentId": 329,
       "segmentName": "רחבת כניסה מטעי דפנה",
       "sourceGeometryDigest": "3ff057d631cfdb332a0b975e55d1f2295af25db4ba1d25f53d97c3fb8073c94e"

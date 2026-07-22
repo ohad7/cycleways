@@ -1,16 +1,16 @@
 {
   "schemaVersion": 1,
   "slug": "sovev-shear-yeshuv",
-  "generatedAt": "2026-07-22T06:36:00.072Z",
+  "generatedAt": "2026-07-22T08:36:04.947Z",
   "source": {
-    "routeTokenHash": "sha256:f4a2057e3ef883fe86a8524e6be283e57c1df9c0c48a96d91a66ef1e0e040d90",
+    "routeTokenHash": "sha256:62faaa3e75c21fce2e59eac51e59492d0f4ce8f966e4a722a58b4056e6ef8982",
     "routeFormat": "base_route_v4",
-    "mapVersion": "8112ad1dfe1f",
+    "mapVersion": "8119b3dc320d",
     "assetHashes": {
-      "bikeRoads": "3ec628517ac6e508af9bb0ed7aaf65a6c47b75af15bc6df0d79c1295b8bb2082",
+      "bikeRoads": "a47eca6e5328ebadb8f6fd1f451f14387ab6a3df05f94fc7dc4acad4f3443fca",
       "segments": "43f0f479a673d5d622775878ccd59e905f49fc3a2a7a1b5c52ab1a41d3c56331",
-      "cwBaseIndex": "9e9dd5e40dad66fa4c1461616cd4ed8db0a244d662be3278a90a35d0baeba52a",
-      "baseRoutingShards": "076ebf09ef093ca4c22aa5813c1108c976c3ee48bd7719b54e982289cd921bef"
+      "cwBaseIndex": "eb51789211d4cd1c8b06077d72617d338df3a02118a50f230f7412aba22337aa",
+      "baseRoutingShards": "976efb8352ca6c5aa695da73128fcd8bec2aad9abf2cc09cd76c7453a469bd1c"
     }
   },
   "route": {
@@ -30,8 +30,8 @@
     },
     "geometry": [
       {
-        "lat": 33.229605036656736,
-        "lng": 35.65228290045559,
+        "lat": 33.229604970345974,
+        "lng": 35.65228293225214,
         "elevation": 144
       },
       {
@@ -190,9 +190,9 @@
         "elevation": 110.67779129308137
       },
       {
-        "lat": 33.21876582872193,
-        "lng": 35.6448372220742,
-        "elevation": 109.76726939803159
+        "lat": 33.21876586124887,
+        "lng": 35.64483701731826,
+        "elevation": 109.76699473563744
       },
       {
         "lat": 33.218797,
@@ -355,9 +355,9 @@
         "elevation": 143.03230975306496
       },
       {
-        "lat": 33.230094310059044,
-        "lng": 35.64488032414793,
-        "elevation": 143.06904707408256
+        "lat": 33.23009405560435,
+        "lng": 35.644879993256254,
+        "elevation": 143.06901655603875
       },
       {
         "lat": 33.232571,
@@ -480,9 +480,9 @@
         "elevation": 139.65451919920542
       },
       {
-        "lat": 33.229008031366,
-        "lng": 35.652706753956345,
-        "elevation": 139.51654840924698
+        "lat": 33.22900796772513,
+        "lng": 35.652706763420184,
+        "elevation": 139.51627374685282
       },
       {
         "lat": 33.228576,
@@ -555,8 +555,8 @@
         "elevation": 123
       },
       {
-        "lat": 33.22543700106813,
-        "lng": 35.65467440955214,
+        "lat": 33.225437137239645,
+        "lng": 35.654674050171664,
         "elevation": 123
       },
       {
@@ -665,20 +665,20 @@
         "elevation": 144
       },
       {
-        "lat": 33.229615519385355,
-        "lng": 35.652282060781346,
-        "elevation": 143.99946593423363
+        "lat": 33.22961589192166,
+        "lng": 35.65228212139743,
+        "elevation": 143.9994354161898
       }
     ],
     "bounds": {
       "west": 35.641422,
       "south": 33.218362,
-      "east": 35.65467440955214,
+      "east": 35.654674050171664,
       "north": 33.232635
     },
-    "distance": 5795.583387502861,
+    "distance": 5795.543956664377,
     "elevationGain": 59,
-    "elevationLoss": 59.00053406576639,
+    "elevationLoss": 59.00056458381018,
     "selectedSegments": [
       "שאר ישוב היקפי דרום מזרח",
       "שאר ישוב היקפי מערב",
@@ -709,8 +709,8 @@
         ],
         "segmentName": "שאר ישוב היקפי מערב",
         "routeDistanceMeters": 1.2112311651276189,
-        "routeProgressMeters": 2347.512904483592,
-        "routeFraction": 0.4050687224686301
+        "routeProgressMeters": 2347.504960052169,
+        "routeFraction": 0.4050701148973716
       },
       {
         "id": "poi-b0a7c0c7",
@@ -734,8 +734,8 @@
         ],
         "segmentName": "הגשר על הבניאס",
         "routeDistanceMeters": 0.6819123034451895,
-        "routeProgressMeters": 5208.096068717252,
-        "routeFraction": 0.8986688920942361
+        "routeProgressMeters": 5208.088124285819,
+        "routeFraction": 0.8986736517281779
       }
     ],
     "dataMarkerFeatures": [

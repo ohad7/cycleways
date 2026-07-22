@@ -32,4 +32,13 @@ await loadRouteCatalogWithAssetLoader(
 );
 assert.equal(requestedVersionedPath, "public-data/route-catalog.abc123.json");
 
+await loadRouteCatalogWithAssetLoader(
+  async (assetPath) => {
+    requestedVersionedPath = assetPath;
+    return { version: 1, entries: [] };
+  },
+  { manifest: { version: "release-1", routeCatalog: "route-catalog.json" } },
+);
+assert.equal(requestedVersionedPath, "public-data/route-catalog.json?v=release-1");
+
 console.log("route catalog loading tests passed");

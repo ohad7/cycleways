@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import {
   buildPromoteTargets,
   offeredRouteMigrationBlockers,
+  stablePromotionManifest,
 } from "../editor/server.mjs";
 
 const repoRoot = fileURLToPath(new URL("..", import.meta.url));
@@ -41,9 +42,9 @@ const releaseTargets = buildPromoteTargets({
   routeCatalog: "route-catalog.abc123.json",
   featuredRoutesBase: "featured-routes.def456",
 });
-assert.ok(releaseTargets.some((target) => target.label === "versioned route catalog"));
+assert.ok(releaseTargets.some((target) => target.label === "public route catalog"));
 assert.ok(
-  releaseTargets.some((target) => target.label === "versioned featured route snapshots"),
+  releaseTargets.some((target) => target.label === "public featured route snapshots"),
 );
 assert.equal(releaseTargets.at(-1).label, "public manifest");
 assert.equal(
@@ -146,6 +147,73 @@ assert.equal(
 assert.equal(
   byLabel.get("base routing shards").target,
   path.join(repoRoot, "public-data/base-routing-shards"),
+);
+
+const stableRelease = stablePromotionManifest({
+  ...manifest,
+  bikeRoads: "bike_roads.abc123def456.geojson",
+  segments: "segments.abc123def456.json",
+  cwBaseIndex: "cw-base-index.abc123def456.json",
+  kml: "exports/map.abc123def456.kml",
+  baseRoutingShards: "base-routing-shards.abc123def456/manifest.json",
+  cwAlignmentGeometry: "cw-alignment-geometry.abc123def456.json",
+  roundabouts: "roundabouts.abc123def456.json",
+  networkJunctions: "network-junctions.abc123def456.json",
+  routeAnchorCompatibility: {
+    ...manifest.routeAnchorCompatibility,
+    path: "routing-compat/route-anchor-compatibility.abc123def456.json",
+  },
+});
+assert.equal(stableRelease.bikeRoads, "bike_roads.geojson");
+assert.equal(stableRelease.segments, "segments.json");
+assert.equal(stableRelease.cwBaseIndex, "cw-base-index.json");
+assert.equal(stableRelease.baseRoutingShards, "base-routing-shards/manifest.json");
+assert.equal(stableRelease.cwAlignmentGeometry, "cw-alignment-geometry.json");
+assert.equal(stableRelease.roundabouts, "roundabouts.json");
+assert.equal(stableRelease.networkJunctions, "network-junctions.json");
+assert.equal(
+  stableRelease.routeAnchorCompatibility.path,
+  "routing-compat/route-anchor-compatibility.json",
+);
+assert.equal(stableRelease.routeCatalog, "route-catalog.json");
+assert.equal(stableRelease.featuredRoutesBase, "featured-routes");
+
+const existingPublication = {
+  bikeRoads: "bike_roads.oldslot.geojson",
+  segments: "segments.oldslot.json",
+  cwBaseIndex: "cw-base-index.oldslot.json",
+  kml: "exports/map.oldslot.kml",
+  baseRoutingShards: "base-routing-shards.oldslot/manifest.json",
+  cwAlignmentGeometry: "cw-alignment-geometry.oldslot.json",
+  roundabouts: "roundabouts.oldslot.json",
+  networkJunctions: "network-junctions.oldslot.json",
+  routeCatalog: "route-catalog.oldslot.json",
+  featuredRoutesBase: "featured-routes.oldslot",
+  routeAnchorCompatibility: {
+    path: "routing-compat/route-anchor-compatibility.oldslot.json",
+  },
+};
+const reusedPublication = stablePromotionManifest(stableRelease, {
+  currentManifest: existingPublication,
+});
+assert.equal(reusedPublication.baseRoutingShards, existingPublication.baseRoutingShards);
+assert.equal(reusedPublication.routeCatalog, existingPublication.routeCatalog);
+assert.equal(
+  reusedPublication.routeAnchorCompatibility.path,
+  existingPublication.routeAnchorCompatibility.path,
+);
+
+const slottedTargets = buildPromoteTargets(reusedPublication, {
+  sourceManifest: stableRelease,
+});
+const slottedByLabel = new Map(slottedTargets.map((target) => [target.label, target]));
+assert.equal(
+  slottedByLabel.get("base routing shards").source,
+  path.join(repoRoot, "build/public-data/base-routing-shards"),
+);
+assert.equal(
+  slottedByLabel.get("base routing shards").target,
+  path.join(repoRoot, "public-data/base-routing-shards.oldslot"),
 );
 
 console.log("editor promote target tests passed");

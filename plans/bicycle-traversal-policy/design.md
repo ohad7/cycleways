@@ -1013,10 +1013,15 @@ Route attestations embed this `routingContextDigest`. A separate
 featured/precomputed snapshots, a canonical immutable release-index payload,
 and their raw artifact hashes. Its canonical preimage excludes the digest field
 itself, `generatedAt`, and the mutable current-pointer manifest. The bundle
-digest verifies an atomic release but is not embedded inside the snapshots it
-hashes, avoiding a self-reference and avoiding navigation interruption when
-only unrelated content changes. Promotion writes immutable assets/release index
-first and replaces the current pointer last.
+digest verifies one internally consistent release but is not embedded inside
+the snapshots it hashes, avoiding a self-reference and avoiding navigation
+interruption when only unrelated content changes. Build retains its
+content-addressed outputs for audit and recovery. Promotion copies them into
+stable publication slots in `public-data/` and replaces the current manifest
+pointer last. An existing repository reuses the paths in its current manifest,
+even if a historical slot name contains a version suffix. The
+manifest version and per-asset hashes remain the release identity while stable
+checked-in paths keep ordinary promotion diffs limited to content that changed.
 
 Every semantic digest is computed from canonical content with volatile fields
 such as `generatedAt`, filesystem paths, and packaging offsets excluded. Raw
@@ -1028,9 +1033,11 @@ file downloaded successfully.
 
 Promotion builds featured/precomputed snapshots strictly from the staged
 manifest/catalog/assets, with no fallback to old public snapshots. Snapshot or
-integrity failure aborts before public pointers change. Immutable artifacts and
-the release index are copied first; the mutable current manifest pointer is the
-last atomic write.
+integrity failure aborts before public files change. Publication-slot files and directories
+are replaced atomically first; the mutable current manifest pointer is the last
+atomic write. Web loaders append the manifest version (and shard hashes where
+available) to stable asset requests, while native bundles resolve the same
+logical paths without relying on browser caching.
 
 ### Immutable share-ID meaning
 
@@ -1136,17 +1143,17 @@ Shard merging rejects:
   states/reasons, and policy metadata. This protects the meaning of
   forward/reverse as well as permission.
 
-During web transition, immutable paths publish
-`shards-v2/<digest>/...` and `shards-v3/<digest>/...`. The manifest exposes
-separate `compactV2` and `compactV3` entries. An enforced client requests
-`compactV3` through a strict loader mode: missing V3 is an asset failure and
-never downgrades to V2, JSON, MessagePack, or the manifest default.
+During web transition, the manifest exposes separate `compactV2` and
+`compactV3` entries. An enforced client requests `compactV3` through a strict
+loader mode: missing V3 is an asset failure and never downgrades to V2, JSON,
+MessagePack, or the manifest default.
 
-The correctness cutover points the versioned current routing manifest at V3
-and replaces the legacy mutable manifest with an unsupported/V3 contract so an
-online stale reader fails closed instead of continuing to fetch V2. Cache and
-manifest versioning plus immutable URLs prevent reuse of old web assets; this
-repository has no service worker. Mobile code and bundled assets ship together;
+The correctness cutover points the current routing manifest at V3 and replaces
+the legacy routing contract with an unsupported/V3 contract so an online stale
+reader fails closed instead of continuing to fetch V2. Manifest-version query
+keys, per-shard content hashes, and strict routing-contract validation prevent
+reuse or combination of stale web routing assets; this repository has no
+service worker. Mobile code and bundled assets ship together;
 an already installed old binary necessarily retains its old offline behavior
 until updated, a deployment limitation the release cannot misrepresent as
 remotely fixed.

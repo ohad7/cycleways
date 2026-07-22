@@ -1,16 +1,16 @@
 {
   "schemaVersion": 1,
   "slug": "sovev-dafna",
-  "generatedAt": "2026-07-22T06:35:59.909Z",
+  "generatedAt": "2026-07-22T08:36:04.807Z",
   "source": {
-    "routeTokenHash": "sha256:eab474ddf446a40b01144f8b64469aa16d2ba3c31b3ef3b6f24438c7f679af56",
+    "routeTokenHash": "sha256:c1dee205e4f4bbb706493730e739ff18912822d74d737bd16c665bd1cb8ca8d5",
     "routeFormat": "base_route_v4",
-    "mapVersion": "8112ad1dfe1f",
+    "mapVersion": "8119b3dc320d",
     "assetHashes": {
-      "bikeRoads": "3ec628517ac6e508af9bb0ed7aaf65a6c47b75af15bc6df0d79c1295b8bb2082",
+      "bikeRoads": "a47eca6e5328ebadb8f6fd1f451f14387ab6a3df05f94fc7dc4acad4f3443fca",
       "segments": "43f0f479a673d5d622775878ccd59e905f49fc3a2a7a1b5c52ab1a41d3c56331",
-      "cwBaseIndex": "9e9dd5e40dad66fa4c1461616cd4ed8db0a244d662be3278a90a35d0baeba52a",
-      "baseRoutingShards": "076ebf09ef093ca4c22aa5813c1108c976c3ee48bd7719b54e982289cd921bef"
+      "cwBaseIndex": "eb51789211d4cd1c8b06077d72617d338df3a02118a50f230f7412aba22337aa",
+      "baseRoutingShards": "976efb8352ca6c5aa695da73128fcd8bec2aad9abf2cc09cd76c7453a469bd1c"
     }
   },
   "route": {
@@ -30,9 +30,9 @@
     },
     "geometry": [
       {
-        "lat": 33.228688957483605,
-        "lng": 35.64076290608038,
-        "elevation": 137.5220416571298
+        "lat": 33.22868898839665,
+        "lng": 35.64076299782231,
+        "elevation": 137.52227054245822
       },
       {
         "lat": 33.228659,
@@ -100,8 +100,8 @@
         "elevation": 135
       },
       {
-        "lat": 33.228141512295736,
-        "lng": 35.64019757425791,
+        "lat": 33.22814162412801,
+        "lng": 35.640197491715035,
         "elevation": 135
       },
       {
@@ -385,8 +385,8 @@
         "elevation": 153
       },
       {
-        "lat": 33.23307871194266,
-        "lng": 35.64016150068339,
+        "lat": 33.2330788463024,
+        "lng": 35.64016146149513,
         "elevation": 153
       },
       {
@@ -425,8 +425,8 @@
         "elevation": 153
       },
       {
-        "lat": 33.23362782905709,
-        "lng": 35.639747118857315,
+        "lat": 33.233627814972,
+        "lng": 35.63974702573067,
         "elevation": 153
       },
       {
@@ -530,8 +530,8 @@
         "elevation": 155
       },
       {
-        "lat": 33.23347050029756,
-        "lng": 35.63641299949645,
+        "lat": 33.233470629434656,
+        "lng": 35.63641278095674,
         "elevation": 155
       },
       {
@@ -620,8 +620,8 @@
         "elevation": 155
       },
       {
-        "lat": 33.2335830003357,
-        "lng": 35.63641349887846,
+        "lat": 33.23358286269932,
+        "lng": 35.636413958709085,
         "elevation": 155
       },
       {
@@ -655,9 +655,9 @@
         "elevation": 154.39431175503265
       },
       {
-        "lat": 33.23331207927028,
-        "lng": 35.63675158869668,
-        "elevation": 154.61782253757534
+        "lat": 33.23331209632272,
+        "lng": 35.63675199664361,
+        "elevation": 154.61739528496224
       },
       {
         "lat": 33.233321,
@@ -1795,9 +1795,9 @@
         "elevation": 135.5687723014155
       },
       {
-        "lat": 33.228248179376365,
-        "lng": 35.64049480190011,
-        "elevation": 135.74708171206225
+        "lat": 33.2282481920021,
+        "lng": 35.64049481468567,
+        "elevation": 135.74712748912793
       }
     ],
     "bounds": {
@@ -1806,9 +1806,9 @@
       "east": 35.641194,
       "north": 33.237857
     },
-    "distance": 7060.070319676508,
-    "elevationGain": 49.3649195086595,
-    "elevationLoss": 51.13987945372702,
+    "distance": 7060.005395590143,
+    "elevationGain": 49.36453803311208,
+    "elevationLoss": 51.13968108644236,
     "selectedSegments": [
       "קיבוץ דפנה שביל המייסדים",
       "שביל היקפי דפנה צפון",
@@ -1844,8 +1844,8 @@
         ],
         "segmentName": "שביל היקפי דפנה צפון",
         "routeDistanceMeters": 0.360104277829464,
-        "routeProgressMeters": 1232.4846997581787,
-        "routeFraction": 0.17454458033761355
+        "routeProgressMeters": 1232.4938993014903,
+        "routeFraction": 0.17454748846570073
       },
       {
         "id": "poi-1821461d",
@@ -1869,8 +1869,8 @@
         "description": "נחל דן זורם בחלקו בתוך קיבוץ דפנה. במקום יש מדשאות וירידה כיפית למים",
         "segmentName": "שביל היקפי דפנה צפון",
         "routeDistanceMeters": 0.0381943723092753,
-        "routeProgressMeters": 1109.7964160722086,
-        "routeFraction": 0.1571694559303804
+        "routeProgressMeters": 1109.80561561552,
+        "routeFraction": 0.1571722042604886
       },
       {
         "id": "poi-86a4607d",
@@ -1890,8 +1890,8 @@
         ],
         "segmentName": "סובב דפנה אבוקדו",
         "routeDistanceMeters": 0.008868755063161798,
-        "routeProgressMeters": 1676.201982057508,
-        "routeFraction": 0.23738385683547086
+        "routeProgressMeters": 1676.1352018126704,
+        "routeFraction": 0.23737658253007332
       },
       {
         "id": "poi-7f0a3972",
@@ -1915,8 +1915,8 @@
         ],
         "segmentName": "גשר על נהר הדן",
         "routeDistanceMeters": 0.17502979559076862,
-        "routeProgressMeters": 2557.598262426268,
-        "routeFraction": 0.3622072675425439
+        "routeProgressMeters": 2557.5314821814304,
+        "routeFraction": 0.36220114123058195
       },
       {
         "type": "warning",
@@ -1935,8 +1935,8 @@
         "name": "עצי תאנה ושיחי פטל",
         "segmentName": "שביל צר לאורך נחל דן",
         "routeDistanceMeters": 1.9276583210866534,
-        "routeProgressMeters": 3312.1844152228027,
-        "routeFraction": 0.4690718179862838
+        "routeProgressMeters": 3312.1176349779653,
+        "routeFraction": 0.4690666745011947
       },
       {
         "id": "poi-a76cdd1b",
@@ -1956,8 +1956,8 @@
         ],
         "segmentName": "שביל צר לאורך נחל דן",
         "routeDistanceMeters": 0.1568218227644885,
-        "routeProgressMeters": 2942.0033823654103,
-        "routeFraction": 0.41664675093132125
+        "routeProgressMeters": 2941.936602120573,
+        "routeFraction": 0.416641125296029
       },
       {
         "id": "poi-0d152fab",
@@ -1981,8 +1981,8 @@
         ],
         "segmentName": "שביל צר לאורך נחל דן",
         "routeDistanceMeters": 0.23352496369003037,
-        "routeProgressMeters": 3124.497055313006,
-        "routeFraction": 0.4424915192802976
+        "routeProgressMeters": 3124.4302750681686,
+        "routeFraction": 0.4424861313377926
       },
       {
         "id": "poi-7004abaf",
@@ -2002,8 +2002,8 @@
         "description": "דג על הדן הוקמה בשנת 1979, לאחרונה נפתח במקום קפה על הדן.",
         "segmentName": "שביל ישראל שמורת נחל שניר",
         "routeDistanceMeters": 0,
-        "routeProgressMeters": 4490.373053993105,
-        "routeFraction": 0.6359269858865877
+        "routeProgressMeters": 4490.306273748268,
+        "routeFraction": 0.6359233769584889
       }
     ],
     "dataMarkerFeatures": [

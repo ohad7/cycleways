@@ -14,7 +14,7 @@ const DEFAULT_MAP_ASSETS = {
   assetBasePath: MAP_MANIFEST_PATH,
 };
 
-function assetPathWithVersion(filePath, version) {
+export function assetPathWithVersion(filePath, version) {
   if (!version) {
     return filePath;
   }
@@ -78,8 +78,14 @@ export async function loadMapAssets(options = {}) {
     legacyRoutingCompatibilityMetadata,
     routeAnchorCompatibilityData,
   ] = await Promise.all([
-    getJsonAsset(manifest.segments, { basePath: manifestBasePath, ...fetchOptions }),
-    getJsonAsset(manifest.bikeRoads, { basePath: manifestBasePath, ...fetchOptions }),
+    getJsonAsset(assetPathWithVersion(manifest.segments, manifest.version), {
+      basePath: manifestBasePath,
+      ...fetchOptions,
+    }),
+    getJsonAsset(assetPathWithVersion(manifest.bikeRoads, manifest.version), {
+      basePath: manifestBasePath,
+      ...fetchOptions,
+    }),
     manifest.cwBaseIndex
       ? getJsonAsset(assetPathWithVersion(manifest.cwBaseIndex, manifest.version), {
           basePath: manifestBasePath,

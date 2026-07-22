@@ -27,12 +27,18 @@ function siteBase() {
 export function getInjectedJsonAsset(filePath) {
   const injected =
     typeof globalThis !== "undefined" ? globalThis.__CW_ASSETS__ : null;
+  const stablePath = typeof filePath === "string"
+    ? filePath.split("#")[0].split("?")[0]
+    : filePath;
   if (
     injected &&
     typeof filePath === "string" &&
-    Object.prototype.hasOwnProperty.call(injected, filePath)
+    (Object.prototype.hasOwnProperty.call(injected, filePath) ||
+      Object.prototype.hasOwnProperty.call(injected, stablePath))
   ) {
-    return injected[filePath];
+    return Object.prototype.hasOwnProperty.call(injected, filePath)
+      ? injected[filePath]
+      : injected[stablePath];
   }
   return undefined;
 }

@@ -1406,9 +1406,10 @@ node tests/test-road-99-traversal-policy.mjs
 - [ ] Stage and validate the entire release before touching public pointers.
   Featured/precomputed snapshot generation is blocking; no promote endpoint may
   swallow its failure. Compute the final canonical release-index digest only
-  after snapshots exist, copy immutable assets first, and atomically replace the
-  mutable current manifest pointer last. Apply the same order to map and route-
-  catalog promotion.
+  after snapshots exist, copy stable public slots atomically first, and
+  atomically replace the mutable current manifest pointer last. Retain
+  content-addressed build outputs for audit/recovery, but do not rotate
+  hash-named checked-in public directories on every promotion.
 - [ ] Refactor `featuredRouteSnapshotBuilder` to accept staged manifest,
   catalog, asset, and output roots; key/invalidate caches by those roots; and add
   a strict promotion mode that forbids fallback to an existing snapshot.
@@ -1419,11 +1420,11 @@ node tests/test-road-99-traversal-policy.mjs
   routing contract/release index to reference that exact registry digest. Never
   roll registry history back after a later promotion failure: unused allocated
   IDs become reserved/tombstoned and are never reused.
-- [ ] Point the versioned current manifest to the immutable V2/V3 set and make
-  the legacy mutable routing path unsupported for enforced clients. Use
-  immutable URLs plus explicit manifest reload/browser-cache handling; this
-  repository has no service worker. Ship mobile code and bundled assets
-  together.
+- [ ] Point the current manifest to stable V3 public slots and make the
+  legacy routing path unsupported for enforced clients. Append the manifest
+  version to stable JSON requests and shard hashes to binary requests; retain
+  strict contract validation because this repository has no service worker.
+  Ship mobile code and bundled assets together.
 - [ ] Verify failure copy and Start-disabled behavior offline, on stale links,
   and after an interrupted active ride.
 - [ ] Keep a rollback generation only if it is itself V3/policy-compatible. Do
@@ -1518,7 +1519,23 @@ Manual acceptance on web and iOS:
 - Web/mobile present one logical segment and actual directional paths.
 - Every active segment and offered route has a disposition.
 - Road 99 token, coordinates, two directions, and return regressions pass.
-- Code and the complete immutable asset set are promoted atomically.
+- Code and the complete policy-bound asset set are promoted through stable
+  publication slots, with the versioned manifest pointer written last.
+
+### 2026-07-22 compact promotion amendment
+
+- [x] Convert the staged versioned build manifest to stable checked-in public
+  slots during Promote, reusing the current manifest paths when present.
+- [x] Publish the current route catalog, featured snapshots, routing shards,
+  CW indexes, junction data, and route-anchor compatibility through stable
+  slots.
+- [x] Keep the last hash-named public generation as a frozen fallback instead
+  of deleting it and adding a new hash-named tree on every promotion.
+- [x] Add manifest-version query keys to logical map, catalog, and featured-route
+  requests, including query-insensitive injected/native lookup.
+- [x] Restore the pre-promote `public-data` baseline, rerun real Promote, and
+  verify that Git reports content modifications rather than a full release-tree
+  deletion/addition.
 
 ### Gate E — Maneuver work may resume
 

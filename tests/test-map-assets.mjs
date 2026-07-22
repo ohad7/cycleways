@@ -59,6 +59,8 @@ try {
   assert.ok(
     requestedPaths.includes("public-data/base-routing-shards.test/manifest.json?v=shard-test"),
   );
+  assert.ok(requestedPaths.includes("public-data/segments.json?v=shard-test"));
+  assert.ok(requestedPaths.includes("public-data/bike-roads.json?v=shard-test"));
   assert.ok(requestedPaths.includes("public-data/cw-base-index.json?v=shard-test"));
   assert.ok(requestedPaths.includes("public-data/roundabouts.json?v=shard-test"));
   assert.ok(requestedPaths.includes("public-data/crossings.json?v=shard-test"));

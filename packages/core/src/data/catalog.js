@@ -1,6 +1,6 @@
 import { primaryPoiImage } from "./poiTypes.js";
 import { getJsonAsset, resolveAssetPath } from "../platform/assets.js";
-import { loadMapManifest } from "./mapAssets.js";
+import { assetPathWithVersion, loadMapManifest } from "./mapAssets.js";
 
 const ROUTE_CATALOG_PATH = "public-data/route-catalog.json";
 const EMPTY_ROUTE_CATALOG = { version: 1, entries: [] };
@@ -11,7 +11,10 @@ export async function loadRouteCatalogWithAssetLoader(loadJsonAsset = getJsonAss
   const catalogPath = manifest?.routeCatalog
     ? resolveAssetPath(manifest.routeCatalog, "public-data/map-manifest.json")
     : ROUTE_CATALOG_PATH;
-  const catalog = await loadJsonAsset(catalogPath, assetOptions);
+  const catalog = await loadJsonAsset(
+    assetPathWithVersion(catalogPath, manifest?.version),
+    assetOptions,
+  );
   return catalog && typeof catalog === "object" ? catalog : EMPTY_ROUTE_CATALOG;
 }
 

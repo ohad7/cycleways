@@ -10,8 +10,8 @@ It edits the source file directly and then runs the processing pipeline to gener
 - `build/public-data/map-manifest.json`
 - `build/report.json`
 
-The `Promote` action copies a fresh full build into the files used by the
-current site:
+The `Promote` action copies a fresh full build into the publication slots used
+by the current site. A new repository starts with these stable names:
 
 - `build/public-data/map-manifest.json` -> `public-data/map-manifest.json`
 - `build/public-data/bike_roads.geojson` -> `public-data/bike_roads.geojson`
@@ -19,13 +19,13 @@ current site:
 - `build/public-data/base-routing-shards/` -> `public-data/base-routing-shards/`
 - `build/public-data/exports/map.kml` -> `public-data/exports/map.kml`
 
-Promote also removes older `bike_roads.<version>.geojson`,
-`segments.<version>.json`, `base-routing-network.<version>.json`, legacy
-`base-routing-shards.<version>/`, root-level stable runtime files, old
-`public-data/base-routing-network.json`, and old `exports/map*.kml` files.
-Runtime artifacts now live under `public-data/` with stable names. The map
-manifest version and per-shard hashes provide browser cache busting, so Git only
-needs to record files whose contents changed.
+For a repository that already has a promoted manifest, Promote reuses those
+paths as stable publication slots even when their historical names contain a
+version suffix. It does not delete the tracked tree and add a newly named tree
+on each release. The map-manifest version and asset/shard hashes provide browser
+cache busting, so Git records only files whose contents changed. Old root-level
+legacy runtime files are still removed; the last content-addressed public
+generation may remain as a frozen compatibility fallback.
 
 Start it from the repository root:
 

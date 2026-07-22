@@ -1,25 +1,25 @@
 {
-  "version": "8112ad1dfe1f",
-  "generatedAt": "2026-07-22T06:34:37.364223Z",
+  "version": "8119b3dc320d",
+  "generatedAt": "2026-07-22T08:20:01.566223Z",
   "bikeRoads": "bike_roads.8112ad1dfe1f.geojson",
   "segments": "segments.8112ad1dfe1f.json",
   "cwBaseIndex": "cw-base-index.8112ad1dfe1f.json",
   "kml": "exports/map.8112ad1dfe1f.kml",
   "baseRoutingShards": "base-routing-shards.8112ad1dfe1f/manifest.json",
   "hashes": {
-    "bikeRoads": "3ec628517ac6e508af9bb0ed7aaf65a6c47b75af15bc6df0d79c1295b8bb2082",
+    "bikeRoads": "a47eca6e5328ebadb8f6fd1f451f14387ab6a3df05f94fc7dc4acad4f3443fca",
     "segments": "43f0f479a673d5d622775878ccd59e905f49fc3a2a7a1b5c52ab1a41d3c56331",
-    "cwBaseIndex": "9e9dd5e40dad66fa4c1461616cd4ed8db0a244d662be3278a90a35d0baeba52a",
-    "kml": "293531b895f9475453ffe9969fd3310c98003a2f7e4f9e359ec4024b76eaeb4f",
-    "baseRoutingShards": "076ebf09ef093ca4c22aa5813c1108c976c3ee48bd7719b54e982289cd921bef",
+    "cwBaseIndex": "eb51789211d4cd1c8b06077d72617d338df3a02118a50f230f7412aba22337aa",
+    "kml": "4443409099e8e12315ab23a1ccb5f114c2450888f887361fced1bd1403819385",
+    "baseRoutingShards": "976efb8352ca6c5aa695da73128fcd8bec2aad9abf2cc09cd76c7453a469bd1c",
     "roundabouts": "307c98e02ffd87d72c247b6816b32952cb06c78b41a3660ef36e4c9868858aeb",
-    "networkJunctions": "bb979eb97e57b11b6d5db26c7ae63c97a6b5d84ae05e486986ae43df305b468e",
-    "cwAlignmentGeometry": "3c38e0a01b7b5cb350ea71c914646a2b45b5d34871e40c7e967062f6395745eb",
+    "networkJunctions": "f6a76a2ed2abad7338aa44010c1c53c4937f58c46e5a8ed54c610a4ba4aa31f1",
+    "cwAlignmentGeometry": "9a92072e65a15c523d9499d7bea5be284248a798a80607fbc0609d7cf36fe6a6",
     "legacyCwBaseIndex": "c9831b6a52c74796263e9714c9cb6d326f672455adb6e33ced777c83557fc479",
     "legacyRoutingCompatibilityMetadata": "114b2ed8b7cdd01022de97b783748ad7f10b1ee1282e0f1eaded1de9581948f3",
     "routeAnchorCompatibility": "df5b7432365b934496caddcbb4c166543c67099291ba2f4392b8b2f47055911a",
-    "routeCatalog": "9905e86abda4e60fa3e0d38dbf0863aeb9e0c983f363e03766417748d4b1eaa3",
-    "featuredRouteSnapshots": "b875b92b421b16db231157ac1430ad2c337ee2e08cdf65362d607464b48852d0"
+    "routeCatalog": "e2e3642fcdbc617298f5736193a76abeaf3bebfaa09a1933c284677360f4ecb4",
+    "featuredRouteSnapshots": "b01504519dafc9a9f5a5cfac93559f591e0590c2c694e66b4106e609d5b749db"
   },
   "elevation": {
     "skipElevation": false,
@@ -69,39 +69,39 @@
       "f03acd80": "79eb7ad00c543c19c3a91a67ab9e3ae14ffa4643b13a03b8aeb11a45b2ca5d3b"
     }
   },
-  "routeCatalog": "route-catalog.9905e86abda4.json",
-  "featuredRoutesBase": "featured-routes.b875b92b421b",
-  "releaseBundleDigest": "f7fed6effee05c40e623f4972f02fbd11ea3593036ce45d34a1ac9fa683de499",
+  "releaseBundleDigest": "b772f594593237b810c85e42ea28b0581b9d3704851dce2811e655ddf42ac78b",
   "releaseIndex": {
     "schemaVersion": 1,
-    "mapVersion": "8112ad1dfe1f",
+    "mapVersion": "8119b3dc320d",
     "policyId": "il-bicycle-v1",
     "policyDigest": "9a8bbb7bdf928deb390f9446260665ac01ac56f208305e3ee2e664aa30bd0a2c",
-    "routingContextDigest": "2ccf062309a29050e068fcc71c670bcb606da4832af740a6cba0ac2ad8d02fec",
+    "routingContextDigest": "01a0caaf859d603f2f6422ab97df00d62a45ff17fcfa7363f8023d7da0342867",
     "baseEdgeShareRegistryDigest": "a6a7d71dab4a6f1f3d675cfca05d831dcf5b63e9c277782aa57be878bc5a3a92",
     "mapAssetHashes": {
-      "bikeRoads": "3ec628517ac6e508af9bb0ed7aaf65a6c47b75af15bc6df0d79c1295b8bb2082",
+      "bikeRoads": "a47eca6e5328ebadb8f6fd1f451f14387ab6a3df05f94fc7dc4acad4f3443fca",
       "segments": "43f0f479a673d5d622775878ccd59e905f49fc3a2a7a1b5c52ab1a41d3c56331",
-      "cwBaseIndex": "9e9dd5e40dad66fa4c1461616cd4ed8db0a244d662be3278a90a35d0baeba52a",
-      "kml": "293531b895f9475453ffe9969fd3310c98003a2f7e4f9e359ec4024b76eaeb4f",
-      "baseRoutingShards": "076ebf09ef093ca4c22aa5813c1108c976c3ee48bd7719b54e982289cd921bef",
+      "cwBaseIndex": "eb51789211d4cd1c8b06077d72617d338df3a02118a50f230f7412aba22337aa",
+      "kml": "4443409099e8e12315ab23a1ccb5f114c2450888f887361fced1bd1403819385",
+      "baseRoutingShards": "976efb8352ca6c5aa695da73128fcd8bec2aad9abf2cc09cd76c7453a469bd1c",
       "roundabouts": "307c98e02ffd87d72c247b6816b32952cb06c78b41a3660ef36e4c9868858aeb",
-      "networkJunctions": "bb979eb97e57b11b6d5db26c7ae63c97a6b5d84ae05e486986ae43df305b468e",
-      "cwAlignmentGeometry": "3c38e0a01b7b5cb350ea71c914646a2b45b5d34871e40c7e967062f6395745eb",
+      "networkJunctions": "f6a76a2ed2abad7338aa44010c1c53c4937f58c46e5a8ed54c610a4ba4aa31f1",
+      "cwAlignmentGeometry": "9a92072e65a15c523d9499d7bea5be284248a798a80607fbc0609d7cf36fe6a6",
       "legacyCwBaseIndex": "c9831b6a52c74796263e9714c9cb6d326f672455adb6e33ced777c83557fc479",
       "legacyRoutingCompatibilityMetadata": "114b2ed8b7cdd01022de97b783748ad7f10b1ee1282e0f1eaded1de9581948f3",
       "routeAnchorCompatibility": "df5b7432365b934496caddcbb4c166543c67099291ba2f4392b8b2f47055911a"
     },
-    "routeCatalogSha256": "9905e86abda4e60fa3e0d38dbf0863aeb9e0c983f363e03766417748d4b1eaa3",
+    "routeCatalogSha256": "e2e3642fcdbc617298f5736193a76abeaf3bebfaa09a1933c284677360f4ecb4",
     "featuredRouteSnapshotHashes": {
-      "banias-gan-hatsafon": "880097b80b9e773eea2b86b3f8dee9267fc450c9ab9c0c78d1a5016a71df61d1",
-      "historic-jordan": "3a17d08a96dca02edecbe6b0b34d936ef2189c315d03a0e60c520e34d870421e",
-      "kovshey-hagolan": "949d7a86cba318a3a26eca19e03b00a839319c69728b714ce3fcb17d3e9c4fd2",
-      "naftali-dishon-yosha": "ab1cd4608a772a4b80e148462e2952f5e313969fb55e8251303ad34f8aaa6aef",
-      "roman-roads": "4e15e4e3a574ee0e0c4d297688cc742ee2f38f01c7b8df5bc310e51fad3259af",
-      "sovev-beit-hillel": "e4403af1a05f7033064e214d5aa38866f45d0ec87ff60d7adf8849488d014036",
-      "sovev-dafna": "0a201839d35da5a742d38146d12e0de1e27d5011f575726ad3a7b71720ba7402",
-      "sovev-shear-yeshuv": "27cbc992bb73e35e984b12a480559290855d07d0042ceb80d4a057e86112a549"
+      "banias-gan-hatsafon": "e4a6907d9c440b7be487ae27df7925a008985de4e696d99a540f2618005a793e",
+      "historic-jordan": "e00b5e7b34b2c840249bc154d5d6ca7a8edb1f980997df5388e1646ba416f39a",
+      "kovshey-hagolan": "cbf45226260e556a6da2a4a5a7bd524168999e41af9228e8212857e4f4428a36",
+      "naftali-dishon-yosha": "79ccd9a709f47e4d0259d062bc9c98bac71470d3ec3f0c918864fae0b345819c",
+      "roman-roads": "b3c75d571577313565653b9e2d9ca4bdc272d5a250104428a7b6b48286dc2c9a",
+      "sovev-beit-hillel": "118e04c5372ebcec90f71b731b8fc15a21624ed26f735fca5bd1352a79c3041f",
+      "sovev-dafna": "abd904fb35f43103909f305859fbf42ff6898bfef631eb2b8439bc255f885aee",
+      "sovev-shear-yeshuv": "6ff2d2c951038c998a8d5ac77fee6a14b64e8c7ca560d1532806db29bb306abe"
     }
-  }
+  },
+  "routeCatalog": "route-catalog.9905e86abda4.json",
+  "featuredRoutesBase": "featured-routes.b875b92b421b"
 }

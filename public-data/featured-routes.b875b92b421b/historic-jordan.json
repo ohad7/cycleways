@@ -1,16 +1,16 @@
 {
   "schemaVersion": 1,
   "slug": "historic-jordan",
-  "generatedAt": "2026-07-22T06:35:59.790Z",
+  "generatedAt": "2026-07-22T08:36:04.664Z",
   "source": {
-    "routeTokenHash": "sha256:795b0ee445b0e416712775e90bf32aa13ed021755284be1b3528cd9f1e389e09",
+    "routeTokenHash": "sha256:da02c6e8f9020d3eafdcd785586dbf0c6a86549533f0e4a471fd9c678cca3db7",
     "routeFormat": "base_route_v4",
-    "mapVersion": "8112ad1dfe1f",
+    "mapVersion": "8119b3dc320d",
     "assetHashes": {
-      "bikeRoads": "3ec628517ac6e508af9bb0ed7aaf65a6c47b75af15bc6df0d79c1295b8bb2082",
+      "bikeRoads": "a47eca6e5328ebadb8f6fd1f451f14387ab6a3df05f94fc7dc4acad4f3443fca",
       "segments": "43f0f479a673d5d622775878ccd59e905f49fc3a2a7a1b5c52ab1a41d3c56331",
-      "cwBaseIndex": "9e9dd5e40dad66fa4c1461616cd4ed8db0a244d662be3278a90a35d0baeba52a",
-      "baseRoutingShards": "076ebf09ef093ca4c22aa5813c1108c976c3ee48bd7719b54e982289cd921bef"
+      "cwBaseIndex": "eb51789211d4cd1c8b06077d72617d338df3a02118a50f230f7412aba22337aa",
+      "baseRoutingShards": "976efb8352ca6c5aa695da73128fcd8bec2aad9abf2cc09cd76c7453a469bd1c"
     }
   },
   "route": {
@@ -1300,9 +1300,9 @@
         "elevation": 74.19637335382043
       },
       {
-        "lat": 33.14580846945382,
-        "lng": 35.62866894474314,
-        "elevation": 74.45604638742657
+        "lat": 33.14580799816693,
+        "lng": 35.62866892038239,
+        "elevation": 74.45564965285725
       },
       {
         "lat": 33.146003,
@@ -1320,9 +1320,9 @@
         "elevation": 74.54669256872938
       },
       {
-        "lat": 33.14678863067682,
-        "lng": 35.628601088145984,
-        "elevation": 73.9999847409781
+        "lat": 33.14678897967686,
+        "lng": 35.628600959370566,
+        "elevation": 73.99891660944533
       },
       {
         "lat": 33.146797,
@@ -1420,9 +1420,9 @@
         "elevation": 73.0612099541288
       },
       {
-        "lat": 33.146416529726885,
-        "lng": 35.62933384324229,
-        "elevation": 73.02146944380866
+        "lat": 33.146416994153924,
+        "lng": 35.62933399805131,
+        "elevation": 73.02041657129777
       },
       {
         "lat": 33.146426,
@@ -1855,9 +1855,9 @@
         "elevation": 80.30771343556879
       },
       {
-        "lat": 33.18219298220088,
-        "lng": 35.6198658706688,
-        "elevation": 80.49999237048905
+        "lat": 33.18219293308825,
+        "lng": 35.619865969018704,
+        "elevation": 80.50002288853284
       },
       {
         "lat": 33.182522,
@@ -2296,9 +2296,9 @@
       "east": 35.629337,
       "north": 33.183259
     },
-    "distance": 23865.06928664072,
-    "elevationGain": 45.192278934920274,
-    "elevationLoss": 48.192278934920274,
+    "distance": 23865.09061264972,
+    "elevationGain": 45.19230945296407,
+    "elevationLoss": 48.19230945296407,
     "selectedSegments": [
       "ירדן מערב כפר בלום",
       "הירדן ההיסטורי",
@@ -2331,7 +2331,7 @@
         "segmentName": "ירדן מערב כפר בלום",
         "routeDistanceMeters": 0.7705179910365144,
         "routeProgressMeters": 171.08187317069766,
-        "routeFraction": 0.007168652716308045
+        "routeFraction": 0.007168646313335447
       },
       {
         "type": "mud",
@@ -2344,7 +2344,7 @@
         "segmentName": "הירדן ההיסטורי",
         "routeDistanceMeters": 0.18885773886078727,
         "routeProgressMeters": 2111.277288404889,
-        "routeFraction": 0.08846649494714245
+        "routeFraction": 0.08846641592970844
       },
       {
         "id": "poi-5b6da297",
@@ -2365,7 +2365,7 @@
         "segmentName": "הירדן ההיסטורי",
         "routeDistanceMeters": 0,
         "routeProgressMeters": 7960.546550972846,
-        "routeFraction": 0.3335618940703899
+        "routeFraction": 0.33356159613607056
       },
       {
         "id": "poi-c6c5fae3",
@@ -2386,7 +2386,7 @@
         "segmentName": "אגמון החולה צפון",
         "routeDistanceMeters": 0.002350249060279382,
         "routeProgressMeters": 10615.957839895265,
-        "routeFraction": 0.4448286285084433
+        "routeFraction": 0.4448282311917323
       },
       {
         "type": "warning",
@@ -2399,7 +2399,7 @@
         "segmentName": "אגמון החולה גישה מזרח",
         "routeDistanceMeters": 3.875729190212262,
         "routeProgressMeters": 11982.880359985316,
-        "routeFraction": 0.5021052566807874
+        "routeFraction": 0.5021048082051355
       },
       {
         "id": "poi-a96860fc",
@@ -2420,7 +2420,7 @@
         "segmentName": "שדות עמיר ירדן",
         "routeDistanceMeters": 0.7791438262541694,
         "routeProgressMeters": 18536.209169663744,
-        "routeFraction": 0.7767020769148515
+        "routeFraction": 0.7767013831719248
       },
       {
         "type": "gate",
@@ -2433,7 +2433,7 @@
         "segmentName": "שדות עמיר מערב",
         "routeDistanceMeters": 6.418434983763764,
         "routeProgressMeters": 21005.717446322473,
-        "routeFraction": 0.8801791249931801
+        "routeFraction": 0.8801783388255358
       }
     ],
     "dataMarkerFeatures": [

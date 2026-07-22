@@ -1,5 +1,5 @@
 import { getJsonAsset, resolveAssetPath } from "../platform/assets.js";
-import { loadMapManifest } from "./mapAssets.js";
+import { assetPathWithVersion, loadMapManifest } from "./mapAssets.js";
 import { emptyRouteSnapshot } from "../routing/routeSnapshot.js";
 
 const FEATURED_ROUTES_BASE_PATH = "public-data/featured-routes";
@@ -43,7 +43,10 @@ export async function loadFeaturedRouteSnapshot(slug, options = {}) {
   const { manifest: suppliedManifest = null, ...assetOptions } = options;
   const manifest = suppliedManifest || await loadMapManifest(assetOptions);
   const snapshot = await getJsonAsset(
-    featuredRouteSnapshotPath(slug, manifest),
+    assetPathWithVersion(
+      featuredRouteSnapshotPath(slug, manifest),
+      manifest?.version,
+    ),
     assetOptions,
   );
   const validated = validateSnapshot(snapshot, slug);

@@ -1510,6 +1510,58 @@ async function snapshotDigestIndex(directory) {
   return hashes;
 }
 
+export function stablePromotionManifest(manifest, {
+  routeCatalog = "route-catalog.json",
+  featuredRoutesBase = "featured-routes",
+  currentManifest = null,
+} = {}) {
+  const current = currentManifest && typeof currentManifest === "object"
+    ? currentManifest
+    : {};
+  const currentPath = (key, fallback) => current[key] || fallback;
+  const stable = {
+    ...manifest,
+    bikeRoads: currentPath("bikeRoads", "bike_roads.geojson"),
+    segments: currentPath("segments", "segments.json"),
+    cwBaseIndex: currentPath("cwBaseIndex", "cw-base-index.json"),
+    kml: currentPath("kml", "exports/map.kml"),
+    baseRoutingShards: currentPath(
+      "baseRoutingShards",
+      "base-routing-shards/manifest.json",
+    ),
+    routeCatalog: currentPath("routeCatalog", routeCatalog),
+    featuredRoutesBase: currentPath("featuredRoutesBase", featuredRoutesBase),
+  };
+
+  if (manifest.cwAlignmentGeometry) {
+    stable.cwAlignmentGeometry = currentPath(
+      "cwAlignmentGeometry",
+      "cw-alignment-geometry.json",
+    );
+  }
+  if (manifest.roundabouts) {
+    stable.roundabouts = currentPath("roundabouts", "roundabouts.json");
+  }
+  if (manifest.crossings) {
+    stable.crossings = currentPath("crossings", "crossings.json");
+  }
+  if (manifest.networkJunctions) {
+    stable.networkJunctions = currentPath(
+      "networkJunctions",
+      "network-junctions.json",
+    );
+  }
+  if (manifest.routeAnchorCompatibility?.path) {
+    stable.routeAnchorCompatibility = {
+      ...manifest.routeAnchorCompatibility,
+      path: current.routeAnchorCompatibility?.path ||
+        "routing-compat/route-anchor-compatibility.json",
+    };
+  }
+
+  return stable;
+}
+
 async function preparePromotionRelease({
   manifest,
   publicDataRoot,
@@ -1521,14 +1573,13 @@ async function preparePromotionRelease({
     manifest,
   });
   const catalogDigest = await fileDigest(promotionCatalogPath);
-  const immutableCatalogName = `route-catalog.${catalogDigest.slice(0, 12)}.json`;
-  const immutableCatalogPath = resolve(buildPublicDataDir, immutableCatalogName);
-  await copyFileAtomic(promotionCatalogPath, immutableCatalogPath);
+  const stableCatalogPath = resolve(buildPublicDataDir, "route-catalog.json");
+  await copyFileAtomic(promotionCatalogPath, stableCatalogPath);
 
   await rm(promotionFeaturedRoutesDir, { recursive: true, force: true });
   invalidateFeaturedAssetCache();
   const snapshots = await buildFeaturedRouteSnapshots({
-    routeCatalogPath: immutableCatalogPath,
+    routeCatalogPath: stableCatalogPath,
     publicDataRoot,
     manifest,
     outputDir: promotionFeaturedRoutesDir,
@@ -1540,9 +1591,8 @@ async function preparePromotionRelease({
   const snapshotIndexDigest = createHash("sha256")
     .update(JSON.stringify(snapshotHashes))
     .digest("hex");
-  const immutableSnapshotsName = `featured-routes.${snapshotIndexDigest.slice(0, 12)}`;
-  const immutableSnapshotsPath = resolve(buildPublicDataDir, immutableSnapshotsName);
-  await copyDirectoryAtomic(promotionFeaturedRoutesDir, immutableSnapshotsPath);
+  const stableSnapshotsPath = resolve(buildPublicDataDir, "featured-routes");
+  await copyDirectoryAtomic(promotionFeaturedRoutesDir, stableSnapshotsPath);
 
   const shardManifest = JSON.parse(
     await readFile(
@@ -1571,10 +1621,12 @@ async function preparePromotionRelease({
   const releaseBundleDigest = createHash("sha256")
     .update(JSON.stringify(releaseIndex))
     .digest("hex");
-  const releaseManifest = {
+  let currentManifest = null;
+  try {
+    currentManifest = JSON.parse(await readFile(promotedManifestPath, "utf-8"));
+  } catch {}
+  const releaseManifest = stablePromotionManifest({
     ...manifest,
-    routeCatalog: immutableCatalogName,
-    featuredRoutesBase: immutableSnapshotsName,
     releaseBundleDigest,
     releaseIndex,
     hashes: {
@@ -1582,14 +1634,14 @@ async function preparePromotionRelease({
       routeCatalog: catalogDigest,
       featuredRouteSnapshots: snapshotIndexDigest,
     },
-  };
+  }, { currentManifest });
   await writeJsonAtomic(promotionManifestPath, releaseManifest);
   return {
     catalog,
     snapshots,
     releaseManifest,
-    immutableCatalogPath,
-    immutableSnapshotsPath,
+    stableCatalogPath,
+    stableSnapshotsPath,
   };
 }
 
@@ -5081,17 +5133,11 @@ async function cleanupOldPublicArtifacts(promoteId, dryRun, manifest = {}) {
     ...(await existingVersionedFiles(repoRoot, /^map-manifest\.json$/)),
     ...(await existingVersionedFiles(resolve(repoRoot, "exports"), /^map\.[0-9a-f]{12}\.kml$/)),
     ...(await existingVersionedFiles(resolve(repoRoot, "exports"), /^map\.kml$/)),
-    ...(await existingVersionedFiles(publicDataDir, /^bike_roads\.[0-9a-f]{12}\.geojson$/)),
-    ...(await existingVersionedFiles(publicDataDir, /^segments\.[0-9a-f]{12}\.json$/)),
-    ...(await existingVersionedFiles(publicDataDir, /^base-routing-network\.[0-9a-f]{12}\.json$/)),
-    ...(await existingVersionedFiles(publicDataDir, /^cw-base-index\.[0-9a-f]{12}\.json$/)),
-    ...(await existingVersionedFiles(publicDataDir, /^cw-alignment-geometry\.[0-9a-f]{12}\.json$/)),
-    ...(await existingVersionedFiles(resolve(publicDataDir, "routing-compat"), /^route-anchor-compatibility\.[0-9a-f]{12}\.json$/)),
-    ...(await existingVersionedFiles(publicDataDir, /^base-routing-shards\.[0-9a-f]{12}$/)),
-    ...(await existingVersionedFiles(publicDataDir, /^route-catalog\.[0-9a-f]{12}\.json$/)),
-    ...(await existingVersionedFiles(publicDataDir, /^featured-routes\.[0-9a-f]{12}$/)),
+    // Keep the last content-addressed public release as a frozen compatibility
+    // fallback. Promote now publishes stable aliases, so deleting and replacing
+    // these paths on every release only creates Git rename noise and adds no
+    // runtime value.
     ...(await existingVersionedFiles(publicDataDir, /^base-routing-network\.json$/)),
-    ...(await existingVersionedFiles(resolve(publicDataDir, "exports"), /^map\.[0-9a-f]{12}\.kml$/)),
     ...(!manifest.roundabouts
       ? await existingVersionedFiles(publicDataDir, /^roundabouts\.json$/)
       : []),
@@ -5119,60 +5165,67 @@ async function cleanupOldPublicArtifacts(promoteId, dryRun, manifest = {}) {
 export function buildPromoteTargets(manifest, {
   featuredRoutesSource = null,
   manifestSource = buildManifestPath,
+  sourceManifest = manifest,
 } = {}) {
   const targets = [
     {
       label: "public geojson",
-      source: resolveManifestPath(buildPublicDataDir, manifest.bikeRoads),
+      source: resolveManifestPath(buildPublicDataDir, sourceManifest.bikeRoads),
       target: resolveManifestPath(publicDataDir, manifest.bikeRoads),
     },
     {
       label: "public segments",
-      source: resolveManifestPath(buildPublicDataDir, manifest.segments),
+      source: resolveManifestPath(buildPublicDataDir, sourceManifest.segments),
       target: resolveManifestPath(publicDataDir, manifest.segments),
     },
     {
       label: "public CW base index",
-      source: resolveManifestPath(buildPublicDataDir, manifest.cwBaseIndex),
+      source: resolveManifestPath(buildPublicDataDir, sourceManifest.cwBaseIndex),
       target: resolveManifestPath(publicDataDir, manifest.cwBaseIndex),
     },
     {
       label: "public kml",
-      source: resolveManifestPath(buildPublicDataDir, manifest.kml),
+      source: resolveManifestPath(buildPublicDataDir, sourceManifest.kml),
       target: resolveManifestPath(publicDataDir, manifest.kml),
     },
     {
       kind: "directory",
       label: "base routing shards",
-      source: dirname(resolveManifestPath(buildPublicDataDir, manifest.baseRoutingShards)),
+      source: dirname(resolveManifestPath(buildPublicDataDir, sourceManifest.baseRoutingShards)),
       target: dirname(resolveManifestPath(publicDataDir, manifest.baseRoutingShards)),
     },
   ];
   if (manifest.cwAlignmentGeometry) {
     targets.push({
       label: "public CW alignment geometry",
-      source: resolveManifestPath(buildPublicDataDir, manifest.cwAlignmentGeometry),
+      source: resolveManifestPath(
+        buildPublicDataDir,
+        sourceManifest.cwAlignmentGeometry,
+      ),
       target: resolveManifestPath(publicDataDir, manifest.cwAlignmentGeometry),
     });
   }
   if (manifest.roundabouts) {
     targets.push({
       label: "public roundabouts",
-      source: resolveManifestPath(buildPublicDataDir, manifest.roundabouts),
+      source: resolveManifestPath(buildPublicDataDir, sourceManifest.roundabouts),
       target: resolveManifestPath(publicDataDir, manifest.roundabouts),
     });
   }
   if (manifest.crossings) {
     targets.push({
       label: "public crossings",
-      source: resolveManifestPath(buildPublicDataDir, manifest.crossings),
+      source: resolveManifestPath(buildPublicDataDir, sourceManifest.crossings),
       target: resolveManifestPath(publicDataDir, manifest.crossings),
     });
   }
   if (manifest.networkJunctions) {
     targets.push({
       label: "public network junctions",
-      source: resolveManifestPath(buildPublicDataDir, manifest.networkJunctions),
+      source: resolveManifestPath(
+        buildPublicDataDir,
+        sourceManifest.networkJunctions,
+      ),
       target: resolveManifestPath(publicDataDir, manifest.networkJunctions),
     });
   }
@@ -5181,7 +5234,7 @@ export function buildPromoteTargets(manifest, {
       label: "legacy routing compatibility index",
       source: resolveManifestPath(
         buildPublicDataDir,
-        manifest.legacyRoutingCompatibility.cwBaseIndex,
+        sourceManifest.legacyRoutingCompatibility.cwBaseIndex,
       ),
       target: resolveManifestPath(
         publicDataDir,
@@ -5194,7 +5247,7 @@ export function buildPromoteTargets(manifest, {
       label: "legacy routing compatibility metadata",
       source: resolveManifestPath(
         buildPublicDataDir,
-        manifest.legacyRoutingCompatibility.metadata,
+        sourceManifest.legacyRoutingCompatibility.metadata,
       ),
       target: resolveManifestPath(
         publicDataDir,
@@ -5207,7 +5260,7 @@ export function buildPromoteTargets(manifest, {
       label: "historical route anchor compatibility",
       source: resolveManifestPath(
         buildPublicDataDir,
-        manifest.routeAnchorCompatibility.path,
+        sourceManifest.routeAnchorCompatibility.path,
       ),
       target: resolveManifestPath(
         publicDataDir,
@@ -5217,16 +5270,19 @@ export function buildPromoteTargets(manifest, {
   }
   if (manifest.routeCatalog) {
     targets.push({
-      label: "versioned route catalog",
-      source: resolveManifestPath(buildPublicDataDir, manifest.routeCatalog),
+      label: "public route catalog",
+      source: resolveManifestPath(buildPublicDataDir, sourceManifest.routeCatalog),
       target: resolveManifestPath(publicDataDir, manifest.routeCatalog),
     });
   }
   if (manifest.featuredRoutesBase) {
     targets.push({
       kind: "directory",
-      label: "versioned featured route snapshots",
-      source: resolveManifestPath(buildPublicDataDir, manifest.featuredRoutesBase),
+      label: "public featured route snapshots",
+      source: resolveManifestPath(
+        buildPublicDataDir,
+        sourceManifest.featuredRoutesBase,
+      ),
       target: resolveManifestPath(publicDataDir, manifest.featuredRoutesBase),
     });
   }
@@ -5238,8 +5294,9 @@ export function buildPromoteTargets(manifest, {
       target: featuredRoutesDir,
     });
   }
-  // The manifest is the public mutable pointer. It must be switched only after
-  // every referenced immutable asset and precomputed snapshot is in place.
+  // The manifest is the public mutable pointer. Switch it only after every
+  // stable artifact has been replaced atomically; its version and hashes are
+  // the cache/integrity boundary for the release.
   targets.push({
     label: "public manifest",
     source: manifestSource,
@@ -5558,6 +5615,11 @@ async function handlePromote(payload = {}) {
 
   const targets = buildPromoteTargets(releaseManifest, {
     manifestSource: promotionManifestPath,
+    sourceManifest: {
+      ...manifest,
+      routeCatalog: "route-catalog.json",
+      featuredRoutesBase: "featured-routes",
+    },
   });
 
   for (const target of targets) {
@@ -7092,12 +7154,17 @@ const server = createServer(async (request, response) => {
             catalogSourcePath: routeCatalogDraftPath,
           });
           const labels = new Set([
-            "versioned route catalog",
-            "versioned featured route snapshots",
+            "public route catalog",
+            "public featured route snapshots",
             "public manifest",
           ]);
           const targets = buildPromoteTargets(release.releaseManifest, {
             manifestSource: promotionManifestPath,
+            sourceManifest: {
+              ...release.releaseManifest,
+              routeCatalog: "route-catalog.json",
+              featuredRoutesBase: "featured-routes",
+            },
           }).filter((target) => labels.has(target.label));
           for (const target of targets) {
             await stat(target.source);
