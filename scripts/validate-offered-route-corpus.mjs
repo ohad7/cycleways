@@ -11,6 +11,7 @@ const { values } = parseArgs({
     root: { type: "string", default: "build/public-data" },
     catalog: { type: "string" },
     corpus: { type: "string", default: "data/offered-route-corpus.json" },
+    "migration-report": { type: "string" },
     check: { type: "boolean", default: false },
   },
 });
@@ -25,12 +26,18 @@ function block(code, detail) {
 let manifest;
 let shardManifest;
 let corpus;
+let migrationReport = null;
 try {
   manifest = JSON.parse(await readFile(path.join(root, "map-manifest.json"), "utf8"));
   shardManifest = JSON.parse(
     await readFile(path.join(root, manifest.baseRoutingShards), "utf8"),
   );
   corpus = JSON.parse(await readFile(path.resolve(values.corpus), "utf8"));
+  if (values["migration-report"]) {
+    migrationReport = JSON.parse(
+      await readFile(path.resolve(values["migration-report"]), "utf8"),
+    );
+  }
 } catch (error) {
   block("corpus-input-load-failed", error instanceof Error ? error.message : String(error));
 }
@@ -58,6 +65,9 @@ if (manifest && shardManifest && corpus) {
     invalidateFeaturedAssetCache();
     const catalog = JSON.parse(await readFile(catalogPath, "utf8"));
     const bySlug = new Map((catalog.entries || []).map((entry) => [entry.slug, entry]));
+    const migrationBySlug = new Map(
+      (migrationReport?.routes || []).map((route) => [route.slug, route]),
+    );
     const expectedBySlug = new Map((corpus.entries || []).map((entry) => [entry.slug, entry]));
     for (const slug of bySlug.keys()) {
       if (!expectedBySlug.has(slug)) block("catalog-route-missing-from-corpus", slug);
@@ -76,12 +86,25 @@ if (manifest && shardManifest && corpus) {
           log: () => {},
         });
         const fingerprint = routeState?.routingValidation?.contentFingerprint || null;
+        const migrated = migrationBySlug.get(expected.slug);
+        const acceptsSafeMigration = Boolean(
+          migrated?.automaticPromotionSafe === true &&
+          migrated?.exactCurrentPolicy === true &&
+          migrated?.currentFingerprint === fingerprint &&
+          migrated?.currentToken === bySlug.get(expected.slug)?.route
+        );
         const result = {
           slug: expected.slug,
           fingerprint,
           distanceMeters: Number(routeState?.distance) || 0,
           requiresReview: routeState?.requiresReview === true,
           routeFailure: routeState?.routeFailure || null,
+          fingerprintDisposition:
+            expected.acceptedFingerprint === fingerprint
+              ? "accepted"
+              : acceptsSafeMigration
+                ? "safe-current-graph-migration"
+                : "changed",
         };
         results.push(result);
         if (!routeState || result.routeFailure || result.requiresReview || !fingerprint) {
@@ -89,7 +112,7 @@ if (manifest && shardManifest && corpus) {
         }
         if (!expected.acceptedFingerprint) {
           block("offered-route-fingerprint-unaccepted", expected.slug);
-        } else if (expected.acceptedFingerprint !== fingerprint) {
+        } else if (expected.acceptedFingerprint !== fingerprint && !acceptsSafeMigration) {
           block("offered-route-fingerprint-changed", {
             slug: expected.slug,
             expected: expected.acceptedFingerprint,

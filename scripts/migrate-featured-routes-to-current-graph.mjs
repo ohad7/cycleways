@@ -2,6 +2,7 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { parseArgs } from "node:util";
 import {
   invalidateFeaturedAssetCache,
   loadRouteStateForSlug,
@@ -89,13 +90,21 @@ function lineFeature(slug, kind, geometry, properties = {}) {
   };
 }
 
-async function main() {
+export async function migrateFeaturedRoutesToCurrentGraph({
+  sourceCatalogPath = catalogPath,
+  outputCatalogPath = draftPath,
+  stagedPublicDataRoot = publicDataRoot,
+  baselineSnapshotsDir = path.join(repoRoot, "public-data/featured-routes"),
+  outputReportPath = reportPath,
+  outputReviewGeoJsonPath = reviewGeoJsonPath,
+  outputMaterialReviewGeoJsonPath = materialReviewGeoJsonPath,
+} = {}) {
   const [catalog, manifest] = await Promise.all([
-    readFile(catalogPath, "utf8").then(JSON.parse),
-    readFile(path.join(publicDataRoot, "map-manifest.json"), "utf8").then(JSON.parse),
+    readFile(sourceCatalogPath, "utf8").then(JSON.parse),
+    readFile(path.join(stagedPublicDataRoot, "map-manifest.json"), "utf8").then(JSON.parse),
   ]);
   const currentCwBaseIndex = JSON.parse(
-    await readFile(path.join(publicDataRoot, manifest.cwBaseIndex), "utf8"),
+    await readFile(path.join(stagedPublicDataRoot, manifest.cwBaseIndex), "utf8"),
   );
   const currentCwSegmentIds = new Set(
     Object.keys(currentCwBaseIndex.segments || {}).map(Number),
@@ -107,8 +116,8 @@ async function main() {
   const historicalRecoveryBySlug = new Map();
   for (const entry of catalog.entries || []) {
     const { routeState, currentShareInfo } = await loadRouteStateForSlug(entry.slug, {
-      routeCatalogPath: catalogPath,
-      publicDataRoot,
+      routeCatalogPath: sourceCatalogPath,
+      publicDataRoot: stagedPublicDataRoot,
       manifest,
       allowSnapshotFallback: false,
       includeCurrentShareInfo: true,
@@ -122,8 +131,8 @@ async function main() {
   }
 
   let migratedCatalog = { ...catalog, entries: migratedEntries };
-  await mkdir(path.dirname(draftPath), { recursive: true });
-  await writeFile(draftPath, `${JSON.stringify(migratedCatalog, null, 2)}\n`);
+  await mkdir(path.dirname(outputCatalogPath), { recursive: true });
+  await writeFile(outputCatalogPath, `${JSON.stringify(migratedCatalog, null, 2)}\n`);
 
   // Fraction quantization can move a reconstructed anchor onto an adjacent
   // edge at an exact boundary. Re-encode only those candidates that do not yet
@@ -133,8 +142,8 @@ async function main() {
     const nextEntries = [];
     for (const entry of migratedCatalog.entries || []) {
       const { routeState, currentShareInfo } = await loadRouteStateForSlug(entry.slug, {
-        routeCatalogPath: draftPath,
-        publicDataRoot,
+        routeCatalogPath: outputCatalogPath,
+        publicDataRoot: stagedPublicDataRoot,
         manifest,
         allowSnapshotFallback: false,
         includeCurrentShareInfo: true,
@@ -150,22 +159,22 @@ async function main() {
       nextEntries.push({ ...entry, route: replacement });
     }
     migratedCatalog = { ...migratedCatalog, entries: nextEntries };
-    await writeFile(draftPath, `${JSON.stringify(migratedCatalog, null, 2)}\n`);
+    await writeFile(outputCatalogPath, `${JSON.stringify(migratedCatalog, null, 2)}\n`);
     if (!changed) break;
   }
 
   const originalBySlug = new Map((catalog.entries || []).map((entry) => [entry.slug, entry]));
   for (const entry of migratedCatalog.entries || []) {
     const { routeState, routeFormat } = await loadRouteStateForSlug(entry.slug, {
-      routeCatalogPath: draftPath,
-      publicDataRoot,
+      routeCatalogPath: outputCatalogPath,
+      publicDataRoot: stagedPublicDataRoot,
       manifest,
       allowSnapshotFallback: false,
       log: () => {},
     });
     const previousSnapshot = JSON.parse(
       await readFile(
-        path.join(repoRoot, "public-data/featured-routes", `${entry.slug}.json`),
+        path.join(baselineSnapshotsDir, `${entry.slug}.json`),
         "utf8",
       ),
     );
@@ -196,6 +205,14 @@ async function main() {
       Math.abs(distanceDeltaPercent || 0) > 1 ||
       Number(approximateMaxDeviationMeters) > 100 ||
       missingCurrentSegmentIds.length > 0;
+    const exactCurrentPolicy = routeState.requiresReview !== true && !routeState.routeFailure;
+    const automaticPromotionSafe =
+      exactCurrentPolicy &&
+      Number.isFinite(distanceDeltaMeters) &&
+      Number.isFinite(approximateMaxDeviationMeters) &&
+      Math.abs(distanceDeltaMeters) <= 1 &&
+      approximateMaxDeviationMeters <= 1 &&
+      missingCurrentSegmentIds.length === 0;
     comparisons.push({
       slug: entry.slug,
       previousToken: originalBySlug.get(entry.slug)?.route || null,
@@ -209,9 +226,10 @@ async function main() {
       historicalSegmentIds,
       missingCurrentSegmentIds,
       materialChange,
+      automaticPromotionSafe,
       currentFingerprint: routeState.routingValidation?.contentFingerprint || null,
       recoveredHistoricalToken: historicalRecoveryBySlug.get(entry.slug) === true,
-      exactCurrentPolicy: routeState.requiresReview !== true && !routeState.routeFailure,
+      exactCurrentPolicy,
     });
     features.push(
       lineFeature(entry.slug, "previous", previousGeometry, { materialChange }),
@@ -223,31 +241,68 @@ async function main() {
     schemaVersion: 1,
     generatedAt: new Date().toISOString(),
     stagedMapVersion: manifest.version,
-    sourceCatalog: path.relative(repoRoot, catalogPath),
-    draftCatalog: path.relative(repoRoot, draftPath),
-    reviewGeoJson: path.relative(repoRoot, reviewGeoJsonPath),
-    materialReviewGeoJson: path.relative(repoRoot, materialReviewGeoJsonPath),
+    sourceCatalog: path.relative(repoRoot, sourceCatalogPath),
+    draftCatalog: path.relative(repoRoot, outputCatalogPath),
+    reviewGeoJson: path.relative(repoRoot, outputReviewGeoJsonPath),
+    materialReviewGeoJson: path.relative(repoRoot, outputMaterialReviewGeoJsonPath),
     summary: {
       routes: comparisons.length,
       historicalTokensRecovered: comparisons.filter((item) => item.recoveredHistoricalToken).length,
       materialChanges: comparisons.filter((item) => item.materialChange).length,
+      automaticPromotionSafe: comparisons.filter((item) => item.automaticPromotionSafe).length,
       exactCurrentPolicy: comparisons.filter((item) => item.exactCurrentPolicy).length,
     },
     routes: comparisons,
   };
-  await writeFile(reportPath, `${JSON.stringify(report, null, 2)}\n`);
+  await mkdir(path.dirname(outputReportPath), { recursive: true });
+  await mkdir(path.dirname(outputReviewGeoJsonPath), { recursive: true });
+  await mkdir(path.dirname(outputMaterialReviewGeoJsonPath), { recursive: true });
+  await writeFile(outputReportPath, `${JSON.stringify(report, null, 2)}\n`);
   await writeFile(
-    reviewGeoJsonPath,
+    outputReviewGeoJsonPath,
     `${JSON.stringify({ type: "FeatureCollection", features }, null, 2)}\n`,
   );
   await writeFile(
-    materialReviewGeoJsonPath,
+    outputMaterialReviewGeoJsonPath,
     `${JSON.stringify({
       type: "FeatureCollection",
       features: features.filter((feature) => feature.properties?.materialChange === true),
     }, null, 2)}\n`,
   );
-  console.log(JSON.stringify({ report: reportPath, draft: draftPath, ...report.summary }));
+  return { report, catalog: migratedCatalog };
 }
 
-await main();
+async function main() {
+  const { values } = parseArgs({
+    options: {
+      catalog: { type: "string", default: catalogPath },
+      output: { type: "string", default: draftPath },
+      root: { type: "string", default: publicDataRoot },
+      "baseline-snapshots": {
+        type: "string",
+        default: path.join(repoRoot, "public-data/featured-routes"),
+      },
+      report: { type: "string", default: reportPath },
+      "review-geojson": { type: "string", default: reviewGeoJsonPath },
+      "material-review-geojson": { type: "string", default: materialReviewGeoJsonPath },
+    },
+  });
+  const result = await migrateFeaturedRoutesToCurrentGraph({
+    sourceCatalogPath: path.resolve(values.catalog),
+    outputCatalogPath: path.resolve(values.output),
+    stagedPublicDataRoot: path.resolve(values.root),
+    baselineSnapshotsDir: path.resolve(values["baseline-snapshots"]),
+    outputReportPath: path.resolve(values.report),
+    outputReviewGeoJsonPath: path.resolve(values["review-geojson"]),
+    outputMaterialReviewGeoJsonPath: path.resolve(values["material-review-geojson"]),
+  });
+  console.log(JSON.stringify({
+    report: path.resolve(values.report),
+    draft: path.resolve(values.output),
+    ...result.report.summary,
+  }));
+}
+
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  await main();
+}

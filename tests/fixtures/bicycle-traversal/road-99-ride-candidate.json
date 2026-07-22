@@ -10,6 +10,9 @@
   "coordinateReplan": {
     "requiredSegmentIds": [174, 352],
     "acceptedFingerprint": "sha256-76c95587abb454c06abccdb387db3749963ff3d4744033891e9000d0686fe44d",
+    "acceptedTraversalPathFingerprint": "sha256-7932e1c8eddc192ec5681528726b1ae82c7895ec70dc12186472627f65bf88bc",
+    "acceptedDistanceMeters": 10086.56804091308,
+    "distanceToleranceMeters": 10,
     "observedCandidateFingerprint": "sha256-d1fff0e598b86d436af0521a452c560f5710c1cc8e0180be88a3a63e5765ea2e",
     "coordinates": [
       {

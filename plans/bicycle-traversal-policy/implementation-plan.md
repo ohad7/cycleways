@@ -1323,6 +1323,14 @@ npm run mobile:assets
 - [ ] Rebuild affected catalog routes and compare distance, CycleWays share,
   road exposure, endpoint behavior, and traversal fingerprint. Record
   accept/fix/withdraw rationale for material changes.
+- [x] Make Promote migrate every offered-route token to the staged current
+  graph before auditing it. Accept a fingerprint transition automatically only
+  when exact current-policy replay succeeds, geometry and distance stay within
+  one metre of the promoted snapshot, and no current CycleWays segment is lost;
+  otherwise retain the review blocker and generated comparison artifacts.
+- [x] Make the reported-ride gate tolerate bounded geometry-only changes on the
+  exact same directed traversal path while continuing to block edge,
+  direction, policy, membership, or material distance changes.
 - [ ] Wire the editor route-fixture panel to the final non-mutating restore and
   candidate APIs. Show historical-token exact rejection, frozen-coordinate
   replan, both isolated directions, and A-to-B-to-A with before/after metrics

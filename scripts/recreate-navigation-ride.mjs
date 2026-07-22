@@ -8,6 +8,10 @@ import { createShardedRouteSession } from "../packages/core/src/routing/shardedR
 import { decodeCompactBaseRoutingShard } from "../packages/core/src/routing/compactBaseRoutingShard.js";
 import { decodeMessagePack } from "../packages/core/src/routing/messagePack.js";
 import { validateRouteAttestation } from "../packages/core/src/routing/routeAttestation.js";
+import {
+  reportedRideFingerprintDisposition,
+  reportedRideTraversalPathFingerprint,
+} from "./lib/reportedRideAcceptance.mjs";
 
 const require = createRequire(import.meta.url);
 const RouteManager = require("../packages/core/route-manager.js");
@@ -99,9 +103,19 @@ for (const required of requiredSegments) {
 }
 const acceptedFingerprint = replan.acceptedFingerprint;
 const actualFingerprint = route?.routingValidation?.contentFingerprint || null;
-if (!acceptedFingerprint) {
+const traversalPathFingerprint = reportedRideTraversalPathFingerprint(slices);
+const fingerprintDisposition = reportedRideFingerprintDisposition({
+  acceptedFingerprint,
+  actualFingerprint,
+  acceptedTraversalPathFingerprint: replan.acceptedTraversalPathFingerprint,
+  actualTraversalPathFingerprint: traversalPathFingerprint,
+  acceptedDistanceMeters: replan.acceptedDistanceMeters,
+  actualDistanceMeters: route?.distance,
+  distanceToleranceMeters: replan.distanceToleranceMeters,
+});
+if (fingerprintDisposition === "unaccepted") {
   blockers.push("replacement-fingerprint-unaccepted");
-} else if (acceptedFingerprint !== actualFingerprint) {
+} else if (fingerprintDisposition === "changed") {
   blockers.push("replacement-fingerprint-changed");
 }
 
@@ -119,6 +133,8 @@ const report = {
       waypointCount: route.points?.length || 0,
       traversalCount: slices.length,
       contentFingerprint: actualFingerprint,
+      traversalPathFingerprint,
+      fingerprintDisposition,
       requiresReview: route.requiresReview === true,
       routeFailure: route.routeFailure || null,
       unsnappedPoints: (route.points || [])

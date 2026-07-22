@@ -94,6 +94,22 @@ route fingerprint gate. Before a future release replaces public routing
 pointers, its released-token anchors and registry snapshot must be captured in
 the compatibility archive.
 
+Promotion performs that current-graph token migration automatically before the
+offered-route audit. A graph-bound token becoming stale is not itself a route
+review event: the migrated token must replay exactly under current policy and
+must preserve the promoted route within one metre of distance and geometry,
+with no accepted CycleWays segment lost. Only then may the audit accept the
+fingerprint transition and advance the corpus fingerprint after a successful
+promotion. Any larger or non-exact change remains blocking and produces the
+migration report and map overlay for review.
+
+The reported-ride fixture distinguishes content geometry from its directed
+traversal path. A content fingerprint change is non-blocking only when the
+ordered edge-share IDs, directions, policy states, and CycleWays memberships
+are unchanged and distance remains within the fixture's explicit tolerance.
+Changing an edge, direction, membership, or route length beyond that tolerance
+continues to require deliberate fixture review.
+
 ## 2026-07-20 amendment — local roundabout reverse repair
 
 When an otherwise valid alignment has no exact reverse solely because a

@@ -138,6 +138,7 @@ const directionReviewPendingApprovalsPath = resolve(
 );
 const bicycleTraversalPolicyAuditPath = resolve(buildDir, "bicycle-traversal-policy-audit.json");
 const bicycleTraversalOverridesPath = resolve(dataDir, "bicycle-traversal-overrides.json");
+const offeredRouteCorpusPath = resolve(dataDir, "offered-route-corpus.json");
 const manualBaseEdgesPath = resolve(dataDir, "manual-base-edges.geojson");
 const baseGraphInputPathByKey = new Map([
   ["rawOsmWays", osmRawWaysPath],
@@ -171,6 +172,22 @@ const featuredRoutesDir = resolve(publicDataDir, "featured-routes");
 const promotionFeaturedRoutesDir = resolve(buildDir, "promotion-featured-routes");
 const promotionCatalogPath = resolve(buildDir, "promotion-route-catalog.json");
 const promotionManifestPath = resolve(buildDir, "promotion-map-manifest.json");
+const offeredRouteMigrationCatalogPath = resolve(
+  buildDir,
+  "offered-route-current-graph-catalog.json",
+);
+const offeredRouteMigrationReportPath = resolve(
+  buildDir,
+  "featured-route-current-graph-migration.json",
+);
+const offeredRouteMigrationReviewPath = resolve(
+  buildDir,
+  "featured-route-current-graph-migration.geojson",
+);
+const offeredRouteMaterialReviewPath = resolve(
+  buildDir,
+  "featured-route-material-review.geojson",
+);
 const poiImagesDir = resolve(publicDataDir, "poi-images");
 const routeMapImagesDir = resolve(publicDataDir, "route-map-images");
 const imagesDir = resolve(repoRoot, "public/images");
@@ -5269,6 +5286,7 @@ async function runOfferedRouteCorpusAudit(
   promoteId,
   catalogPath,
   publicDataRoot = buildPublicDataDir,
+  migrationReportPath = null,
 ) {
   const result = await runBuildDependencyStep(
     `promote-${promoteId}`,
@@ -5280,6 +5298,9 @@ async function runOfferedRouteCorpusAudit(
       publicDataRoot,
       "--catalog",
       catalogPath,
+      ...(migrationReportPath
+        ? ["--migration-report", migrationReportPath]
+        : []),
     ],
   );
   let audit;
@@ -5297,6 +5318,106 @@ async function runOfferedRouteCorpusAudit(
     );
   }
   return audit;
+}
+
+export function offeredRouteMigrationBlockers(report, corpus = null) {
+  const routes = Array.isArray(report?.routes) ? report.routes : [];
+  const routeCount = Number(report?.summary?.routes) || routes.length;
+  const blockers = [];
+  if (routeCount === 0) blockers.push("no-offered-routes-migrated");
+  const acceptedBySlug = new Map(
+    (corpus?.entries || []).map((entry) => [entry.slug, entry.acceptedFingerprint]),
+  );
+  if (routes.length !== routeCount) {
+    blockers.push(`route-report-count-mismatch=${routeCount - routes.length}`);
+  }
+  const notExact = routes.filter((route) => route.exactCurrentPolicy !== true);
+  if (notExact.length > 0) {
+    blockers.push(`not-exact-current-policy=${notExact.length}`);
+  }
+  const needsReview = routes.filter(
+    (route) =>
+      route.exactCurrentPolicy === true &&
+      route.automaticPromotionSafe !== true &&
+      acceptedBySlug.get(route.slug) !== route.currentFingerprint,
+  );
+  if (needsReview.length > 0) blockers.push(`route-changes-need-review=${needsReview.length}`);
+  return blockers;
+}
+
+async function currentFeaturedRouteSnapshotDirectory() {
+  const promotedManifest = await readJsonOrNull(promotedManifestPath);
+  if (promotedManifest?.featuredRoutesBase) {
+    const versioned = resolveManifestPath(publicDataDir, promotedManifest.featuredRoutesBase);
+    try {
+      await stat(versioned);
+      return versioned;
+    } catch {}
+  }
+  return featuredRoutesDir;
+}
+
+async function prepareOfferedRouteCatalogForPromotion(promoteId, catalogSourcePath) {
+  const baselineSnapshotsDir = await currentFeaturedRouteSnapshotDirectory();
+  await runBuildDependencyStep(
+    `promote-${promoteId}`,
+    "offered route current-graph migration",
+    process.execPath,
+    [
+      resolve(repoRoot, "scripts/migrate-featured-routes-to-current-graph.mjs"),
+      "--catalog",
+      catalogSourcePath,
+      "--output",
+      offeredRouteMigrationCatalogPath,
+      "--root",
+      buildPublicDataDir,
+      "--baseline-snapshots",
+      baselineSnapshotsDir,
+      "--report",
+      offeredRouteMigrationReportPath,
+      "--review-geojson",
+      offeredRouteMigrationReviewPath,
+      "--material-review-geojson",
+      offeredRouteMaterialReviewPath,
+    ],
+  );
+  const report = JSON.parse(await readFile(offeredRouteMigrationReportPath, "utf-8"));
+  const corpus = JSON.parse(await readFile(offeredRouteCorpusPath, "utf-8"));
+  const blockers = offeredRouteMigrationBlockers(report, corpus);
+  if (blockers.length > 0) {
+    const reviewSlugs = (report.routes || [])
+      .filter(
+        (route) =>
+          route.exactCurrentPolicy !== true ||
+          (
+            route.automaticPromotionSafe !== true &&
+            corpus.entries?.find((entry) => entry.slug === route.slug)?.acceptedFingerprint !==
+              route.currentFingerprint
+          ),
+      )
+      .map((route) => route.slug)
+      .join(", ");
+    throw new Error(
+      `Promote blocked by offered-route migration: ${blockers.join(", ")}` +
+      `${reviewSlugs ? ` (${reviewSlugs})` : ""}. Review ${repoRelative(offeredRouteMigrationReportPath)}.`,
+    );
+  }
+  return { catalogPath: offeredRouteMigrationCatalogPath, report };
+}
+
+async function advanceOfferedRouteCorpus(report) {
+  const corpus = JSON.parse(await readFile(offeredRouteCorpusPath, "utf-8"));
+  const migratedBySlug = new Map((report?.routes || []).map((route) => [route.slug, route]));
+  const entries = (corpus.entries || []).map((entry) => {
+    const migrated = migratedBySlug.get(entry.slug);
+    if (!migrated?.currentFingerprint || migrated.exactCurrentPolicy !== true) return entry;
+    return {
+      ...entry,
+      acceptedFingerprint: migrated.currentFingerprint,
+      distanceMeters: migrated.currentDistanceMeters,
+    };
+  });
+  await writeJsonAtomicIfChanged(offeredRouteCorpusPath, { ...corpus, entries });
 }
 
 async function runReportedRideAudit(promoteId, publicDataRoot = buildPublicDataDir) {
@@ -5406,7 +5527,17 @@ async function handlePromote(payload = {}) {
     catalogSourcePath = routeCatalogDraftPath;
     usesCatalogDraft = true;
   } catch {}
-  await runOfferedRouteCorpusAudit(promoteId, catalogSourcePath);
+  const offeredRouteMigration = await prepareOfferedRouteCatalogForPromotion(
+    promoteId,
+    catalogSourcePath,
+  );
+  catalogSourcePath = offeredRouteMigration.catalogPath;
+  await runOfferedRouteCorpusAudit(
+    promoteId,
+    catalogSourcePath,
+    buildPublicDataDir,
+    offeredRouteMigrationReportPath,
+  );
   await runReportedRideAudit(promoteId);
   const release = await preparePromotionRelease({
     manifest,
@@ -5419,6 +5550,9 @@ async function handlePromote(payload = {}) {
   log("info", `promote#${promoteId} checks passed`, {
     version: releaseManifest.version,
     releaseBundleDigest: releaseManifest.releaseBundleDigest,
+    offeredRoutesMigrated: offeredRouteMigration.report.summary?.routes || 0,
+    offeredRoutesRecovered:
+      offeredRouteMigration.report.summary?.historicalTokensRecovered || 0,
     warnings: (report.validation?.routeCompatibilityWarnings || []).length,
   });
 
@@ -5492,6 +5626,7 @@ async function handlePromote(payload = {}) {
     // featured-route decoding (keyframe polyline, catalog, Phase 2 snapshots)
     // reads the freshly promoted data instead of stale cached copies.
     invalidateFeaturedAssetCache();
+    await advanceOfferedRouteCorpus(offeredRouteMigration.report);
     if (usesCatalogDraft) {
       await unlink(routeCatalogDraftPath);
     }
@@ -5520,6 +5655,7 @@ async function handlePromote(payload = {}) {
     })),
     removed: removed.map((filePath) => repoRelative(filePath)),
     warnings: report.validation?.routeCompatibilityWarnings || [],
+    offeredRouteMigration: offeredRouteMigration.report.summary,
     snapshots,
   };
 }

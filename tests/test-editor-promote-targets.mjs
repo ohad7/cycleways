@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { buildPromoteTargets } from "../editor/server.mjs";
+import {
+  buildPromoteTargets,
+  offeredRouteMigrationBlockers,
+} from "../editor/server.mjs";
 
 const repoRoot = fileURLToPath(new URL("..", import.meta.url));
 
@@ -70,6 +73,61 @@ assert.equal(
 assert.equal(
   byLabel.get("public crossings").target,
   path.join(repoRoot, "public-data/crossings.json"),
+);
+
+assert.deepEqual(
+  offeredRouteMigrationBlockers({
+    summary: { routes: 8, exactCurrentPolicy: 8, materialChanges: 0 },
+    routes: Array.from({ length: 8 }, (_, index) => ({
+      slug: `route-${index}`,
+      exactCurrentPolicy: true,
+      automaticPromotionSafe: true,
+      currentFingerprint: `fingerprint-${index}`,
+    })),
+  }),
+  [],
+);
+assert.deepEqual(
+  offeredRouteMigrationBlockers({
+    summary: { routes: 2, exactCurrentPolicy: 1, automaticPromotionSafe: 0 },
+    routes: [
+      {
+        slug: "not-exact",
+        exactCurrentPolicy: false,
+        automaticPromotionSafe: false,
+        currentFingerprint: "fingerprint-1",
+      },
+      {
+        slug: "changed",
+        exactCurrentPolicy: true,
+        automaticPromotionSafe: false,
+        currentFingerprint: "fingerprint-2",
+      },
+    ],
+  }),
+  ["not-exact-current-policy=1", "route-changes-need-review=1"],
+);
+assert.deepEqual(offeredRouteMigrationBlockers({ summary: {} }), [
+  "no-offered-routes-migrated",
+]);
+assert.deepEqual(
+  offeredRouteMigrationBlockers({ summary: { routes: 1 }, routes: [] }),
+  ["route-report-count-mismatch=1"],
+);
+assert.deepEqual(
+  offeredRouteMigrationBlockers(
+    {
+      summary: { routes: 1 },
+      routes: [{
+        slug: "reviewed-change",
+        exactCurrentPolicy: true,
+        automaticPromotionSafe: false,
+        currentFingerprint: "accepted-after-review",
+      }],
+    },
+    { entries: [{ slug: "reviewed-change", acceptedFingerprint: "accepted-after-review" }] },
+  ),
+  [],
 );
 
 assert.equal(
