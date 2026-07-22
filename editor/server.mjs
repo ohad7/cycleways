@@ -66,6 +66,7 @@ import {
   normalizeAlignmentEdgeRefs,
   oppositeAlignmentKey,
   parseCwOverlayV2,
+  projectCwOverlayV2Compatibility,
   publishAlignmentUnavailable,
   setAlignmentDraft,
 } from "./lib/cw-overlay-v2.mjs";
@@ -1926,6 +1927,8 @@ function normalizeCwBaseOverlay(overlay) {
 
   return {
     schemaVersion: 1,
+    ...(overlay.compatibilityOnly === true ? { compatibilityOnly: true } : {}),
+    ...(Number(overlay.sourceSchemaVersion) === 2 ? { sourceSchemaVersion: 2 } : {}),
     description:
       typeof overlay.description === "string"
         ? overlay.description
@@ -1935,15 +1938,20 @@ function normalizeCwBaseOverlay(overlay) {
   };
 }
 
-async function readCwBaseOverlay() {
+async function readRawCwBaseOverlay() {
   try {
     return JSON.parse(await readFile(cwBaseOverlayPath, "utf-8"));
   } catch (error) {
-    if (error?.code === "ENOENT") {
-      return emptyCwBaseOverlay();
-    }
+    if (error?.code === "ENOENT") return emptyCwBaseOverlay();
     throw error;
   }
+}
+
+async function readCwBaseOverlay() {
+  const overlay = await readRawCwBaseOverlay();
+  return Number(overlay?.schemaVersion) === 2
+    ? projectCwOverlayV2Compatibility(overlay)
+    : overlay;
 }
 
 async function readJsonFileOrNull(path) {
@@ -2545,7 +2553,12 @@ async function writeNetworkAuthoringCompatibilityMapping({
       },
     },
   });
-  await writeJsonAtomic(cwBaseOverlayPath, next);
+  // After the V2 cutover this value is only an in-memory adapter for legacy
+  // editor panels. Never replace the canonical V2 authority with a V1
+  // projection while applying an ordinary authoring edit.
+  if (!previous.compatibilityOnly) {
+    await writeJsonAtomic(cwBaseOverlayPath, next);
+  }
   return next;
 }
 
@@ -2672,13 +2685,17 @@ async function applyNetworkAuthoringSegmentMetadata(payload) {
   try {
     await validatePublishedDirectionReviewOverlay(parsed);
     await writeJsonAtomic(cwBaseOverlayV2StagedPath, parsed);
-    await writeJsonAtomic(cwBaseOverlayPath, nextCompatibility);
+    if (!nextCompatibility.compatibilityOnly) {
+      await writeJsonAtomic(cwBaseOverlayPath, nextCompatibility);
+    }
   } catch (error) {
     await Promise.all([
       stagedValue
         ? writeJsonAtomic(cwBaseOverlayV2StagedPath, stagedValue)
         : unlink(cwBaseOverlayV2StagedPath).catch(() => {}),
-      writeJsonAtomic(cwBaseOverlayPath, compatibilityValue),
+      !compatibilityValue.compatibilityOnly
+        ? writeJsonAtomic(cwBaseOverlayPath, compatibilityValue)
+        : Promise.resolve(),
     ]).catch((rollbackError) => {
       log("error", "network metadata rollback failed", rollbackError?.message || String(rollbackError));
     });
@@ -2983,7 +3000,9 @@ async function applyNetworkAuthoringSegment(payload) {
       previousStaged
         ? writeJsonAtomic(cwBaseOverlayV2StagedPath, previousStaged)
         : unlink(cwBaseOverlayV2StagedPath).catch(() => {}),
-      writeJsonAtomic(cwBaseOverlayPath, previousCompatibility),
+      !previousCompatibility.compatibilityOnly
+        ? writeJsonAtomic(cwBaseOverlayPath, previousCompatibility)
+        : Promise.resolve(),
     ]).catch((rollbackError) => {
       log("error", "network authoring rollback failed", rollbackError?.message || String(rollbackError));
     });
@@ -6453,6 +6472,14 @@ const server = createServer(async (request, response) => {
         sendJson(response, 400, { ok: false, error: message });
         return;
       }
+      const canonicalOverlay = await readRawCwBaseOverlay();
+      if (Number(canonicalOverlay?.schemaVersion) === 2) {
+        sendJson(response, 409, {
+          ok: false,
+          error: "The canonical CW overlay is V2; legacy V1 compatibility mappings are read-only.",
+        });
+        return;
+      }
       await writeJsonAtomic(cwBaseOverlayPath, overlay);
       logApi(requestId, "POST /api/cw-base-overlay saved", {
         path: repoRelative(cwBaseOverlayPath),
@@ -6497,17 +6524,21 @@ const server = createServer(async (request, response) => {
         return;
       }
 
-      const [previousManualBaseEdges, previousOverlay] = await Promise.all([
+      const [previousManualBaseEdges, previousOverlay, canonicalOverlay] = await Promise.all([
         readManualBaseEdges(),
         readCwBaseOverlay(),
+        readRawCwBaseOverlay(),
       ]);
+      const v2Authority = Number(canonicalOverlay?.schemaVersion) === 2;
       try {
         await writeJsonAtomic(manualBaseEdgesPath, manualBaseEdges);
-        await writeJsonAtomic(cwBaseOverlayPath, overlay);
+        if (!v2Authority) await writeJsonAtomic(cwBaseOverlayPath, overlay);
       } catch (error) {
         await Promise.all([
           writeJsonAtomic(manualBaseEdgesPath, previousManualBaseEdges),
-          writeJsonAtomic(cwBaseOverlayPath, previousOverlay),
+          !v2Authority
+            ? writeJsonAtomic(cwBaseOverlayPath, previousOverlay)
+            : Promise.resolve(),
         ]).catch((rollbackError) => {
           log("error", `api#${requestId} POST /api/base-edge-state rollback failed`, rollbackError?.message || String(rollbackError));
         });
@@ -6517,7 +6548,11 @@ const server = createServer(async (request, response) => {
         manualEdges: manualBaseEdges.features?.length || 0,
         mappings: Object.keys(overlay.segments || {}).length,
       });
-      sendJson(response, 200, { ok: true, manualBaseEdges, overlay });
+      sendJson(response, 200, {
+        ok: true,
+        manualBaseEdges,
+        overlay: v2Authority ? previousOverlay : overlay,
+      });
       return;
     }
 

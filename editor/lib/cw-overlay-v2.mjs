@@ -340,6 +340,44 @@ export function materializeAcceptedAlignment(segment, alignmentKey) {
     }));
 }
 
+/**
+ * Expose accepted V2 alignments to the remaining read-only V1 consumers.
+ * This is deliberately a projection: callers must never persist it over the
+ * authoritative V2 overlay.
+ */
+export function projectCwOverlayV2Compatibility(overlay) {
+  const segments = {};
+  for (const segment of Object.values(overlay?.segments || {})) {
+    if (!segment || segment.navigable === false || !isActiveCwOverlaySegment(segment)) continue;
+    const edgeRefs =
+      materializeAcceptedAlignment(segment, "aToB") ||
+      materializeAcceptedAlignment(segment, "bToA") ||
+      [];
+    if (edgeRefs.length === 0) continue;
+    segments[String(segment.segmentId)] = {
+      segmentId: Number(segment.segmentId),
+      segmentName: String(segment.segmentName || segment.segmentId),
+      status: "accepted_auto_match",
+      source: "v2_compatibility_projection",
+      confidence: "high",
+      coverageRatio: 1,
+      avgDistanceMeters: null,
+      gapCount: 0,
+      failureClass: null,
+      edgeRefs: normalizeAlignmentEdgeRefs(edgeRefs),
+      updatedAt: overlay.updatedAt || null,
+    };
+  }
+  return {
+    schemaVersion: 1,
+    sourceSchemaVersion: 2,
+    compatibilityOnly: true,
+    description: "Read-only compatibility projection of the canonical CycleWays V2 overlay.",
+    updatedAt: overlay?.updatedAt || null,
+    segments,
+  };
+}
+
 function replacementRef(original, replacement, sequenceIndex, preserveFractions) {
   return {
     edgeId: String(replacement.edgeId),

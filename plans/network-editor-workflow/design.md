@@ -300,6 +300,18 @@ An idempotent migration will seed missing V2 state from V1 without replacing
 newer V2 authoring. Thereafter, V1 cannot block or overwrite a current V2
 direction.
 
+After the canonical-path cutover, the same endpoint may contain schema V2. Any
+remaining V1-shaped editor panel must receive a read-only in-memory projection
+of accepted V2 alignments. It must never write that projection back over the
+canonical file. Normal geometry, metadata, and explicit-path edits continue
+through the V2 network-authoring transaction; legacy direct-V1 writes fail
+closed once V2 is authoritative.
+
+Evidence refresh and migration compatibility code use the same projection when
+the canonical authoring overlay is V2. A V2 segment must never be interpreted
+as a V1 mapping with an empty `edgeRefs` list, because that would abort the
+derived-state refresh after an otherwise valid source edit.
+
 ### Evidence is scoped to what changed
 
 An applied alignment records a digest of:

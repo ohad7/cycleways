@@ -117,6 +117,48 @@ assert.equal(
   "new-east",
 );
 
+const withCanonicalV2Authoring = buildMigrationProposal({
+  overlayV1,
+  authoringOverlayV1: {
+    schemaVersion: 2,
+    segments: {
+      "7": {
+        segmentId: 7,
+        segmentName: "Test",
+        lifecycleStatus: "active",
+        navigable: true,
+        alignments: {
+          aToB: {
+            published: {
+              disposition: "accepted",
+              realization: {
+                type: "explicit",
+                edgeRefs: [
+                  { edgeId: "new-east", direction: "forward", sequenceIndex: 0, fromFraction: 0, toFraction: 1 },
+                ],
+              },
+            },
+          },
+          bToA: { published: null },
+        },
+      },
+    },
+  },
+  publicIndexV1,
+  mapSource,
+  graph,
+  policyAudit,
+  graphDigest: "graph-digest",
+});
+assert.equal(withCanonicalV2Authoring.report.authoringRevisedSegments, 1);
+assert.equal(
+  withCanonicalV2Authoring.overlay.segments["7"].alignments.aToB.draft.realization.edgeRefs[0].edgeId,
+  "new-east",
+);
+assert.ok(
+  withCanonicalV2Authoring.overlay.segments["7"].alignments.aToB.draft.realization.edgeRefs.length > 0,
+);
+
 const blocked = buildMigrationProposal({
   overlayV1,
   publicIndexV1,

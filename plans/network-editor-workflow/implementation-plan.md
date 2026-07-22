@@ -76,6 +76,20 @@ projection is removed, and active drafts blocked by the released segment are
 revalidated. A previously completed explicit selection is projected as current
 when it becomes mechanically valid, without another curator action.
 
+Implementation note (2026-07-22): promotion has completed the canonical V2
+cutover. The editor server now projects accepted V2 alignments into a read-only
+V1-shaped view for the remaining compatibility panels, and all compatibility
+writes are suppressed or rejected while V2 is authoritative. This prevents a
+selected segment from crashing the render on a missing legacy `edgeRefs` field
+and prevents ordinary editing from downgrading the canonical overlay back to
+schema V1.
+
+Implementation note (2026-07-22): evidence refresh now projects a canonical V2
+authoring overlay into the expected V1 compatibility shape before generating
+its migration proposal. Regression coverage verifies that accepted V2
+alignments produce non-empty proposal realizations instead of failing the
+post-edit route-path update.
+
 ## Outcome
 
 Deliver one Network authoring workflow in which the curator switches explicitly

@@ -288,6 +288,8 @@ const state = {
   dirty: false,
   segmentsOpen: false,
   draggingVertex: false,
+  vertexDragStart: null,
+  vertexDragMoved: false,
   draggingManualBaseVertex: false,
   draggingDataMarker: null,
   suppressNextSegmentClick: false,
@@ -7094,7 +7096,7 @@ function renderBaseOverlayPanel() {
   const savedLine = mapping
     ? mapping.manualEdgeIds?.length
       ? `${mapping.manualEdgeIds.length} manual base edge${mapping.manualEdgeIds.length === 1 ? "" : "s"} drawn · ${new Date(mapping.updatedAt || state.baseOverlay.overlay.updatedAt || Date.now()).toLocaleString()}`
-      : `${mapping.edgeRefs.length} saved edge refs · ${new Date(mapping.updatedAt || state.baseOverlay.overlay.updatedAt || Date.now()).toLocaleString()}`
+      : `${mapping.edgeRefs?.length || 0} saved edge refs · ${new Date(mapping.updatedAt || state.baseOverlay.overlay.updatedAt || Date.now()).toLocaleString()}`
     : "No saved mapping";
   const issueLine =
     edgeRefIssues.length > 0
@@ -8136,21 +8138,42 @@ async function applySymmetricDirectionMigrationBatch() {
 }
 
 function renderAll() {
-  els.sourceSummary.textContent = `${state.activeFeatures.length} active · ${state.source.features.length} records`;
-  renderWorkspaceChrome();
-  renderDrawControls();
-  renderList();
-  renderForm();
-  renderNetworkSegmentRouting();
-  renderDataList();
-  renderBaseGraphPanel();
-  renderBaseOverlayPanel();
-  renderConnectorLensPanel();
-  renderRoundaboutsPanel();
-  renderCrossingsPanel();
-  renderComposeStatus();
-  renderAuthoringState();
-  updateMapSources();
+  let stage = "summary";
+  try {
+    els.sourceSummary.textContent = `${state.activeFeatures.length} active · ${state.source.features.length} records`;
+    stage = "workspace chrome";
+    renderWorkspaceChrome();
+    stage = "draw controls";
+    renderDrawControls();
+    stage = "segment list";
+    renderList();
+    stage = "segment form";
+    renderForm();
+    stage = "segment routing";
+    renderNetworkSegmentRouting();
+    stage = "segment data";
+    renderDataList();
+    stage = "base graph panel";
+    renderBaseGraphPanel();
+    stage = "base overlay panel";
+    renderBaseOverlayPanel();
+    stage = "connector panel";
+    renderConnectorLensPanel();
+    stage = "junction panel";
+    renderRoundaboutsPanel();
+    stage = "crossing panel";
+    renderCrossingsPanel();
+    stage = "compose status";
+    renderComposeStatus();
+    stage = "authoring status";
+    renderAuthoringState();
+    stage = "map sources";
+    updateMapSources();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    showError(new Error(`Editor render failed during ${stage}: ${message}`));
+    throw error;
+  }
 }
 
 function selectFeatureByActiveIndex(index, fit = false) {
@@ -10832,6 +10855,9 @@ async function persistSelectedOverlayMatch(segmentId) {
 }
 
 async function saveBaseOverlay() {
+  if (state.baseOverlay.overlay?.compatibilityOnly) {
+    return { skipped: true, reason: "v2-authority" };
+  }
   const response = await fetch("/api/cw-base-overlay", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -12202,6 +12228,8 @@ function wireEvents() {
       state.baseOverlay.selectedManualVertexIndex = Number(event.features[0].properties.index);
     } else {
       state.draggingVertex = true;
+      state.vertexDragStart = { x: event.point.x, y: event.point.y };
+      state.vertexDragMoved = false;
       state.selectedVertexIndex = Number(event.features[0].properties.index);
       state.selectedDataIndex = -1;
     }
@@ -12234,6 +12262,14 @@ function wireEvents() {
     if (!state.draggingVertex) return;
     const feature = selectedFeature();
     if (!feature || state.selectedVertexIndex < 0) return;
+    if (!state.vertexDragMoved && state.vertexDragStart) {
+      const distance = Math.hypot(
+        event.point.x - state.vertexDragStart.x,
+        event.point.y - state.vertexDragStart.y,
+      );
+      if (distance < 3) return;
+      state.vertexDragMoved = true;
+    }
     const coord = feature.geometry.coordinates[state.selectedVertexIndex];
     coord[0] = event.lngLat.lng;
     coord[1] = event.lngLat.lat;
@@ -12279,8 +12315,16 @@ function wireEvents() {
 
     if (!state.draggingVertex) return;
     const movedFeature = selectedFeature();
+    const vertexMoved = state.vertexDragMoved;
     state.draggingVertex = false;
+    state.vertexDragStart = null;
+    state.vertexDragMoved = false;
     map.dragPan.enable();
+    if (!vertexMoved) {
+      renderVertexSelectionState();
+      setStatus(`Selected vertex ${state.selectedVertexIndex + 1}.`);
+      return;
+    }
     clearSelectedSegmentMatchResult();
     queueChangedFeature(movedFeature);
     scheduleAuthoringSync();

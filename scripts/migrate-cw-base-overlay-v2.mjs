@@ -8,6 +8,7 @@ import {
   alignmentMappingDigest,
   digestCwOverlayValue,
   parseCwOverlayV2,
+  projectCwOverlayV2Compatibility,
   serializeCwOverlayV2,
 } from "../editor/lib/cw-overlay-v2.mjs";
 import {
@@ -620,6 +621,13 @@ export function buildMigrationProposal({
   graphDigest,
   endpointZoneMeters = 30,
 }) {
+  // After the V2 cutover, the canonical authoring path contains V2. The
+  // migration proposal is still V1-shaped internally, so feed it a read-only
+  // projection of accepted alignments instead of interpreting V2 segments as
+  // empty V1 mappings.
+  const authoringOverlay = Number(authoringOverlayV1?.schemaVersion) === 2
+    ? projectCwOverlayV2Compatibility(authoringOverlayV1)
+    : authoringOverlayV1;
   const sourceById = sourceFeatureById(mapSource);
   const legacyActiveIds = new Set(Object.keys(publicIndexV1.segments || {}).map(Number));
   const activeIds = new Set([
@@ -650,7 +658,7 @@ export function buildMigrationProposal({
   for (const segmentId of [...activeIds].sort((a, b) => a - b)) {
     const isLegacySegment = legacyActiveIds.has(segmentId);
     const legacyMapping = overlayV1.segments?.[String(segmentId)];
-    const authoringMapping = authoringOverlayV1.segments?.[String(segmentId)];
+    const authoringMapping = authoringOverlay.segments?.[String(segmentId)];
     const hasAuthoringRevision = Boolean(
       isLegacySegment &&
       legacyMapping &&
