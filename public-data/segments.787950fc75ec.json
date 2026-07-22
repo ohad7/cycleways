@@ -1,0 +1,8436 @@
+{
+  "כביש 9974": {
+    "id": 62,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.603237,
+      "latitude": 33.229582,
+      "elevation": 140.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "כביש 918 פלג הדן": {
+    "id": 338,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "data": [
+      {
+        "id": "poi-dbc2c016",
+        "type": "warning",
+        "information": "מעבר הכרחי בצד הכביש, שוליים רחבים",
+        "location": [
+          33.216903846623694,
+          35.64192395978628
+        ],
+        "name": "גשר הבניאס",
+        "description": "המעבר מעל הבניאס באיזור הזה עובר בשוליים של כביש. השוליים עצמם די רחבים, רק צריך לרכב בזהירות",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-dbc2c016-6f9ee817.webp",
+            "thumbnail": "public-data/poi-images/poi-dbc2c016-6f9ee817-thumb.webp"
+          },
+          {
+            "photo": "public-data/poi-images/poi-dbc2c016-4bb5f9df.webp",
+            "thumbnail": "public-data/poi-images/poi-dbc2c016-4bb5f9df-thumb.webp"
+          }
+        ]
+      }
+    ],
+    "splitFrom": 88,
+    "splitFromName": "שביל אופניים 918 דפנה",
+    "middle": {
+      "longitude": 35.641163,
+      "latitude": 33.217692,
+      "elevation": 99.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "שביל אופניים 918 דפנה": {
+    "id": 339,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "splitFrom": 88,
+    "splitFromName": "שביל אופניים 918 דפנה",
+    "middle": {
+      "longitude": 35.6352,
+      "latitude": 33.221095,
+      "elevation": 115.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "שדות כפר יובל": {
+    "id": 121,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.596392,
+      "latitude": 33.234967,
+      "elevation": 193.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "נחל טל מטעי דפנה": {
+    "id": 74,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.632326,
+      "latitude": 33.22921,
+      "elevation": 136.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "סובב דפנה שער צפוני": {
+    "id": 246,
+    "status": "active",
+    "splitFrom": 242,
+    "splitFromName": "סובב דפנה - 1",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.635902,
+      "latitude": 33.233622,
+      "elevation": 155.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "סובב דפנה אבוקדו": {
+    "id": 247,
+    "status": "active",
+    "splitFrom": 242,
+    "splitFromName": "סובב דפנה - 1",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "data": [
+      {
+        "id": "poi-86a4607d",
+        "type": "tree",
+        "information": "מטעי אבוקדו של קיבוץ דפנה",
+        "location": [
+          33.23353107025309,
+          35.63836313971484
+        ],
+        "name": "מטעי אבוקדו",
+        "description": "מטעי אבוקדו של קיבוץ דפנה. נא לא לקטוף!",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-86a4607d-aeab1967.webp",
+            "thumbnail": "public-data/poi-images/poi-86a4607d-aeab1967-thumb.webp"
+          }
+        ]
+      }
+    ],
+    "middle": {
+      "longitude": 35.638865,
+      "latitude": 33.233614,
+      "elevation": 152.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "סובב דפנה שדות": {
+    "id": 243,
+    "status": "active",
+    "splitFrom": 81,
+    "splitFromName": "סובב דפנה",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.645888,
+      "latitude": 33.235926,
+      "elevation": 157.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "טיילת עמי": {
+    "id": 31,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.615789,
+      "latitude": 33.179687,
+      "elevation": 75.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "הירדן ההיסטורי": {
+    "id": 27,
+    "status": "active",
+    "data": [
+      {
+        "type": "mud",
+        "information": "קטע בוצי אחרי גשם",
+        "location": [
+          33.163004,
+          35.595931
+        ]
+      },
+      {
+        "id": "poi-5b6da297",
+        "type": "flora",
+        "information": "בריכות נופרים יפהפהיות לקראת סוף החורף",
+        "location": [
+          33.12008325,
+          35.594871999999995
+        ],
+        "name": "בריכות נופרים",
+        "description": "בריכות נופרים יפהפהיות לקראת סוף החורף",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-5b6da297-fd491b50.webp",
+            "thumbnail": "public-data/poi-images/poi-5b6da297-fd491b50-thumb.webp"
+          }
+        ]
+      }
+    ],
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.585694,
+      "latitude": 33.145331,
+      "elevation": 69.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "האי בנחל הבניאס": {
+    "id": 25,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.618553,
+      "latitude": 33.188338,
+      "elevation": 78.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "שדות הגושרים": {
+    "id": 120,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "data": [
+      {
+        "id": "poi-015cc38e",
+        "type": "gate",
+        "information": "שער להולכי רגל, פתוח כל היום כתלות במצב בטחוני",
+        "location": [
+          33.218812,
+          35.614327
+        ],
+        "name": "שער להולכי רגל",
+        "description": "שער להולכי רגל, פתוח כל היום כתלות במצב בטחוני"
+      },
+      {
+        "id": "poi-23d6dbf0",
+        "type": "landmark",
+        "information": "מיקומו ההיסטורי של מושב נחלים הנטוש",
+        "location": [
+          33.2127877,
+          35.6199385
+        ],
+        "name": "מושב נחלים",
+        "description": "מיקומו ההיסטורי של מושב נחלים הנטוש",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-23d6dbf0-325f9ead.webp",
+            "thumbnail": "public-data/poi-images/poi-23d6dbf0-325f9ead-thumb.webp"
+          },
+          {
+            "photo": "public-data/poi-images/poi-23d6dbf0-07580bf2.webp",
+            "thumbnail": "public-data/poi-images/poi-23d6dbf0-07580bf2-thumb.webp"
+          }
+        ]
+      }
+    ],
+    "middle": {
+      "longitude": 35.618767,
+      "latitude": 33.206169,
+      "elevation": 85.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "גן הצפון": {
+    "id": 10,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "data": [
+      {
+        "id": "poi-77f69a67",
+        "type": "cafe",
+        "information": "מתחם מסעדות, בתי קפה וחנויות",
+        "location": [
+          33.223701,
+          35.61561
+        ],
+        "name": "גן הצפון",
+        "description": "מתחם מסעדות, בתי קפה וחנויות",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-77f69a67-3c7b3936.webp",
+            "thumbnail": "public-data/poi-images/poi-77f69a67-3c7b3936-thumb.webp"
+          },
+          {
+            "photo": "public-data/poi-images/poi-77f69a67-c4064b12.webp",
+            "thumbnail": "public-data/poi-images/poi-77f69a67-c4064b12-thumb.webp"
+          }
+        ]
+      }
+    ],
+    "middle": {
+      "longitude": 35.615615,
+      "latitude": 33.222405,
+      "elevation": 96.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "דרך הפטרולים נבי יהודה": {
+    "id": 19,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.660264,
+      "latitude": 33.228406,
+      "elevation": 152.0
+    },
+    "elevation_gain_m": 2.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 2.0
+  },
+  "בית עלמין שאר ישוב": {
+    "id": 3,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.655341,
+      "latitude": 33.232639,
+      "elevation": 159.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "דרך נוף הרי נפתלי דרום": {
+    "id": 21,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "data": [
+      {
+        "id": "poi-03007424",
+        "type": "tree",
+        "information": "ניתן לצפות מכאן בלהקות גדולות של חסידות בסוף האביב",
+        "location": [
+          33.172261,
+          35.556551
+        ],
+        "name": "חסידות",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-03007424-8e53f5c4.webp",
+            "thumbnail": "public-data/poi-images/poi-03007424-8e53f5c4-thumb.webp"
+          },
+          {
+            "photo": "public-data/poi-images/poi-03007424-0a04ce34.webp",
+            "thumbnail": "public-data/poi-images/poi-03007424-0a04ce34-thumb.webp"
+          }
+        ]
+      }
+    ],
+    "middle": {
+      "longitude": 35.556086,
+      "latitude": 33.165232,
+      "elevation": 470.0
+    },
+    "elevation_gain_m": 349.8,
+    "elevation_loss_m": 138.6,
+    "net_elevation_change_m": 211.2
+  },
+  "כביש 886": {
+    "id": 47,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "data": [
+      {
+        "id": "poi-11102fea",
+        "type": "viewpoint",
+        "information": "כניסה לכביש גישה לקרן נפתלי: תצפית לעמק החולה ולחרמון",
+        "location": [
+          33.091983,
+          35.550171
+        ],
+        "name": "קרן נפתלי",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-11102fea-572cdcba.webp",
+            "thumbnail": "public-data/poi-images/poi-11102fea-572cdcba-thumb.webp"
+          },
+          {
+            "photo": "public-data/poi-images/poi-11102fea-10303cb8.webp",
+            "thumbnail": "public-data/poi-images/poi-11102fea-10303cb8-thumb.webp"
+          }
+        ]
+      }
+    ],
+    "middle": {
+      "longitude": 35.549372,
+      "latitude": 33.112833,
+      "elevation": 381.0
+    },
+    "elevation_gain_m": 107.4,
+    "elevation_loss_m": 126.0,
+    "net_elevation_change_m": -18.6
+  },
+  "ירדן הררי": {
+    "id": 33,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.621609,
+      "latitude": 32.966463,
+      "elevation": 54.0
+    },
+    "elevation_gain_m": 390.4,
+    "elevation_loss_m": 417.8,
+    "net_elevation_change_m": -27.4
+  },
+  "ירדן מזרח גשר בנות יעקב": {
+    "id": 35,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.630452,
+      "latitude": 33.025797,
+      "elevation": 71.0
+    },
+    "elevation_gain_m": 11.6,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 11.6
+  },
+  "כביש 99 תל דן צומת רג׳ר": {
+    "id": 210,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.666256,
+      "latitude": 33.245031,
+      "elevation": 216.0
+    },
+    "elevation_gain_m": 2.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 2.0
+  },
+  "כביש 99 צומת רג׳ר כביש ביטחון": {
+    "id": 211,
+    "status": "active",
+    "data": [
+      {
+        "type": "narrow",
+        "information": "שוליים צרים לאורך 400מ בעלייה לשניר",
+        "location": [
+          33.250799,
+          35.67583
+        ]
+      }
+    ],
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.675027,
+      "latitude": 33.250637,
+      "elevation": 266.0
+    },
+    "elevation_gain_m": 10.8,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 10.8
+  },
+  "כביש 99 כביש ביטחון בניאס": {
+    "id": 212,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.682516,
+      "latitude": 33.24771,
+      "elevation": 336.0
+    },
+    "elevation_gain_m": 53.6,
+    "elevation_loss_m": 10.0,
+    "net_elevation_change_m": 43.6
+  },
+  "כביש 99 תל בניאס מסעדה לבנונית": {
+    "id": 213,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.692168,
+      "latitude": 33.247768,
+      "elevation": 350.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "כביש 99 ציר הנפט": {
+    "id": 214,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.691626,
+      "latitude": 33.245755,
+      "elevation": 347.0
+    },
+    "elevation_gain_m": 2.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 2.0
+  },
+  "כביש 99 שאר ישוב": {
+    "id": 61,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.645749,
+      "latitude": 33.231023,
+      "elevation": 147.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "כביש 99 בריכות דגים": {
+    "id": 58,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.656705,
+      "latitude": 33.237937,
+      "elevation": 175.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "כביש 99 קיבוץ דן": {
+    "id": 60,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.650312,
+      "latitude": 33.234384,
+      "elevation": 157.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "עלייה קטנה לשאר ישוב": {
+    "id": 238,
+    "status": "active",
+    "splitFrom": 87,
+    "splitFromName": "שאר ישוב היקפי",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.652508,
+      "latitude": 33.229529,
+      "elevation": 141.0
+    },
+    "elevation_gain_m": 3.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 3.0
+  },
+  "שאר ישוב היקפי צפון": {
+    "id": 239,
+    "status": "active",
+    "splitFrom": 87,
+    "splitFromName": "שאר ישוב היקפי",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.649744,
+      "latitude": 33.232103,
+      "elevation": 149.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "הגשר על הבניאס": {
+    "id": 26,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "data": [
+      {
+        "id": "poi-b0a7c0c7",
+        "type": "nature",
+        "information": "גשר ביילי מעל הבניאס, מתחתיו גישה למים ופינה נהדרת למנוחה",
+        "location": [
+          33.22552974040883,
+          35.65442162844337
+        ],
+        "name": "גשר שאר ישוב",
+        "description": "גשר ביילי מעל הבניאס, מתחתיו גישה למים ופינה נהדרת למנוחה",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-b0a7c0c7-d717983c.webp",
+            "thumbnail": "public-data/poi-images/poi-b0a7c0c7-d717983c-thumb.webp"
+          },
+          {
+            "photo": "public-data/poi-images/poi-b0a7c0c7-69ed2ce2.webp",
+            "thumbnail": "public-data/poi-images/poi-b0a7c0c7-69ed2ce2-thumb.webp"
+          }
+        ]
+      }
+    ],
+    "middle": {
+      "longitude": 35.653047,
+      "latitude": 33.227179,
+      "elevation": 134.0
+    },
+    "elevation_gain_m": 4.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 4.0
+  },
+  "דרך הפטרולים גבעת האם": {
+    "id": 16,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.662011,
+      "latitude": 33.215245,
+      "elevation": 168.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 44.8,
+    "net_elevation_change_m": -44.8
+  },
+  "גבעת האם": {
+    "id": 9,
+    "status": "active",
+    "todo": "check winter conditions",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "data": [
+      {
+        "id": "poi-8e08b582",
+        "type": "landmark",
+        "information": "שביל גישה לגבעת האם, גבעה בזלתית בגובה 196 מ׳",
+        "location": [
+          33.20986655083472,
+          35.658273167456514
+        ],
+        "name": "גבעת האם",
+        "description": "שביל גישה לגבעת האם, גבעה בזלתית בגובה 196 מ׳. בגבעה יש תצפית לעמק החולה ולעבר הגולן, היא שמשה כנקודת הזינוק לכיבוש הגולן ביוני 1967",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-8e08b582-107f7255.webp",
+            "thumbnail": "public-data/poi-images/poi-8e08b582-107f7255-thumb.webp"
+          },
+          {
+            "photo": "public-data/poi-images/poi-8e08b582-2da6d1e0.webp",
+            "thumbnail": "public-data/poi-images/poi-8e08b582-2da6d1e0-thumb.webp"
+          }
+        ]
+      }
+    ],
+    "middle": {
+      "longitude": 35.65587,
+      "latitude": 33.208668,
+      "elevation": 147.0
+    },
+    "elevation_gain_m": 47.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 47.0
+  },
+  "דרך הפטרולים קיבוץ שמיר דרום": {
+    "id": 225,
+    "status": "active",
+    "splitFrom": 20,
+    "splitFromName": "דרך הפטרולים קיבוץ שמיר",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.664907,
+      "latitude": 33.174019,
+      "elevation": 221.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "דרך הפטרולים קיבוץ שמיר צפון": {
+    "id": 226,
+    "status": "active",
+    "data": [
+      {
+        "type": "warning",
+        "information": "דרך רומית על בסיס אבני בזלת שחוקות",
+        "location": [
+          33.176255,
+          35.664454
+        ]
+      }
+    ],
+    "splitFrom": 20,
+    "splitFromName": "דרך הפטרולים קיבוץ שמיר",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.663691,
+      "latitude": 33.181453,
+      "elevation": 223.0
+    },
+    "elevation_gain_m": 11.4,
+    "elevation_loss_m": 2.2,
+    "net_elevation_change_m": 9.2
+  },
+  "חורבת עומרית": {
+    "id": 261,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "splitFrom": 104,
+    "splitFromName": "שביל חום ליד חורבת עומרית",
+    "middle": {
+      "longitude": 35.668547,
+      "latitude": 33.210918,
+      "elevation": 240.0
+    },
+    "elevation_gain_m": 87.4,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 87.4
+  },
+  "תל עזזיאת": {
+    "id": 262,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "splitFrom": 104,
+    "splitFromName": "שביל חום ליד חורבת עומרית",
+    "middle": {
+      "longitude": 35.677114,
+      "latitude": 33.226909,
+      "elevation": 277.0
+    },
+    "elevation_gain_m": 44.2,
+    "elevation_loss_m": 28.0,
+    "net_elevation_change_m": 16.2
+  },
+  "דרך הפטרולים כפר סאלד": {
+    "id": 18,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.663202,
+      "latitude": 33.198819,
+      "elevation": 206.0
+    },
+    "elevation_gain_m": 89.6,
+    "elevation_loss_m": 81.0,
+    "net_elevation_change_m": 8.6
+  },
+  "דרך הפטרולים יער מורדות הגולן גונן": {
+    "id": 206,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.664988,
+      "latitude": 33.145486,
+      "elevation": 250.0
+    },
+    "elevation_gain_m": 62.4,
+    "elevation_loss_m": 35.6,
+    "net_elevation_change_m": 26.8
+  },
+  "דרך הפטרולים יער מורדות הגולן שמיר": {
+    "id": 207,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.665425,
+      "latitude": 33.169178,
+      "elevation": 226.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 3.2,
+    "net_elevation_change_m": -3.2
+  },
+  "כביש 959 קלע אלון": {
+    "id": 54,
+    "status": "active",
+    "data": [
+      {
+        "type": "narrow",
+        "information": "שוליים צרים",
+        "location": [
+          33.125123,
+          35.688132
+        ]
+      },
+      {
+        "type": "narrow",
+        "information": "שוליים צרים",
+        "location": [
+          33.124975,
+          35.679452
+        ]
+      },
+      {
+        "type": "narrow",
+        "information": "שוליים צרים",
+        "location": [
+          33.128895,
+          35.671083
+        ]
+      },
+      {
+        "type": "narrow",
+        "information": "שוליים צרים",
+        "location": [
+          33.136579,
+          35.668136
+        ]
+      }
+    ],
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.668026,
+      "latitude": 33.135859,
+      "elevation": 434.0
+    },
+    "elevation_gain_m": 20.8,
+    "elevation_loss_m": 320.8,
+    "net_elevation_change_m": -300.0
+  },
+  "כביש 959 גונן": {
+    "id": 53,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.648837,
+      "latitude": 33.119612,
+      "elevation": 133.0
+    },
+    "elevation_gain_m": 9.2,
+    "elevation_loss_m": 121.6,
+    "net_elevation_change_m": -112.4
+  },
+  "כביש 918 דרדרה": {
+    "id": 284,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "splitFrom": 51,
+    "splitFromName": "כביש 918 גשר הפקק",
+    "middle": {
+      "longitude": 35.636083,
+      "latitude": 33.078793,
+      "elevation": 67.0
+    },
+    "elevation_gain_m": 8.6,
+    "elevation_loss_m": 6.6,
+    "net_elevation_change_m": 2.0
+  },
+  "כניסה פארק התעלות": {
+    "id": 288,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "splitFrom": 285,
+    "splitFromName": "כביש 918 גשר הפקק - 2",
+    "middle": {
+      "longitude": 35.629626,
+      "latitude": 33.043552,
+      "elevation": 65.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "כביש 918 גשר הפקק": {
+    "id": 289,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "splitFrom": 285,
+    "splitFromName": "כביש 918 גשר הפקק - 2",
+    "middle": {
+      "longitude": 35.630166,
+      "latitude": 33.041701,
+      "elevation": 69.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "נחל קליל מערב": {
+    "id": 234,
+    "status": "active",
+    "todo": "check winter conditions",
+    "splitFrom": 80,
+    "splitFromName": "נחל קליל",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.643952,
+      "latitude": 33.205624,
+      "elevation": 87.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "נחל קליל מזרח": {
+    "id": 235,
+    "status": "active",
+    "todo": "check winter conditions",
+    "splitFrom": 80,
+    "splitFromName": "נחל קליל",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.648142,
+      "latitude": 33.205728,
+      "elevation": 98.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "שדות קיבוץ שדה נחמיה": {
+    "id": 126,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.635117,
+      "latitude": 33.183675,
+      "elevation": 80.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "חניון האקליפטוס": {
+    "id": 29,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.629427,
+      "latitude": 33.192708,
+      "elevation": 81.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "בניאס שביל חום תעלה מזרחי": {
+    "id": 6,
+    "status": "active",
+    "todo": "check winter condition, pick a better name",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.636504,
+      "latitude": 33.198833,
+      "elevation": 82.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "בניאס צפון": {
+    "id": 5,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "data": [
+      {
+        "id": "poi-1eb44fd0",
+        "type": "viewpoint",
+        "information": "",
+        "location": [
+          33.2129776,
+          35.6428954
+        ],
+        "name": "תצפית לחרמון",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-1eb44fd0-4dd46f81.webp",
+            "thumbnail": "public-data/poi-images/poi-1eb44fd0-4dd46f81-thumb.webp"
+          }
+        ]
+      }
+    ],
+    "middle": {
+      "longitude": 35.642743,
+      "latitude": 33.21059,
+      "elevation": 90.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "בניאס חניון האקליפטוס": {
+    "id": 4,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "data": [
+      {
+        "id": "poi-38b469d3",
+        "type": "rest_stop",
+        "information": "השביל כולו מלא פינות מנוחה ליד הבניאס",
+        "location": [
+          33.203704,
+          35.636825
+        ],
+        "name": "חניון הדקל",
+        "description": "השביל כולו מלא פינות מנוחה ליד הבניאס, יש המון פינות מוצלות והמים זורמים כל השנה בטמפרטורות נמוכות",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-38b469d3-eadbb56a.webp",
+            "thumbnail": "public-data/poi-images/poi-38b469d3-eadbb56a-thumb.webp"
+          }
+        ]
+      }
+    ],
+    "middle": {
+      "longitude": 35.633899,
+      "latitude": 33.201474,
+      "elevation": 84.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "בניאס שדה נחמיה": {
+    "id": 7,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.622796,
+      "latitude": 33.192807,
+      "elevation": 81.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "שדה נחמיה שער כניסה": {
+    "id": 114,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.619509,
+      "latitude": 33.186604,
+      "elevation": 78.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "כביש 918 כניסה לגבעת האם": {
+    "id": 267,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "splitFrom": 194,
+    "splitFromName": "כביש 918 גבעת האם",
+    "middle": {
+      "longitude": 35.649611,
+      "latitude": 33.206406,
+      "elevation": 98.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "כביש 918 גבעת האם": {
+    "id": 268,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "splitFrom": 194,
+    "splitFromName": "כביש 918 גבעת האם",
+    "middle": {
+      "longitude": 35.648946,
+      "latitude": 33.20858,
+      "elevation": 94.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "כביש 918 בניאס תל תורמוס": {
+    "id": 195,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.645367,
+      "latitude": 33.213591,
+      "elevation": 95.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "שביל אופניים 9779 שדה נחמיה": {
+    "id": 92,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.620909,
+      "latitude": 33.181743,
+      "elevation": 79.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "כביש 918 תל קליל": {
+    "id": 217,
+    "status": "active",
+    "splitFrom": 52,
+    "splitFromName": "כביש 918 כפר סאלד",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.652509,
+      "latitude": 33.195453,
+      "elevation": 91.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "כביש 918 כפר סאלד": {
+    "id": 229,
+    "status": "active",
+    "splitFrom": 218,
+    "splitFromName": "כביש 918 צומת כפר סאלד",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.651767,
+      "latitude": 33.19835,
+      "elevation": 96.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "כביש 918 חורשות האקליפטוס": {
+    "id": 230,
+    "status": "active",
+    "splitFrom": 218,
+    "splitFromName": "כביש 918 צומת כפר סאלד",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.650578,
+      "latitude": 33.202728,
+      "elevation": 103.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "שביל אופניים 9779 עמיר": {
+    "id": 90,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.628693,
+      "latitude": 33.178597,
+      "elevation": 76.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "שביל אופניים 9779 תל אנפה": {
+    "id": 93,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.642533,
+      "latitude": 33.173989,
+      "elevation": 76.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "שביל שדות כפר סאלד": {
+    "id": 323,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "splitFrom": 215,
+    "splitFromName": "שביל שדות כפר סאלד נחל רחום",
+    "middle": {
+      "longitude": 35.649094,
+      "latitude": 33.187234,
+      "elevation": 79.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "שביל שדות כפר סאלד נחל רחום": {
+    "id": 324,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "splitFrom": 215,
+    "splitFromName": "שביל שדות כפר סאלד נחל רחום",
+    "middle": {
+      "longitude": 35.646517,
+      "latitude": 33.178047,
+      "elevation": 78.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "שביל שדות כפר סאלד כביש 918": {
+    "id": 216,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.642104,
+      "latitude": 33.17167,
+      "elevation": 77.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "שביל תל קליל דרום": {
+    "id": 231,
+    "status": "active",
+    "splitFrom": 112,
+    "splitFromName": "שביל תל קליל",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.647782,
+      "latitude": 33.186058,
+      "elevation": 78.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "שביל תל קליל צפון": {
+    "id": 232,
+    "status": "active",
+    "splitFrom": 112,
+    "splitFromName": "שביל תל קליל",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.65089,
+      "latitude": 33.192261,
+      "elevation": 85.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "שדות עמיר דרום": {
+    "id": 123,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.633336,
+      "latitude": 33.165829,
+      "elevation": 75.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "שדות עמיר מערב": {
+    "id": 125,
+    "status": "active",
+    "data": [
+      {
+        "type": "gate",
+        "information": "שער לקיבוץ עמיר, פתוח בשעות היום בלבד",
+        "location": [
+          33.178378,
+          35.624814
+        ]
+      }
+    ],
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.625613,
+      "latitude": 33.17358,
+      "elevation": 73.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "שדות עמיר ירדן": {
+    "id": 124,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "data": [
+      {
+        "id": "poi-a96860fc",
+        "type": "viewpoint",
+        "information": "אחת התצפיות לחרמון היפות ביותר בארץ",
+        "location": [
+          33.156947,
+          35.627448
+        ],
+        "name": "תצפית לחרמון",
+        "description": "תצפית לחרמון על רק השדות של קיבוץ עמיר וכפר בלום. מומלץ להגיע בחורף כשהחרמון מושלג והשדות ירוקים",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-a96860fc-71a8e561.webp",
+            "thumbnail": "public-data/poi-images/poi-a96860fc-71a8e561-thumb.webp"
+          }
+        ]
+      }
+    ],
+    "middle": {
+      "longitude": 35.627258,
+      "latitude": 33.158297,
+      "elevation": 72.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "ירדן מערב כפר בלום": {
+    "id": 44,
+    "status": "active",
+    "data": [
+      {
+        "type": "gate",
+        "information": "שער יציאה מכפר בלום לעיתים סגור, אפשר לעקוף בהליכה ליד הנחל",
+        "location": [
+          33.169404,
+          35.61047
+        ]
+      }
+    ],
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.613621,
+      "latitude": 33.171725,
+      "elevation": 75.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "ירדן מזרח שדות כפר בלום": {
+    "id": 38,
+    "status": "active",
+    "data": [
+      {
+        "type": "mud",
+        "information": "קטע בוצי אחרי גשם",
+        "location": [
+          33.174453,
+          35.616292
+        ]
+      }
+    ],
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.613582,
+      "latitude": 33.161297,
+      "elevation": 71.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "גשר עינות ירדן": {
+    "id": 14,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.615852,
+      "latitude": 33.175039,
+      "elevation": 74.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "ירדן מערב שדות כפר בלום": {
+    "id": 346,
+    "status": "active",
+    "data": [
+      {
+        "type": "mud",
+        "information": "קטע בוצי אחרי הגשם",
+        "location": [
+          33.160586,
+          35.613319
+        ]
+      }
+    ],
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "splitFrom": 45,
+    "splitFromName": "ירדן מערב שדות כפר בלום",
+    "middle": {
+      "longitude": 35.617806,
+      "latitude": 33.157729,
+      "elevation": 73.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "ירדן מערב מקטע מרכזי": {
+    "id": 347,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "splitFrom": 45,
+    "splitFromName": "ירדן מערב שדות כפר בלום",
+    "middle": {
+      "longitude": 35.62884,
+      "latitude": 33.135755,
+      "elevation": 66.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "ירדן מזרחי מקטע מרכזי": {
+    "id": 349,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "splitFrom": 39,
+    "splitFromName": "ירדן מזרחי שביל צפוני",
+    "middle": {
+      "longitude": 35.62962,
+      "latitude": 33.135855,
+      "elevation": 64.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "ירדן מזרחי מקטע צפוני": {
+    "id": 350,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "splitFrom": 39,
+    "splitFromName": "ירדן מזרחי שביל צפוני",
+    "middle": {
+      "longitude": 35.628547,
+      "latitude": 33.149185,
+      "elevation": 75.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "גשר חיל ההנדסה ירדן": {
+    "id": 13,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.627862,
+      "latitude": 33.124172,
+      "elevation": 63.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "ירדן מזרח חולתה": {
+    "id": 37,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.624557,
+      "latitude": 33.091677,
+      "elevation": 61.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "ירדן מזרח גונן": {
+    "id": 34,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.627948,
+      "latitude": 33.120741,
+      "elevation": 63.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "שדות גונן": {
+    "id": 118,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.6393,
+      "latitude": 33.11673,
+      "elevation": 67.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "ירדן מערבי הרמלין": {
+    "id": 46,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.625808,
+      "latitude": 33.113782,
+      "elevation": 62.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "ירדן מערב אגמון החולה": {
+    "id": 40,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.62417,
+      "latitude": 33.101172,
+      "elevation": 63.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "ירדן מערב אינדי פארק": {
+    "id": 41,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.622313,
+      "latitude": 33.085524,
+      "elevation": 61.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "עוקף שמורת החולה אינדי פארק": {
+    "id": 83,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.604737,
+      "latitude": 33.081919,
+      "elevation": 64.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "שדות אגמון ושמורת החולה": {
+    "id": 116,
+    "status": "active",
+    "data": [
+      {
+        "type": "payment",
+        "information": "הכניסה מצפון דרך אגמון החולה בלבד ובתשלום, כניסה מדרום פתוחה",
+        "location": [
+          33.110373,
+          35.58665
+        ]
+      }
+    ],
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.588177,
+      "latitude": 33.101418,
+      "elevation": 64.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "אגמון החולה מבואה": {
+    "id": 2,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.590131,
+      "latitude": 33.110142,
+      "elevation": 62.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "דרך המנפטה": {
+    "id": 15,
+    "status": "active",
+    "data": [
+      {
+        "type": "payment",
+        "information": "הכניסה מדרום דרך אגמון החולה בלבד ובתשלום, כניסה מצפון פתוחה",
+        "location": [
+          33.11124,
+          35.586584
+        ]
+      }
+    ],
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.583545,
+      "latitude": 33.128374,
+      "elevation": 64.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "שדות נאות מרדכי מערב": {
+    "id": 122,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.575322,
+      "latitude": 33.157759,
+      "elevation": 68.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "עין תאו": {
+    "id": 370,
+    "status": "active",
+    "data": [
+      {
+        "type": "warning",
+        "information": "מעבר על גשר צבאי",
+        "location": [
+          33.145886,
+          35.578115
+        ]
+      },
+      {
+        "type": "warning",
+        "information": "אפשר להנות מהנוף, הכניסה למים אסורה",
+        "location": [
+          33.133896,
+          35.56918
+        ],
+        "name": "עין תאו",
+        "description": "שמרו על הטבע, בעין תאו אפשר להנות מהנוף אולם אסור להכנס לשמורה או למים, על מנת לשמור על ערכי הטבע שם.",
+        "id": "poi-a77bbe8c",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-a77bbe8c-13ec0055.webp",
+            "thumbnail": "public-data/poi-images/poi-a77bbe8c-13ec0055-thumb.webp"
+          }
+        ]
+      }
+    ],
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "splitFrom": 84,
+    "splitFromName": "עין תאו",
+    "middle": {
+      "longitude": 35.570515,
+      "latitude": 33.137789,
+      "elevation": 74.0
+    },
+    "elevation_gain_m": 2.4,
+    "elevation_loss_m": 3.0,
+    "net_elevation_change_m": -0.6
+  },
+  "כביש 899": {
+    "id": 371,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "splitFrom": 84,
+    "splitFromName": "עין תאו",
+    "middle": {
+      "longitude": 35.568958,
+      "latitude": 33.122185,
+      "elevation": 99.0
+    },
+    "elevation_gain_m": 26.4,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 26.4
+  },
+  "שביל אופניים 9779 בית הלל": {
+    "id": 89,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.609142,
+      "latitude": 33.188375,
+      "elevation": 78.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "שביל אופניים 9779 פינת ישיבה": {
+    "id": 296,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "splitFrom": 91,
+    "splitFromName": "שביל אופניים 9779 קרית שמונה",
+    "middle": {
+      "longitude": 35.598553,
+      "latitude": 33.193751,
+      "elevation": 79.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "שביל אופניים 9779 קרית שמונה": {
+    "id": 297,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "splitFrom": 91,
+    "splitFromName": "שביל אופניים 9779 קרית שמונה",
+    "middle": {
+      "longitude": 35.58922,
+      "latitude": 33.196777,
+      "elevation": 78.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "בריכות דגים צומת גומא": {
+    "id": 8,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.579757,
+      "latitude": 33.171693,
+      "elevation": 71.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "שביל חום תל נעמה": {
+    "id": 105,
+    "status": "active",
+    "data": [
+      {
+        "type": "mud",
+        "information": "קטע בוצי אחרי גשם",
+        "location": [
+          33.188697,
+          35.594922
+        ]
+      }
+    ],
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.591205,
+      "latitude": 33.183912,
+      "elevation": 73.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "שדות בית הלל מערב": {
+    "id": 117,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.585555,
+      "latitude": 33.205815,
+      "elevation": 76.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "נחל עיון מחנה גיבור": {
+    "id": 78,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.59598,
+      "latitude": 33.212544,
+      "elevation": 91.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "שער כניסה שדות בית הלל": {
+    "id": 278,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "splitFrom": 77,
+    "splitFromName": "נחל עיון בית הלל",
+    "middle": {
+      "longitude": 35.601614,
+      "latitude": 33.21452,
+      "elevation": 91.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "נחל עיון בית הלל": {
+    "id": 279,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "splitFrom": 77,
+    "splitFromName": "נחל עיון בית הלל",
+    "middle": {
+      "longitude": 35.603533,
+      "latitude": 33.218857,
+      "elevation": 95.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "שביל אופניים 99 הגושרים": {
+    "id": 96,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.625713,
+      "latitude": 33.224289,
+      "elevation": 119.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "כביש 9888 נחל עיון": {
+    "id": 56,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.60703,
+      "latitude": 33.222246,
+      "elevation": 101.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "שביל אופניים 99 מעיין ברוך": {
+    "id": 326,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "splitFrom": 98,
+    "splitFromName": "שביל אופניים 99 קיאקי הגושרים",
+    "middle": {
+      "longitude": 35.609774,
+      "latitude": 33.225301,
+      "elevation": 109.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "שביל אופניים 99 קיאקי הגושרים": {
+    "id": 327,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "splitFrom": 98,
+    "splitFromName": "שביל אופניים 99 קיאקי הגושרים",
+    "middle": {
+      "longitude": 35.613986,
+      "latitude": 33.224792,
+      "elevation": 101.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "שביל אופניים 99 כפר יובל": {
+    "id": 97,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.604203,
+      "latitude": 33.225242,
+      "elevation": 120.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "שביל אופניים 99 גן הצפון": {
+    "id": 94,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "data": [
+      {
+        "id": "poi-e144a450",
+        "type": "nature",
+        "information": "מעבר יפהפה ליד נחל קורן אל יער מאכל",
+        "location": [
+          33.224716,
+          35.621684
+        ],
+        "name": "יער מאכל קורן",
+        "description": "מעבר יפהפה ליד נחל קורן אל יער מאכל",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-e144a450-8d7e7468.webp",
+            "thumbnail": "public-data/poi-images/poi-e144a450-8d7e7468-thumb.webp"
+          },
+          {
+            "photo": "public-data/poi-images/poi-e144a450-193d6660.webp",
+            "thumbnail": "public-data/poi-images/poi-e144a450-193d6660-thumb.webp"
+          },
+          {
+            "photo": "public-data/poi-images/poi-e144a450-bed713bd.webp",
+            "thumbnail": "public-data/poi-images/poi-e144a450-bed713bd-thumb.webp"
+          }
+        ]
+      },
+      {
+        "id": "poi-7442a920",
+        "type": "viewpoint",
+        "information": "מצפה קורן, לזכרו של ניר פופקו",
+        "location": [
+          33.22658505087399,
+          35.62202280888957
+        ],
+        "name": "מצפה קורן",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-7442a920-eaed8fae.webp",
+            "thumbnail": "public-data/poi-images/poi-7442a920-eaed8fae-thumb.webp"
+          },
+          {
+            "photo": "public-data/poi-images/poi-7442a920-68ca9d3e.webp",
+            "thumbnail": "public-data/poi-images/poi-7442a920-68ca9d3e-thumb.webp"
+          },
+          {
+            "photo": "public-data/poi-images/poi-7442a920-6dcff0f6.webp",
+            "thumbnail": "public-data/poi-images/poi-7442a920-6dcff0f6-thumb.webp"
+          }
+        ]
+      }
+    ],
+    "middle": {
+      "longitude": 35.620547,
+      "latitude": 33.224286,
+      "elevation": 109.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "כביש 9888 בית הלל": {
+    "id": 55,
+    "status": "active",
+    "data": [
+      {
+        "type": "narrow",
+        "information": "שוליים צרים בחלק מהכביש",
+        "location": [
+          33.216343,
+          35.607994
+        ]
+      }
+    ],
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.608114,
+      "latitude": 33.216527,
+      "elevation": 90.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "כביש 9888 סדנה": {
+    "id": 304,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "splitFrom": 57,
+    "splitFromName": "כביש 9888 סדנה",
+    "middle": {
+      "longitude": 35.609197,
+      "latitude": 33.218146,
+      "elevation": 93.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "כביש 9888 קמפינג": {
+    "id": 305,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "splitFrom": 57,
+    "splitFromName": "כביש 9888 סדנה",
+    "middle": {
+      "longitude": 35.609333,
+      "latitude": 33.219162,
+      "elevation": 92.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "נחל עיון קאמפינג גרין": {
+    "id": 79,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.610351,
+      "latitude": 33.221034,
+      "elevation": 97.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "שביל עפר חצבאני מערב": {
+    "id": 110,
+    "status": "active",
+    "data": [
+      {
+        "type": "warning",
+        "information": "שביל יפהפה אבל לא מתוחזק ומלא צמחייה כרגע, רכיבה לא זורמת",
+        "location": [
+          33.221109,
+          35.612262
+        ]
+      }
+    ],
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.611216,
+      "latitude": 33.216629,
+      "elevation": 90.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "שדות בית הלל - מזרח": {
+    "id": 157,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.597478,
+      "latitude": 33.200812,
+      "elevation": 81.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "שביל אופניים חצבאני חופים צפוני": {
+    "id": 101,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "data": [
+      {
+        "id": "poi-1a4c1f16",
+        "type": "beach",
+        "information": "חוף רחצה על נחל שניר, עם כניסה דרך שער 1.",
+        "location": [
+          33.21628,
+          35.609092
+        ],
+        "name": "חוף קולומביה",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-1a4c1f16-b96c2372.webp",
+            "thumbnail": "public-data/poi-images/poi-1a4c1f16-b96c2372-thumb.webp"
+          },
+          {
+            "photo": "public-data/poi-images/poi-1a4c1f16-fae02a20.webp",
+            "thumbnail": "public-data/poi-images/poi-1a4c1f16-fae02a20-thumb.webp"
+          }
+        ],
+        "description": "חוף קטן וקצת יותר פראי עם כניסה דרך שער 1. משום מה הוא נקרא חוף קולומביה, נשמח לדעת למה ביום מן הימים"
+      },
+      {
+        "id": "poi-857aa85d",
+        "type": "beach",
+        "information": "חוף נהדר, מרווח, גישה נוחה למים, מלא עצי תות",
+        "location": [
+          33.214461,
+          35.610436
+        ],
+        "name": "חוף בורגר",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-857aa85d-088f1532.webp",
+            "thumbnail": "public-data/poi-images/poi-857aa85d-088f1532-thumb.webp"
+          },
+          {
+            "photo": "public-data/poi-images/poi-857aa85d-f6c5e9be.webp",
+            "thumbnail": "public-data/poi-images/poi-857aa85d-f6c5e9be-thumb.webp"
+          }
+        ],
+        "description": "דרך שער 2, חוף רחב ומרווח על נחל שניר, עם גישה נוחה למים שמתאימה גם למשפחות, ועצי תות שמטילים צל  על הגדה (ובעונה — גם פינוק מתוק היישר מהענף). מקום מצוין לפרוס מגבת ולשכשך רגלים."
+      }
+    ],
+    "middle": {
+      "longitude": 35.61001,
+      "latitude": 33.214726,
+      "elevation": 89.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "דרך עפר חצבאני קיאקים כפר בלום": {
+    "id": 24,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.611677,
+      "latitude": 33.194824,
+      "elevation": 79.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "שביל אופניים וילג׳ שדה נחמיה": {
+    "id": 99,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.61797,
+      "latitude": 33.187643,
+      "elevation": 79.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "שביל אופניים חצבאני בית הלל": {
+    "id": 100,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "data": [
+      {
+        "id": "poi-d2081ac2",
+        "type": "beach",
+        "information": "בכניסה משער 5, חוף קטן תחת עצי דולב בעיקול הנחל",
+        "location": [
+          33.205265,
+          35.610959
+        ],
+        "name": "חוף ללא שם בעיקול הנחל",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-d2081ac2-000a5417.webp",
+            "thumbnail": "public-data/poi-images/poi-d2081ac2-000a5417-thumb.webp"
+          },
+          {
+            "photo": "public-data/poi-images/poi-d2081ac2-2e6d4024.webp",
+            "thumbnail": "public-data/poi-images/poi-d2081ac2-2e6d4024-thumb.webp"
+          },
+          {
+            "photo": "public-data/poi-images/poi-d2081ac2-4f4272c3.webp",
+            "thumbnail": "public-data/poi-images/poi-d2081ac2-4f4272c3-thumb.webp"
+          }
+        ],
+        "description": "בשער 5 הנחל מתעקל בחדות, לצד העיקול שוכנת בריכת דגים שקטה, לחוף הזה אין שם אבל יש שם עץ דולב ענקי וירידה חביבה לחצבאני"
+      },
+      {
+        "id": "poi-f5fd1f27",
+        "type": "beach",
+        "information": "חוף מגניב ומרוחק, מרחק שתי דקות הליכה משער 8",
+        "location": [
+          33.201237,
+          35.609947
+        ],
+        "name": "חוף האקליפטוס",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-f5fd1f27-34405fc1.webp",
+            "thumbnail": "public-data/poi-images/poi-f5fd1f27-34405fc1-thumb.webp"
+          },
+          {
+            "photo": "public-data/poi-images/poi-f5fd1f27-8267032a.webp",
+            "thumbnail": "public-data/poi-images/poi-f5fd1f27-8267032a-thumb.webp"
+          }
+        ],
+        "description": "אקליפטוס ענק מסמן את הנקודה, וממנו שביל קצר של כשתי דקות מוביל אל גדת הנחל. הטרחה הקטנה משתלמת — המים כאן שקטים יותר, הצל נדיב, והתחושה היא של פינה פרטית."
+      }
+    ],
+    "middle": {
+      "longitude": 35.610844,
+      "latitude": 33.205494,
+      "elevation": 85.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "כביש גישה נבי יהודה מזרח": {
+    "id": 197,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.657061,
+      "latitude": 33.217382,
+      "elevation": 127.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "כביש גישה נבי יהודה מערב": {
+    "id": 198,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.652936,
+      "latitude": 33.21832,
+      "elevation": 117.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "נבי יהודה נקודת הצינור": {
+    "id": 72,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.647083,
+      "latitude": 33.216817,
+      "elevation": 102.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "כביש גישה תל דן": {
+    "id": 68,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.656481,
+      "latitude": 33.244311,
+      "elevation": 191.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "שביל ישראל שמורת נחל שניר": {
+    "id": 250,
+    "status": "active",
+    "splitFrom": 107,
+    "splitFromName": "שביל ישראל נחל דן",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "data": [
+      {
+        "id": "poi-7004abaf",
+        "type": "cafe",
+        "information": "דג על הדן המסעדה המיתולוגית על נחל שניר",
+        "location": [
+          33.231024,
+          35.625048
+        ],
+        "name": "כניסה לקפה על הדן",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-7004abaf-b3f48c12.webp",
+            "thumbnail": "public-data/poi-images/poi-7004abaf-b3f48c12-thumb.webp"
+          }
+        ],
+        "description": "דג על הדן הוקמה בשנת 1979, לאחרונה נפתח במקום קפה על הדן."
+      }
+    ],
+    "middle": {
+      "longitude": 35.62748,
+      "latitude": 33.232639,
+      "elevation": 138.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "שביל ישראל ליד מאגר דולב": {
+    "id": 252,
+    "status": "active",
+    "splitFrom": 251,
+    "splitFromName": "שביל ישראל מאגר דולב",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.628161,
+      "latitude": 33.239831,
+      "elevation": 167.0
+    },
+    "elevation_gain_m": 6.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 6.0
+  },
+  "שביל ישראל מאגר ללא שם": {
+    "id": 254,
+    "status": "active",
+    "splitFrom": 253,
+    "splitFromName": "שביל ישראל מאגר דולב - 2",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.63499,
+      "latitude": 33.245633,
+      "elevation": 182.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "שביל ישראל נחל דן ונוחיילה": {
+    "id": 255,
+    "status": "active",
+    "splitFrom": 253,
+    "splitFromName": "שביל ישראל מאגר דולב - 2",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.646853,
+      "latitude": 33.249703,
+      "elevation": 190.0
+    },
+    "elevation_gain_m": 7.2,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 7.2
+  },
+  "שביל גישה דג על הדן": {
+    "id": 102,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.623795,
+      "latitude": 33.229185,
+      "elevation": 123.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "שביל תעלת פלרי": {
+    "id": 113,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.619162,
+      "latitude": 33.22892,
+      "elevation": 113.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "דרך נוף הרי נפתלי צפון": {
+    "id": 22,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.558845,
+      "latitude": 33.192656,
+      "elevation": 315.0
+    },
+    "elevation_gain_m": 97.95,
+    "elevation_loss_m": 74.8,
+    "net_elevation_change_m": 23.15
+  },
+  "כביש 9977 מרגליות": {
+    "id": 64,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.560013,
+      "latitude": 33.229438,
+      "elevation": 472.0
+    },
+    "elevation_gain_m": 40.4,
+    "elevation_loss_m": 287.0,
+    "net_elevation_change_m": -246.6
+  },
+  "שדות דישון": {
+    "id": 119,
+    "status": "active",
+    "data": [
+      {
+        "type": "gate",
+        "information": "שער להולכי רגל בדישון פתוח בדרך כלל.",
+        "location": [
+          33.084515,
+          35.515782
+        ]
+      }
+    ],
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.519703,
+      "latitude": 33.085569,
+      "elevation": 449.0
+    },
+    "elevation_gain_m": 140.8,
+    "elevation_loss_m": 194.8,
+    "net_elevation_change_m": -54.0
+  },
+  "כביש המערכת קרית שמונה": {
+    "id": 69,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.565799,
+      "latitude": 33.222067,
+      "elevation": 276.0
+    },
+    "elevation_gain_m": 249.6,
+    "elevation_loss_m": 201.2,
+    "net_elevation_change_m": 48.4
+  },
+  "ירדן מערב יסוד המעלה": {
+    "id": 131,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.621306,
+      "latitude": 33.069199,
+      "elevation": 64.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "כביש גישה שדה אליעזר": {
+    "id": 359,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "splitFrom": 357,
+    "splitFromName": "רחוב פנימי שדה אליעזר",
+    "middle": {
+      "longitude": 35.570272,
+      "latitude": 33.046052,
+      "elevation": 144.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "רחוב פנימי שדה אליעזר": {
+    "id": 358,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "splitFrom": 355,
+    "splitFromName": "רחוב פנימי שדה אליעזר",
+    "middle": {
+      "longitude": 35.563279,
+      "latitude": 33.04711,
+      "elevation": 157.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "כביש מערכת שדה אליעזר": {
+    "id": 356,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "splitFrom": 353,
+    "splitFromName": "כביש מערכת שדה אליעזר",
+    "middle": {
+      "longitude": 35.55756,
+      "latitude": 33.048209,
+      "elevation": 170.0
+    },
+    "elevation_gain_m": 17.2,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 17.2
+  },
+  "בקעת יחמור": {
+    "id": 354,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "splitFrom": 150,
+    "splitFromName": "בקעת יחמור",
+    "middle": {
+      "longitude": 35.546885,
+      "latitude": 33.065857,
+      "elevation": 292.0
+    },
+    "elevation_gain_m": 185.6,
+    "elevation_loss_m": 26.4,
+    "net_elevation_change_m": 159.2
+  },
+  "ירדן מזרח גשר הפקק": {
+    "id": 286,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "splitFrom": 36,
+    "splitFromName": "ירדן מזרח גשר הפקק",
+    "middle": {
+      "longitude": 35.626413,
+      "latitude": 33.054997,
+      "elevation": 64.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "ירדן מזרח חורשת הפקק": {
+    "id": 290,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "splitFrom": 287,
+    "splitFromName": "ירדן מזרח גשר הפקק - 2",
+    "middle": {
+      "longitude": 35.629709,
+      "latitude": 33.041995,
+      "elevation": 61.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "כביש 918 המשאבה הראשונה": {
+    "id": 292,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "splitFrom": 291,
+    "splitFromName": "ירדן מזרח גשר הפקק - 2 - 2",
+    "middle": {
+      "longitude": 35.629361,
+      "latitude": 33.040364,
+      "elevation": 68.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "כביש 918 תחנה הידרטמטית": {
+    "id": 293,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "splitFrom": 291,
+    "splitFromName": "ירדן מזרח גשר הפקק - 2 - 2",
+    "middle": {
+      "longitude": 35.628607,
+      "latitude": 33.040362,
+      "elevation": 68.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "כביש גישה ציר הנפט": {
+    "id": 67,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.689412,
+      "latitude": 33.243077,
+      "elevation": 346.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 6.8,
+    "net_elevation_change_m": -6.8
+  },
+  "ציר הנפט מצפה גולני": {
+    "id": 257,
+    "status": "active",
+    "quality": {
+      "overall": 4,
+      "safety": 3,
+      "comfort": 5,
+      "scenery": 5
+    },
+    "splitFrom": 208,
+    "splitFromName": "ציר הנפט בניאס שמיר",
+    "middle": {
+      "longitude": 35.690581,
+      "latitude": 33.233339,
+      "elevation": 361.0
+    },
+    "elevation_gain_m": 48.4,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 48.4
+  },
+  "ציר הנפט עין פית": {
+    "id": 259,
+    "status": "active",
+    "quality": {
+      "overall": 4,
+      "safety": 3,
+      "comfort": 5,
+      "scenery": 5
+    },
+    "splitFrom": 258,
+    "splitFromName": "ציר הנפט בניאס שמיר - 2",
+    "data": [
+      {
+        "id": "poi-521bbc87",
+        "type": "landmark",
+        "information": "מוצב סורי שנכבש במחיר כבד במלחמת ששת הימים. כיום מצפה גולני",
+        "location": [
+          33.22471482716924,
+          35.69313022319281
+        ],
+        "name": "מצפה גולני - תל פאחר",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-521bbc87-9fdd2f58.webp",
+            "thumbnail": "public-data/poi-images/poi-521bbc87-9fdd2f58-thumb.webp"
+          },
+          {
+            "photo": "public-data/poi-images/poi-521bbc87-f68ae011.webp",
+            "thumbnail": "public-data/poi-images/poi-521bbc87-f68ae011-thumb.webp"
+          }
+        ],
+        "description": "מוצב סורי שנכבש במחיר כבד במלחמת ששת הימים. כיום מצפה גולני"
+      }
+    ],
+    "middle": {
+      "longitude": 35.694377,
+      "latitude": 33.222118,
+      "elevation": 453.0
+    },
+    "elevation_gain_m": 65.8,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 65.8
+  },
+  "ציר הנפט זעורה": {
+    "id": 260,
+    "status": "active",
+    "quality": {
+      "overall": 4,
+      "safety": 3,
+      "comfort": 5,
+      "scenery": 5
+    },
+    "splitFrom": 258,
+    "splitFromName": "ציר הנפט בניאס שמיר - 2",
+    "middle": {
+      "longitude": 35.692855,
+      "latitude": 33.197229,
+      "elevation": 559.0
+    },
+    "elevation_gain_m": 75.45,
+    "elevation_loss_m": 99.2,
+    "net_elevation_change_m": -23.75
+  },
+  "ציר הנפט נחל עורבים": {
+    "id": 209,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.687262,
+      "latitude": 33.151327,
+      "elevation": 619.0
+    },
+    "elevation_gain_m": 225.2,
+    "elevation_loss_m": 52.2,
+    "net_elevation_change_m": 173.0
+  },
+  "כביש 90 צומת אגמון החולה": {
+    "id": 48,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.571663,
+      "latitude": 33.115637,
+      "elevation": 80.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 16.6,
+    "net_elevation_change_m": -16.6
+  },
+  "גשר חולתה": {
+    "id": 12,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.62265,
+      "latitude": 33.066198,
+      "elevation": 65.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "כביש גישה אגמון החולה": {
+    "id": 65,
+    "status": "active",
+    "data": [
+      {
+        "type": "payment",
+        "information": "כניסה בתשלום מכיוון הכביש",
+        "location": [
+          33.110496,
+          35.585433
+        ]
+      }
+    ],
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.579221,
+      "latitude": 33.110818,
+      "elevation": 69.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "כביש 99 דפנה": {
+    "id": 331,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "splitFrom": 95,
+    "splitFromName": "שביל אופניים 99 דפנה",
+    "middle": {
+      "longitude": 35.64248,
+      "latitude": 33.228513,
+      "elevation": 138.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "שביל אופניים 99 דפנה": {
+    "id": 336,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "splitFrom": 332,
+    "splitFromName": "שביל אופניים 99 דפנה",
+    "middle": {
+      "longitude": 35.639322,
+      "latitude": 33.226567,
+      "elevation": 129.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "שביל אופניים אנדרטת אסון המסוקים": {
+    "id": 337,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "splitFrom": 332,
+    "splitFromName": "שביל אופניים 99 דפנה",
+    "middle": {
+      "longitude": 35.634655,
+      "latitude": 33.224945,
+      "elevation": 125.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "כביש 90 שמורת החולה": {
+    "id": 49,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.574542,
+      "latitude": 33.095148,
+      "elevation": 90.0
+    },
+    "elevation_gain_m": 4.2,
+    "elevation_loss_m": 10.4,
+    "net_elevation_change_m": -6.2
+  },
+  "ירדן מערב חולתה": {
+    "id": 43,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.623998,
+      "latitude": 33.059386,
+      "elevation": 65.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "יסוד המעלה המייסדים": {
+    "id": 128,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.593816,
+      "latitude": 33.051774,
+      "elevation": 95.0
+    },
+    "elevation_gain_m": 15.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 15.0
+  },
+  "כביש 9115 עין הדייג": {
+    "id": 134,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.596226,
+      "latitude": 33.066499,
+      "elevation": 76.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "מטעים יסוד המעלה": {
+    "id": 135,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.613441,
+      "latitude": 33.064095,
+      "elevation": 65.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "ירדן מערב גשר הפקק": {
+    "id": 42,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.627411,
+      "latitude": 33.046656,
+      "elevation": 65.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "ירדן מערב גדות": {
+    "id": 129,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.63055,
+      "latitude": 33.033066,
+      "elevation": 71.0
+    },
+    "elevation_gain_m": 2.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 2.0
+  },
+  "נחל מחניים דרום": {
+    "id": 137,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.574759,
+      "latitude": 32.995052,
+      "elevation": 241.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "ירדן מערב גשר בנות יעקב": {
+    "id": 130,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.628096,
+      "latitude": 33.017804,
+      "elevation": 79.0
+    },
+    "elevation_gain_m": 38.5,
+    "elevation_loss_m": 14.4,
+    "net_elevation_change_m": 24.1
+  },
+  "קמפינג דג על הדן": {
+    "id": 140,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.613353,
+      "latitude": 33.223304,
+      "elevation": 99.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "רחוב הדולב בית הלל": {
+    "id": 302,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "splitFrom": 141,
+    "splitFromName": "רחוב הדולב בית הלל",
+    "middle": {
+      "longitude": 35.604825,
+      "latitude": 33.215301,
+      "elevation": 93.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "רחוב הדולב בית הלל מערב": {
+    "id": 303,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "splitFrom": 141,
+    "splitFromName": "רחוב הדולב בית הלל",
+    "middle": {
+      "longitude": 35.602121,
+      "latitude": 33.214841,
+      "elevation": 92.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "גדר המערכת בית הלל": {
+    "id": 139,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "data": [
+      {
+        "id": "poi-95010070",
+        "type": "cafe",
+        "information": "עצירה טובה לקפה",
+        "location": [
+          33.200456,
+          35.601372
+        ],
+        "name": "פרישטיק",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-95010070-e9f669c1.webp",
+            "thumbnail": "public-data/poi-images/poi-95010070-e9f669c1-thumb.webp"
+          }
+        ],
+        "description": "[פרישטיק](https://www.vitrage-resort.co.il/%D7%A4%D7%A8%D7%99%D7%A9%D7%98%D7%99%D7%A7/) הוא בית קפה שטובל בירוק ומזמין לעצירה מתגמלת. זה הרגע להניח את הקסדה, להזמין קפה וארוחת בוקר ולמלא מצברים. המקום כשר, והאווירה רגועה ונעימה.\n\nבית הקפה פתוח כל בוקר בשבוע בין 8:30 ועד 16:00, מלבד שבתות וימי חג.\nבית הקפה פתוח כל בוקר בשבוע בין 8:30 ועד 16:00, מלבד שבתות וימי חג."
+      },
+      {
+        "id": "poi-c723c695",
+        "type": "tree",
+        "information": "בסוף האביב פריחה של חוטמית זיפנית בשלל צבעים",
+        "location": [
+          33.198283,
+          35.603713
+        ],
+        "name": "חוטמית זיפנית",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-c723c695-dc902444.webp",
+            "thumbnail": "public-data/poi-images/poi-c723c695-dc902444-thumb.webp"
+          },
+          {
+            "photo": "public-data/poi-images/poi-c723c695-5408f7d0.webp",
+            "thumbnail": "public-data/poi-images/poi-c723c695-5408f7d0-thumb.webp"
+          },
+          {
+            "photo": "public-data/poi-images/poi-c723c695-03220773.webp",
+            "thumbnail": "public-data/poi-images/poi-c723c695-03220773-thumb.webp"
+          }
+        ],
+        "description": "בשלהי האביב החוטמית הזיפנית מתנשאת בקנים גבוהים ופורחת בגוונים של ורוד, סגול ולבן, נדיר לראות את כל הצבעים פורחים יחד בטבע. בשאר השנה זו פינת בר ירוקה ושקטה."
+      },
+      {
+        "id": "poi-75f40178",
+        "type": "tree",
+        "information": "בית הלל מלא במטעי פקאן שלווים ומרשימים",
+        "location": [
+          33.205539,
+          35.599154
+        ],
+        "name": "מטעי פקאן",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-75f40178-b465e980.webp",
+            "thumbnail": "public-data/poi-images/poi-75f40178-b465e980-thumb.webp"
+          }
+        ],
+        "description": "מטעי פקאן רחבי ידיים, שבהם שורות העצים הגבוהים יוצרות מסדרון מוצל ונעים.  האור חודר בין העלים והשקט כמעט מוחלט — פינה ירוקה ורגועה לעצור ולהנות מהיופי והצל. המטעים הם רכוש המושב ופרנסת החקלאים, אנא כבדו את המקום, וכמובן לא לקטוף"
+      }
+    ],
+    "middle": {
+      "longitude": 35.6005,
+      "latitude": 33.202278,
+      "elevation": 81.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "שביל האיצטדיון": {
+    "id": 365,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "splitFrom": 143,
+    "splitFromName": "פארק הזהב קריית שמונה",
+    "middle": {
+      "longitude": 35.575849,
+      "latitude": 33.209936,
+      "elevation": 128.0
+    },
+    "elevation_gain_m": 2.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 2.0
+  },
+  "פארק הזהב קריית שמונה": {
+    "id": 367,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "splitFrom": 366,
+    "splitFromName": "פארק הזהב קריית שמונה - 2",
+    "middle": {
+      "longitude": 35.573656,
+      "latitude": 33.204864,
+      "elevation": 101.0
+    },
+    "elevation_gain_m": 2.6,
+    "elevation_loss_m": 2.0,
+    "net_elevation_change_m": 0.6
+  },
+  "שביל אופניים רחוב הירדן דרום": {
+    "id": 368,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "splitFrom": 366,
+    "splitFromName": "פארק הזהב קריית שמונה - 2",
+    "middle": {
+      "longitude": 35.576329,
+      "latitude": 33.201407,
+      "elevation": 95.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "גבעת שחומית": {
+    "id": 298,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "splitFrom": 142,
+    "splitFromName": "גבעת שחומית",
+    "middle": {
+      "longitude": 35.578304,
+      "latitude": 33.203473,
+      "elevation": 122.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 2.4,
+    "net_elevation_change_m": -2.4
+  },
+  "גבעת שחומית שביל גישה": {
+    "id": 299,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "splitFrom": 142,
+    "splitFromName": "גבעת שחומית",
+    "middle": {
+      "longitude": 35.5775,
+      "latitude": 33.206152,
+      "elevation": 141.0
+    },
+    "elevation_gain_m": 13.6,
+    "elevation_loss_m": 24.08,
+    "net_elevation_change_m": -10.48
+  },
+  "קרית שמונה תעשייה דרומי": {
+    "id": 144,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.578425,
+      "latitude": 33.199175,
+      "elevation": 81.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "רחוב הנרייטה סאלד": {
+    "id": 361,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "splitFrom": 146,
+    "splitFromName": "רחוב הנרייטה סאלד",
+    "middle": {
+      "longitude": 35.573092,
+      "latitude": 33.199543,
+      "elevation": 93.0
+    },
+    "elevation_gain_m": 4.4,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 4.4
+  },
+  "קרית שמונה עלייה לפארק גאולוגי": {
+    "id": 276,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "splitFrom": 86,
+    "splitFromName": "קרית שמונה פארק גאולוגי",
+    "middle": {
+      "longitude": 35.564508,
+      "latitude": 33.199347,
+      "elevation": 177.0
+    },
+    "elevation_gain_m": 143.8,
+    "elevation_loss_m": 10.4,
+    "net_elevation_change_m": 133.4
+  },
+  "קרית שמונה פארק גאולוגי": {
+    "id": 277,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "splitFrom": 86,
+    "splitFromName": "קרית שמונה פארק גאולוגי",
+    "middle": {
+      "longitude": 35.560763,
+      "latitude": 33.201118,
+      "elevation": 273.0
+    },
+    "elevation_gain_m": 12.33,
+    "elevation_loss_m": 8.0,
+    "net_elevation_change_m": 4.33
+  },
+  "נחל מחניים": {
+    "id": 75,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.598276,
+      "latitude": 33.016202,
+      "elevation": 135.0
+    },
+    "elevation_gain_m": 21.0,
+    "elevation_loss_m": 77.0,
+    "net_elevation_change_m": -56.0
+  },
+  "אגמון החולה גישה מזרח": {
+    "id": 147,
+    "status": "active",
+    "data": [
+      {
+        "type": "warning",
+        "information": "הנהלת האגמון מבקשת להמנע מכניסה לאגמון מכיוון זה ללא תשלום, הדרך נועדה לאפשר גישה לירדן ההסטורי בלבד",
+        "location": [
+          33.102549,
+          35.621832
+        ]
+      }
+    ],
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.62275,
+      "latitude": 33.103096,
+      "elevation": 63.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "אגמון החולה צפון": {
+    "id": 149,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "data": [
+      {
+        "id": "poi-c6c5fae3",
+        "type": "tree",
+        "information": "תצפית לעגורים",
+        "location": [
+          33.1097855,
+          35.6109355
+        ],
+        "name": "עגורים",
+        "description": "שימו לב: אין להיכנס לאגמון החולה בלי לשלם, הרכיבה מותרת בשביל החיצוני מחוץ לאגמון לכיוון הירדן או לירדן ההיסטורי",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-c6c5fae3-e663e2e7.webp",
+            "thumbnail": "public-data/poi-images/poi-c6c5fae3-e663e2e7-thumb.webp"
+          }
+        ]
+      }
+    ],
+    "middle": {
+      "longitude": 35.610657,
+      "latitude": 33.109787,
+      "elevation": 62.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "נחל דישון עליון": {
+    "id": 154,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.482206,
+      "latitude": 33.076001,
+      "elevation": 426.0
+    },
+    "elevation_gain_m": 199.8,
+    "elevation_loss_m": 155.8,
+    "net_elevation_change_m": 44.0
+  },
+  "נחל זמר": {
+    "id": 156,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.567179,
+      "latitude": 33.109526,
+      "elevation": 144.0
+    },
+    "elevation_gain_m": 94.4,
+    "elevation_loss_m": 40.4,
+    "net_elevation_change_m": 54.0
+  },
+  "כביש גישה שדה נחמיה": {
+    "id": 282,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "splitFrom": 160,
+    "splitFromName": "כביש גישה שדה נחמיה",
+    "middle": {
+      "longitude": 35.619185,
+      "latitude": 33.183562,
+      "elevation": 79.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "כניסה שדה נחמיה חניה": {
+    "id": 283,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "splitFrom": 160,
+    "splitFromName": "כביש גישה שדה נחמיה",
+    "middle": {
+      "longitude": 35.618835,
+      "latitude": 33.182829,
+      "elevation": 80.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "שביל תל חי": {
+    "id": 164,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.577607,
+      "latitude": 33.228901,
+      "elevation": 204.0
+    },
+    "elevation_gain_m": 2.25,
+    "elevation_loss_m": 51.4,
+    "net_elevation_change_m": -49.15
+  },
+  "כביש 9977 כפר גלעדי": {
+    "id": 63,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.576693,
+      "latitude": 33.237137,
+      "elevation": 286.0
+    },
+    "elevation_gain_m": 2.6,
+    "elevation_loss_m": 74.6,
+    "net_elevation_change_m": -72.0
+  },
+  "אגמון החולה דרום": {
+    "id": 265,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "splitFrom": 148,
+    "splitFromName": "אגמון החולה דרום",
+    "middle": {
+      "longitude": 35.603299,
+      "latitude": 33.097317,
+      "elevation": 62.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "אגמון החולה ירדן היסטורי": {
+    "id": 266,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "splitFrom": 148,
+    "splitFromName": "אגמון החולה דרום",
+    "middle": {
+      "longitude": 35.594919,
+      "latitude": 33.110114,
+      "elevation": 64.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "נחל חצור איילת השחר": {
+    "id": 163,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.591302,
+      "latitude": 33.035545,
+      "elevation": 106.0
+    },
+    "elevation_gain_m": 42.6,
+    "elevation_loss_m": 3.0,
+    "net_elevation_change_m": 39.6
+  },
+  "ואדי ינשוף": {
+    "id": 158,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.574404,
+      "latitude": 33.006369,
+      "elevation": 243.0
+    },
+    "elevation_gain_m": 4.4,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 4.4
+  },
+  "קטע חיבור נחל אשף": {
+    "id": 272,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "splitFrom": 161,
+    "splitFromName": "נחל אשף",
+    "middle": {
+      "longitude": 35.566494,
+      "latitude": 33.002793,
+      "elevation": 258.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "נחל אשף": {
+    "id": 273,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "splitFrom": 161,
+    "splitFromName": "נחל אשף",
+    "middle": {
+      "longitude": 35.567896,
+      "latitude": 33.008393,
+      "elevation": 239.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 4.2,
+    "net_elevation_change_m": -4.2
+  },
+  "נחל אשף כביש 90": {
+    "id": 162,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.571161,
+      "latitude": 33.002577,
+      "elevation": 247.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 4.4,
+    "net_elevation_change_m": -4.4
+  },
+  "נחל חצור מחניים": {
+    "id": 136,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.577058,
+      "latitude": 33.00171,
+      "elevation": 253.0
+    },
+    "elevation_gain_m": 4.0,
+    "elevation_loss_m": 23.7,
+    "net_elevation_change_m": -19.7
+  },
+  "דרך נוף הרי נפתלי פארק גאולוגי": {
+    "id": 167,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.558956,
+      "latitude": 33.204142,
+      "elevation": 326.0
+    },
+    "elevation_gain_m": 30.4,
+    "elevation_loss_m": 15.4,
+    "net_elevation_change_m": 15.0
+  },
+  "דרך נוף הרי נפתלי מצפה לירן": {
+    "id": 274,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "splitFrom": 166,
+    "splitFromName": "דרך נוף הרי נפתלי מצפה לירן",
+    "middle": {
+      "longitude": 35.56289,
+      "latitude": 33.224713,
+      "elevation": 372.0
+    },
+    "elevation_gain_m": 176.4,
+    "elevation_loss_m": 121.2,
+    "net_elevation_change_m": 55.2
+  },
+  "דרך נוף הרי נפתלי כניסה": {
+    "id": 275,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "splitFrom": 166,
+    "splitFromName": "דרך נוף הרי נפתלי מצפה לירן",
+    "middle": {
+      "longitude": 35.572155,
+      "latitude": 33.239021,
+      "elevation": 347.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "מעלה נחל בדולח": {
+    "id": 180,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.555746,
+      "latitude": 33.207476,
+      "elevation": 448.0
+    },
+    "elevation_gain_m": 197.0,
+    "elevation_loss_m": 41.2,
+    "net_elevation_change_m": 155.8
+  },
+  "רחוב החצב קריית שמונה": {
+    "id": 184,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.578776,
+      "latitude": 33.211681,
+      "elevation": 154.0
+    },
+    "elevation_gain_m": 9.6,
+    "elevation_loss_m": 4.4,
+    "net_elevation_change_m": 5.2
+  },
+  "שביל אדום הרי נפתלי": {
+    "id": 187,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.551363,
+      "latitude": 33.210746,
+      "elevation": 586.0
+    },
+    "elevation_gain_m": 258.2,
+    "elevation_loss_m": 140.4,
+    "net_elevation_change_m": 117.8
+  },
+  "רחוב הוורדים דרום קריית שמונה": {
+    "id": 263,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "splitFrom": 183,
+    "splitFromName": "רחוב הוורדים דרום קריית שמונה",
+    "middle": {
+      "longitude": 35.579795,
+      "latitude": 33.202936,
+      "elevation": 99.0
+    },
+    "elevation_gain_m": 13.0,
+    "elevation_loss_m": 17.6,
+    "net_elevation_change_m": -4.6
+  },
+  "רחוב הוורדים מרכזי קריית שמונה": {
+    "id": 264,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "splitFrom": 183,
+    "splitFromName": "רחוב הוורדים דרום קריית שמונה",
+    "middle": {
+      "longitude": 35.579915,
+      "latitude": 33.211624,
+      "elevation": 129.0
+    },
+    "elevation_gain_m": 44.8,
+    "elevation_loss_m": 8.8,
+    "net_elevation_change_m": 36.0
+  },
+  "עוקף סינגל הרי נפתלי": {
+    "id": 182,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.55496,
+      "latitude": 33.193287,
+      "elevation": 436.0
+    },
+    "elevation_gain_m": 243.73,
+    "elevation_loss_m": 56.4,
+    "net_elevation_change_m": 187.33
+  },
+  "רחוב הנשיא קריית שמונה": {
+    "id": 185,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.576132,
+      "latitude": 33.221385,
+      "elevation": 153.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 2.0,
+    "net_elevation_change_m": -2.0
+  },
+  "כביש 99 קריית שמונה": {
+    "id": 174,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.595063,
+      "latitude": 33.221651,
+      "elevation": 132.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 2.2,
+    "net_elevation_change_m": -2.2
+  },
+  "דרך נוף מצפה עדי - מטולה דרום": {
+    "id": 169,
+    "status": "active",
+    "data": [
+      {
+        "type": "warning",
+        "information": "איזור נשלט מכפר קילא בלבנון",
+        "location": [
+          33.249935,
+          35.558978
+        ]
+      }
+    ],
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.55905,
+      "latitude": 33.237205,
+      "elevation": 576.0
+    },
+    "elevation_gain_m": 167.0,
+    "elevation_loss_m": 234.2,
+    "net_elevation_change_m": -67.2
+  },
+  "דרך נוף מטולה קרוב לגבול": {
+    "id": 168,
+    "status": "active",
+    "data": [
+      {
+        "type": "severe",
+        "information": "רכיבה צמודה לגדר הגבול",
+        "location": [
+          33.27333,
+          35.5645
+        ]
+      }
+    ],
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.561669,
+      "latitude": 33.266088,
+      "elevation": 571.0
+    },
+    "elevation_gain_m": 11.2,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 11.2
+  },
+  "רחוב עין זהב והוורדים צפון": {
+    "id": 186,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.579481,
+      "latitude": 33.219153,
+      "elevation": 163.0
+    },
+    "elevation_gain_m": 7.2,
+    "elevation_loss_m": 2.2,
+    "net_elevation_change_m": 5.0
+  },
+  "מצפה דדו מטולה אתר בבניה": {
+    "id": 181,
+    "status": "active",
+    "data": [
+      {
+        "type": "gate",
+        "information": "מעבר מאתגר מעל תל עפר וגדר אבן",
+        "location": [
+          33.270151,
+          35.570542
+        ]
+      }
+    ],
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.572721,
+      "latitude": 33.270176,
+      "elevation": 528.0
+    },
+    "elevation_gain_m": 12.8,
+    "elevation_loss_m": 58.8,
+    "net_elevation_change_m": -46.0
+  },
+  "דרך נוף מצפה עדי מטולה צפון": {
+    "id": 170,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.563327,
+      "latitude": 33.261758,
+      "elevation": 542.0
+    },
+    "elevation_gain_m": 48.2,
+    "elevation_loss_m": 54.4,
+    "net_elevation_change_m": -6.2
+  },
+  "דרך מעבר להר הצפייה מטעים מטולה": {
+    "id": 165,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.569629,
+      "latitude": 33.271946,
+      "elevation": 554.0
+    },
+    "elevation_gain_m": 26.2,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 26.2
+  },
+  "הר הצפייה מטולה": {
+    "id": 171,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.571173,
+      "latitude": 33.274085,
+      "elevation": 580.0
+    },
+    "elevation_gain_m": 20.4,
+    "elevation_loss_m": 16.0,
+    "net_elevation_change_m": 4.4
+  },
+  "מטעים מטולה קרוב לגבול": {
+    "id": 177,
+    "status": "active",
+    "data": [
+      {
+        "type": "warning",
+        "information": "רכיבה קרובה לגדר הגבול",
+        "location": [
+          33.274086,
+          35.567282
+        ]
+      }
+    ],
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.567137,
+      "latitude": 33.274138,
+      "elevation": 551.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "כביש 90 כפר גלעדי": {
+    "id": 159,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.581687,
+      "latitude": 33.239234,
+      "elevation": 271.0
+    },
+    "elevation_gain_m": 6.8,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 6.8
+  },
+  "מעלה דדו מטולה": {
+    "id": 178,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.573547,
+      "latitude": 33.277165,
+      "elevation": 564.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 50.05,
+    "net_elevation_change_m": -50.05
+  },
+  "כבישון עגל": {
+    "id": 176,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.582735,
+      "latitude": 33.243573,
+      "elevation": 279.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 2.6,
+    "net_elevation_change_m": -2.6
+  },
+  "כביש 9974 כפר יובל": {
+    "id": 175,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.590055,
+      "latitude": 33.244102,
+      "elevation": 243.0
+    },
+    "elevation_gain_m": 4.0,
+    "elevation_loss_m": 4.4,
+    "net_elevation_change_m": -0.4
+  },
+  "כביש 90 כפר יובל": {
+    "id": 172,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.573283,
+      "latitude": 33.248788,
+      "elevation": 309.0
+    },
+    "elevation_gain_m": 32.6,
+    "elevation_loss_m": 68.8,
+    "net_elevation_change_m": -36.2
+  },
+  "מעלה הצפייה מטולה": {
+    "id": 179,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.568939,
+      "latitude": 33.277314,
+      "elevation": 541.0
+    },
+    "elevation_gain_m": 2.2,
+    "elevation_loss_m": 18.4,
+    "net_elevation_change_m": -16.2
+  },
+  "תל אבל בית מעכה": {
+    "id": 188,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.57892,
+      "latitude": 33.254722,
+      "elevation": 304.0
+    },
+    "elevation_gain_m": 24.8,
+    "elevation_loss_m": 44.6,
+    "net_elevation_change_m": -19.8
+  },
+  "כביש 90 תל אבל בית מעכה": {
+    "id": 173,
+    "status": "active",
+    "data": [
+      {
+        "type": "narrow",
+        "information": "שוליים צרים",
+        "location": [
+          33.266663,
+          35.573932
+        ]
+      }
+    ],
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.575674,
+      "latitude": 33.269939,
+      "elevation": 413.0
+    },
+    "elevation_gain_m": 25.4,
+    "elevation_loss_m": 178.8,
+    "net_elevation_change_m": -153.4
+  },
+  "כביש 9118 איילת השחר": {
+    "id": 190,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.572622,
+      "latitude": 33.026171,
+      "elevation": 165.0
+    },
+    "elevation_gain_m": 6.2,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 6.2
+  },
+  "צומת איילת השחר": {
+    "id": 343,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "splitFrom": 341,
+    "splitFromName": "נחל מכברם",
+    "middle": {
+      "longitude": 35.572548,
+      "latitude": 33.030324,
+      "elevation": 143.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "נחל מכברם": {
+    "id": 344,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "splitFrom": 341,
+    "splitFromName": "נחל מכברם",
+    "middle": {
+      "longitude": 35.583817,
+      "latitude": 33.037748,
+      "elevation": 126.0
+    },
+    "elevation_gain_m": 10.8,
+    "elevation_loss_m": 18.2,
+    "net_elevation_change_m": -7.4
+  },
+  "אחוזת הירדן": {
+    "id": 342,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "splitFrom": 76,
+    "splitFromName": "נחל מכברם",
+    "middle": {
+      "longitude": 35.572116,
+      "latitude": 33.044126,
+      "elevation": 139.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "כביש 9118 תל חצור": {
+    "id": 192,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.570526,
+      "latitude": 33.017253,
+      "elevation": 199.0
+    },
+    "elevation_gain_m": 17.0,
+    "elevation_loss_m": 2.6,
+    "net_elevation_change_m": 14.4
+  },
+  "נחל דישון תחתון": {
+    "id": 155,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.537021,
+      "latitude": 33.054058,
+      "elevation": 275.0
+    },
+    "elevation_gain_m": 316.8,
+    "elevation_loss_m": 504.2,
+    "net_elevation_change_m": -187.4
+  },
+  "כביש 9118 לצד כביש 90": {
+    "id": 191,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.561672,
+      "latitude": 33.008918,
+      "elevation": 235.0
+    },
+    "elevation_gain_m": 17.4,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 17.4
+  },
+  "כביש 90 שדה אליעזר": {
+    "id": 132,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.574389,
+      "latitude": 33.058895,
+      "elevation": 119.0
+    },
+    "elevation_gain_m": 4.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 4.0
+  },
+  "שטח 100 מערת עלמה": {
+    "id": 193,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.526082,
+      "latitude": 33.03063,
+      "elevation": 462.0
+    },
+    "elevation_gain_m": 362.0,
+    "elevation_loss_m": 39.4,
+    "net_elevation_change_m": 322.6
+  },
+  "כביש 8966 יער ברעם": {
+    "id": 189,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.477819,
+      "latitude": 33.051863,
+      "elevation": 602.0
+    },
+    "elevation_gain_m": 212.4,
+    "elevation_loss_m": 13.0,
+    "net_elevation_change_m": 199.4
+  },
+  "כביש 9115 כביש 90": {
+    "id": 133,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.5821,
+      "latitude": 33.072525,
+      "elevation": 92.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "נחל גרשום, דרך הצינור": {
+    "id": 270,
+    "status": "active",
+    "data": [
+      {
+        "type": "severe",
+        "information": "להרפתקנים בלבד, נוף מהמם, אבל עדיף להמנע",
+        "location": [
+          33.082536,
+          35.567673
+        ]
+      },
+      {
+        "type": "gate",
+        "information": "שער סגור עביר להולכי רגל",
+        "location": [
+          33.082131,
+          35.563219
+        ]
+      },
+      {
+        "type": "slope",
+        "information": "שיפוע תלול ודרדרת אבנים",
+        "location": [
+          33.082352,
+          35.565911
+        ]
+      }
+    ],
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "splitFrom": 153,
+    "splitFromName": "נחל גרשום, דרך הצינור",
+    "middle": {
+      "longitude": 35.557953,
+      "latitude": 33.082507,
+      "elevation": 302.0
+    },
+    "elevation_gain_m": 253.1,
+    "elevation_loss_m": 9.6,
+    "net_elevation_change_m": 243.5
+  },
+  "נחל גרשום מבואה": {
+    "id": 271,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "splitFrom": 153,
+    "splitFromName": "נחל גרשום, דרך הצינור",
+    "middle": {
+      "longitude": 35.545062,
+      "latitude": 33.083333,
+      "elevation": 431.0
+    },
+    "elevation_gain_m": 4.5,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 4.5
+  },
+  "יער נבי ישע תחתון": {
+    "id": 151,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.571271,
+      "latitude": 33.094292,
+      "elevation": 228.0
+    },
+    "elevation_gain_m": 126.6,
+    "elevation_loss_m": 136.6,
+    "net_elevation_change_m": -10.0
+  },
+  "כביש 90 שמורת נחל עינן מערב": {
+    "id": 152,
+    "status": "active",
+    "data": [
+      {
+        "type": "gate",
+        "information": "מעבר דרך מחנה צבאי",
+        "location": [
+          33.079706,
+          35.571761
+        ]
+      }
+    ],
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.57486,
+      "latitude": 33.079502,
+      "elevation": 95.0
+    },
+    "elevation_gain_m": 2.6,
+    "elevation_loss_m": 43.9,
+    "net_elevation_change_m": -41.3
+  },
+  "שביל עפר בניאס שדות שאר ישוב": {
+    "id": 109,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.653322,
+      "latitude": 33.221902,
+      "elevation": 115.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "תל תורמוס": {
+    "id": 196,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.651092,
+      "latitude": 33.214493,
+      "elevation": 105.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "שביל חיבור שמיר ציר הנפט": {
+    "id": 200,
+    "status": "active",
+    "quality": {
+      "overall": 4,
+      "safety": 3,
+      "comfort": 4,
+      "scenery": 5
+    },
+    "middle": {
+      "longitude": 35.67707,
+      "latitude": 33.175323,
+      "elevation": 335.0
+    },
+    "elevation_gain_m": 124.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 124.0
+  },
+  "שביל גישה גדר גבול הר דב": {
+    "id": 201,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.677519,
+      "latitude": 33.25158,
+      "elevation": 282.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "דרך ביטחונית גבול הר דב מערב": {
+    "id": 202,
+    "status": "active",
+    "data": [
+      {
+        "type": "warning",
+        "information": "דרך ביטחונית, רכיבה לבד לא מומלצת",
+        "location": [
+          33.253286901221074,
+          35.67418445853631
+        ]
+      }
+    ],
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.674541,
+      "latitude": 33.253254,
+      "elevation": 271.0
+    },
+    "elevation_gain_m": 9.2,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 9.2
+  },
+  "דרך ביטחונית גבול הר דב מזרח": {
+    "id": 203,
+    "status": "active",
+    "data": [
+      {
+        "type": "warning",
+        "information": "דרך ביטחונית. רכיבה לבד לא מומלצת",
+        "location": [
+          33.25152065575443,
+          35.68022340358455
+        ]
+      },
+      {
+        "type": "slope",
+        "information": "שיפוע תלול מאוד",
+        "location": [
+          33.252191718034474,
+          35.68215147657551
+        ]
+      }
+    ],
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.684755,
+      "latitude": 33.250117,
+      "elevation": 359.0
+    },
+    "elevation_gain_m": 73.33,
+    "elevation_loss_m": 12.8,
+    "net_elevation_change_m": 60.53
+  },
+  "כביש 9970 צומת רגר דרך ביטחונית": {
+    "id": 204,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.672039,
+      "latitude": 33.252487,
+      "elevation": 257.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "נחל רחום": {
+    "id": 205,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 2,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.655564,
+      "latitude": 33.174895,
+      "elevation": 139.0
+    },
+    "elevation_gain_m": 93.6,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 93.6
+  },
+  "כפר סאלד כביש גישה": {
+    "id": 220,
+    "status": "active",
+    "splitFrom": 219,
+    "splitFromName": "New segment",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.654303,
+      "latitude": 33.196625,
+      "elevation": 103.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "דרך כפר סאלד מרכז": {
+    "id": 221,
+    "status": "active",
+    "splitFrom": 219,
+    "splitFromName": "New segment",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.657167,
+      "latitude": 33.193387,
+      "elevation": 119.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "דרך היקפית דרום כפר סאלד": {
+    "id": 222,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.654396,
+      "latitude": 33.191986,
+      "elevation": 98.0
+    },
+    "elevation_gain_m": 13.25,
+    "elevation_loss_m": 2.2,
+    "net_elevation_change_m": 11.05
+  },
+  "האגם הנעלם": {
+    "id": 223,
+    "status": "active",
+    "data": [
+      {
+        "type": "gate",
+        "information": "שער יציאה מהאגם הנעלם. פתוח",
+        "location": [
+          33.189384,
+          35.657058
+        ]
+      },
+      {
+        "type": "gate",
+        "information": "שער כניסה לאגם הנעלם. נעול לעיתים",
+        "location": [
+          33.190889,
+          35.657953
+        ]
+      }
+    ],
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.658098,
+      "latitude": 33.190181,
+      "elevation": 127.0
+    },
+    "elevation_gain_m": 4.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 4.0
+  },
+  "דרך רומית מעלה כפר סאלד": {
+    "id": 224,
+    "status": "active",
+    "data": [
+      {
+        "type": "warning",
+        "information": "דרך רומית מחורצת מאוד",
+        "location": [
+          33.186494,
+          35.660013
+        ]
+      }
+    ],
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.66069,
+      "latitude": 33.186872,
+      "elevation": 161.0
+    },
+    "elevation_gain_m": 75.2,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 75.2
+  },
+  "עלייה מדרך רומית לפטרולים דרום": {
+    "id": 227,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.66199,
+      "latitude": 33.178317,
+      "elevation": 207.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "עלייה מדרך רומית לפטרולים צפון": {
+    "id": 228,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.661532,
+      "latitude": 33.184593,
+      "elevation": 207.0
+    },
+    "elevation_gain_m": 17.2,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 17.2
+  },
+  "עין סהר - חורשת האקליפטוס": {
+    "id": 233,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.648275,
+      "latitude": 33.199748,
+      "elevation": 92.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "עין סהר מערב": {
+    "id": 236,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.645256,
+      "latitude": 33.203438,
+      "elevation": 91.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "שביל חקלאי ליד תל קליל": {
+    "id": 237,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.64749,
+      "latitude": 33.197214,
+      "elevation": 82.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "שאר ישוב היקפי דרום מזרח": {
+    "id": 240,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.649908,
+      "latitude": 33.222006,
+      "elevation": 120.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "שאר ישוב היקפי מערב": {
+    "id": 241,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "data": [
+      {
+        "id": "poi-3af86b92",
+        "type": "landmark",
+        "information": "המקום בו נפל אחד מהמסוקים באסון ב 1997. אין גישה לאתר הנצחה",
+        "location": [
+          33.221945,
+          35.64153
+        ],
+        "name": "אתר אסון המסוקים",
+        "description": "המקום בו נפל אחד מהמסוקים באסון ב 1997. אין גישה לאתר הנצחה, יש להגיע דרך הצומת שמול קיבוץ דפנה",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-3af86b92-04323504.webp",
+            "thumbnail": "public-data/poi-images/poi-3af86b92-04323504-thumb.webp"
+          }
+        ]
+      }
+    ],
+    "middle": {
+      "longitude": 35.643157,
+      "latitude": 33.224347,
+      "elevation": 127.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 4.0,
+    "net_elevation_change_m": -4.0
+  },
+  "שדות דפנה צפון": {
+    "id": 244,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.640876,
+      "latitude": 33.236672,
+      "elevation": 157.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "גשר על נהר הדן": {
+    "id": 245,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "data": [
+      {
+        "id": "poi-7f0a3972",
+        "type": "river",
+        "information": "גשר מעל נחל דן, מים ישר מהחרמון",
+        "location": [
+          33.23739073146143,
+          35.63907383219774
+        ],
+        "name": "גשר מעל נחל דן",
+        "description": "נחל דן הוא הנחל עם ספיקת המים הגדולה ביותר בארץ, והוא מהווה את ספק המים העיקרי לירדן. הוא ניזון ממי שלגים ואגן ההיקוות של החרמון",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-7f0a3972-1973492b.webp",
+            "thumbnail": "public-data/poi-images/poi-7f0a3972-1973492b-thumb.webp"
+          },
+          {
+            "photo": "public-data/poi-images/poi-7f0a3972-55fe7ce9.webp",
+            "thumbnail": "public-data/poi-images/poi-7f0a3972-55fe7ce9-thumb.webp"
+          }
+        ]
+      }
+    ],
+    "middle": {
+      "longitude": 35.638964,
+      "latitude": 33.237529,
+      "elevation": 157.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 2.0,
+    "net_elevation_change_m": -2.0
+  },
+  "שביל גישה למחלק": {
+    "id": 248,
+    "status": "active",
+    "data": [
+      {
+        "type": "river",
+        "information": "שביל גישה נסתר למחלק",
+        "location": [
+          33.235867,
+          35.636375
+        ],
+        "name": "המחלק",
+        "id": "poi-df4652b4",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-df4652b4-3f8a59d2.webp",
+            "thumbnail": "public-data/poi-images/poi-df4652b4-3f8a59d2-thumb.webp"
+          }
+        ],
+        "description": "שביל גישה נסתר מעט שמוביל למחלק של דפנה. מקום יפה ושקט. המחלק הוא סכר קטן שמחלק את מי נחל הדן בין קיבוץ דפנה והשדות החקלאיים"
+      }
+    ],
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.636378,
+      "latitude": 33.236312,
+      "elevation": 157.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "שביל צר לאורך נחל דן": {
+    "id": 249,
+    "status": "active",
+    "data": [
+      {
+        "type": "warning",
+        "information": "ענפי תאנה ושיחי פטל קוצניים מפריעים למעבר",
+        "location": [
+          33.236979,
+          35.632165
+        ],
+        "id": "poi-1ed71e4f",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-1ed71e4f-85f43b3d.webp",
+            "thumbnail": "public-data/poi-images/poi-1ed71e4f-85f43b3d-thumb.webp"
+          }
+        ],
+        "name": "עצי תאנה ושיחי פטל"
+      },
+      {
+        "id": "poi-a76cdd1b",
+        "type": "river",
+        "information": "שביל גישה קצר למחלק של דפנה",
+        "location": [
+          33.23625831990057,
+          35.63572481429375
+        ],
+        "name": "המחלק",
+        "description": "שביל גישה נסתר מעט שמוביל למחלק של דפנה. מקום יפה ושקט. המחלק הוא סכר קטן שמחלק את מי נחל הדן בין קיבוץ דפנה והשדות החקלאיים",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-a76cdd1b-3f8a59d2.webp",
+            "thumbnail": "public-data/poi-images/poi-a76cdd1b-3f8a59d2-thumb.webp"
+          }
+        ]
+      },
+      {
+        "id": "poi-0d152fab",
+        "type": "rest_stop",
+        "information": "על השביל יש פינות מנוחה רבות וחופים קטנים",
+        "location": [
+          33.236782,
+          35.634031
+        ],
+        "name": "פינות רבות לנוח",
+        "description": "על השביל יש פינות מנוחה רבות וחופים קטנים שאפשר לרדת הם למים",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-0d152fab-255f43bc.webp",
+            "thumbnail": "public-data/poi-images/poi-0d152fab-255f43bc-thumb.webp"
+          },
+          {
+            "photo": "public-data/poi-images/poi-0d152fab-9a6dc0c0.webp",
+            "thumbnail": "public-data/poi-images/poi-0d152fab-9a6dc0c0-thumb.webp"
+          }
+        ]
+      }
+    ],
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.633639,
+      "latitude": 33.236855,
+      "elevation": 154.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "שדות קיבוץ דן": {
+    "id": 256,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.638578,
+      "latitude": 33.241861,
+      "elevation": 162.0
+    },
+    "elevation_gain_m": 3.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 3.0
+  },
+  "צומת יסוד שביל חיבור": {
+    "id": 269,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.572986,
+      "latitude": 33.045958,
+      "elevation": 141.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "שביל אופניים גשר חצבאני": {
+    "id": 280,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "data": [
+      {
+        "id": "poi-53d4e045",
+        "type": "river",
+        "information": "גשר להולכי רגל מעל החצבאני",
+        "location": [
+          33.224609,
+          35.614702
+        ],
+        "name": "גשר מעל החצבאני",
+        "description": "גשר להולכי רגל מעל החצבאני. פינות ישיבה נחמדות וגישה לגשר קטן מעל שלושה נחלים: נחל עיון, נחל דן והחצבאני",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-53d4e045-24f5d79e.webp",
+            "thumbnail": "public-data/poi-images/poi-53d4e045-24f5d79e-thumb.webp"
+          },
+          {
+            "photo": "public-data/poi-images/poi-53d4e045-bf53a6bc.webp",
+            "thumbnail": "public-data/poi-images/poi-53d4e045-bf53a6bc-thumb.webp"
+          },
+          {
+            "photo": "public-data/poi-images/poi-53d4e045-67debd43.webp",
+            "thumbnail": "public-data/poi-images/poi-53d4e045-67debd43-thumb.webp"
+          }
+        ]
+      }
+    ],
+    "middle": {
+      "longitude": 35.614773,
+      "latitude": 33.224558,
+      "elevation": 102.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "שביל אופניים 99 מפגש שלושה נחלים": {
+    "id": 281,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.615403,
+      "latitude": 33.224469,
+      "elevation": 102.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "כביש 998 קטע חיבור": {
+    "id": 294,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.626946,
+      "latitude": 33.027634,
+      "elevation": 74.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "שער כניסה שאר ישוב": {
+    "id": 295,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.644007,
+      "latitude": 33.229639,
+      "elevation": 140.0
+    },
+    "elevation_gain_m": 3.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 3.0
+  },
+  "גדר מערכת בית הלל צפון": {
+    "id": 301,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.604513,
+      "latitude": 33.218818,
+      "elevation": 94.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "דרך פטרולים סורית חיבור נעמוש": {
+    "id": 306,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.672889,
+      "latitude": 33.20736,
+      "elevation": 315.0
+    },
+    "elevation_gain_m": 27.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 27.0
+  },
+  "שביל עין אל דיסא": {
+    "id": 307,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "data": [
+      {
+        "id": "poi-972b4305",
+        "type": "landmark",
+        "information": "שרידי כלים צהליים שנפגעו בקרב על תל פאחר",
+        "location": [
+          33.224442,
+          35.685621
+        ],
+        "name": "שרידי זחלמ״ים",
+        "description": "בקרב על תל כיבוש תל פאחר נהרגו חיילים רבים, רובם חיילי שריון וגולני. במקום יש כלים צהליים שנפגעו תוך כדי העלייה הקשה למוצב שנשלטת מלמעלה",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-972b4305-7eba303a.webp",
+            "thumbnail": "public-data/poi-images/poi-972b4305-7eba303a-thumb.webp"
+          }
+        ]
+      }
+    ],
+    "middle": {
+      "longitude": 35.682367,
+      "latitude": 33.215836,
+      "elevation": 333.0
+    },
+    "elevation_gain_m": 17.95,
+    "elevation_loss_m": 14.6,
+    "net_elevation_change_m": 3.35
+  },
+  "תל פאחר": {
+    "id": 308,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "data": [
+      {
+        "id": "poi-482e2483",
+        "type": "landmark",
+        "information": "פרוייקט הנדסי סורי להטיית מי הבניאס והדן לכיוון הירמוך",
+        "location": [
+          33.226536,
+          35.69118
+        ],
+        "name": "תוואי ההטיה",
+        "description": "קטע מתוך תוואי ההטיה בעזרתה ביקשו הסורים בשנים 1962-6 להפנות ולהוביל את מי הבניאס הדן והחצבני ולהובילם באמצעות תעלה פתוחה וסיפונים (בחלקו העיקרי של התואי) ומנהרה (בחלקו הדרומי)ולהזרימם לירמוך.",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-482e2483-83028d1d.webp",
+            "thumbnail": "public-data/poi-images/poi-482e2483-83028d1d-thumb.webp"
+          }
+        ]
+      }
+    ],
+    "middle": {
+      "longitude": 35.689048,
+      "latitude": 33.225426,
+      "elevation": 378.0
+    },
+    "elevation_gain_m": 58.2,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 58.2
+  },
+  "עין פית": {
+    "id": 309,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "data": [
+      {
+        "id": "poi-f844255d",
+        "type": "landmark",
+        "information": "כפר סורי הרוס עם מעיין שנובע כל השנה",
+        "location": [
+          33.22439700072273,
+          35.705025987337734
+        ],
+        "name": "עין פית",
+        "description": "כפר סורי עלאווי עתיק שרובו נהרס לאחר מלחמת ששת הימים. במקום יש מעיין שממנו מתחילה הזרימה על נחל פרע. המעיין נמצא במרכז הכפר, מכוסה במבנה מקומר ומוקף בעצי תאנה ופטל",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-f844255d-9beeb979.webp",
+            "thumbnail": "public-data/poi-images/poi-f844255d-9beeb979-thumb.webp"
+          },
+          {
+            "photo": "public-data/poi-images/poi-f844255d-46ad3cad.webp",
+            "thumbnail": "public-data/poi-images/poi-f844255d-46ad3cad-thumb.webp"
+          }
+        ]
+      }
+    ],
+    "middle": {
+      "longitude": 35.705269,
+      "latitude": 33.224765,
+      "elevation": 537.0
+    },
+    "elevation_gain_m": 56.0,
+    "elevation_loss_m": 11.4,
+    "net_elevation_change_m": 44.6
+  },
+  "מעיינות הבניאס": {
+    "id": 310,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.695137,
+      "latitude": 33.244557,
+      "elevation": 364.0
+    },
+    "elevation_gain_m": 21.4,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 21.4
+  },
+  "כביש 99 מעיינות הבניאס": {
+    "id": 311,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "data": [
+      {
+        "type": "narrow",
+        "information": "שוליים צרים",
+        "location": [
+          33.24379,
+          35.690295
+        ]
+      },
+      {
+        "type": "narrow",
+        "information": "דרך מסוכנת",
+        "location": [
+          33.24336,
+          35.695991
+        ]
+      }
+    ],
+    "middle": {
+      "longitude": 35.693136,
+      "latitude": 33.242868,
+      "elevation": 375.0
+    },
+    "elevation_gain_m": 28.8,
+    "elevation_loss_m": 2.8,
+    "net_elevation_change_m": 26.0
+  },
+  "כביש 99 קטע": {
+    "id": 312,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.698327,
+      "latitude": 33.241344,
+      "elevation": 402.0
+    },
+    "elevation_gain_m": 9.2,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 9.2
+  },
+  "מטעים עין קניא": {
+    "id": 313,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.704245,
+      "latitude": 33.236862,
+      "elevation": 461.0
+    },
+    "elevation_gain_m": 124.4,
+    "elevation_loss_m": 16.8,
+    "net_elevation_change_m": 107.6
+  },
+  "מטעים עין קניא כביש 99": {
+    "id": 314,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.709526,
+      "latitude": 33.232344,
+      "elevation": 570.0
+    },
+    "elevation_gain_m": 2.2,
+    "elevation_loss_m": 2.4,
+    "net_elevation_change_m": -0.2
+  },
+  "מטעים עין קניא חיבור": {
+    "id": 315,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.711405,
+      "latitude": 33.234367,
+      "elevation": 556.0
+    },
+    "elevation_gain_m": 7.8,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 7.8
+  },
+  "עין קניא מטעים דרומיים": {
+    "id": 316,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.714521,
+      "latitude": 33.230676,
+      "elevation": 627.0
+    },
+    "elevation_gain_m": 94.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 94.0
+  },
+  "כביש 99 קטע 7": {
+    "id": 317,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.719419,
+      "latitude": 33.229563,
+      "elevation": 685.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "נחל סער שביל מסומן": {
+    "id": 318,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.718067,
+      "latitude": 33.233238,
+      "elevation": 641.0
+    },
+    "elevation_gain_m": 137.2,
+    "elevation_loss_m": 54.8,
+    "net_elevation_change_m": 82.4
+  },
+  "נחל סער עין קניא": {
+    "id": 319,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.726389,
+      "latitude": 33.22888,
+      "elevation": 644.0
+    },
+    "elevation_gain_m": 23.0,
+    "elevation_loss_m": 14.0,
+    "net_elevation_change_m": 9.0
+  },
+  "נחל סער כביש 9895": {
+    "id": 320,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.724701,
+      "latitude": 33.228705,
+      "elevation": 649.0
+    },
+    "elevation_gain_m": 53.2,
+    "elevation_loss_m": 12.6,
+    "net_elevation_change_m": 40.6
+  },
+  "כביש 9895 מערב": {
+    "id": 321,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.722552,
+      "latitude": 33.227882,
+      "elevation": 713.0
+    },
+    "elevation_gain_m": 29.6,
+    "elevation_loss_m": 38.2,
+    "net_elevation_change_m": -8.6
+  },
+  "כביש 9895 מזרח": {
+    "id": 322,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.729447,
+      "latitude": 33.228206,
+      "elevation": 681.0
+    },
+    "elevation_gain_m": 4.4,
+    "elevation_loss_m": 21.78,
+    "net_elevation_change_m": -17.38
+  },
+  "מעבר מתחת כביש 918": {
+    "id": 325,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.646695,
+      "latitude": 33.180757,
+      "elevation": 77.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 2.0,
+    "net_elevation_change_m": -2.0
+  },
+  "שביל אופניים דפנה": {
+    "id": 330,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.635792,
+      "latitude": 33.225813,
+      "elevation": 126.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "כניסה לקיבוץ דפנה": {
+    "id": 333,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.640571,
+      "latitude": 33.22741,
+      "elevation": 132.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "קיבוץ דפנה שביל המייסדים": {
+    "id": 334,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.640025,
+      "latitude": 33.230545,
+      "elevation": 145.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "שביל היקפי דפנה צפון": {
+    "id": 335,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "data": [
+      {
+        "id": "poi-2392c619",
+        "type": "gate",
+        "information": "שער לא נעול ליציאה מדפנה לכיוון נחל דן",
+        "location": [
+          33.23347,
+          35.635129
+        ],
+        "name": "שער יציאה מדפנה למטעים",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-2392c619-0ee99404.webp",
+            "thumbnail": "public-data/poi-images/poi-2392c619-0ee99404-thumb.webp"
+          }
+        ]
+      },
+      {
+        "id": "poi-1821461d",
+        "type": "river",
+        "information": "נחל דן זורם בחלקו בתוך קיבוץ דפנה. במקום יש מדשאות וירידה כיפית למים",
+        "location": [
+          33.2334903,
+          35.6363802
+        ],
+        "name": "נחל דן",
+        "images": [
+          {
+            "photo": "public-data/poi-images/poi-1821461d-91d526fa.webp",
+            "thumbnail": "public-data/poi-images/poi-1821461d-91d526fa-thumb.webp"
+          },
+          {
+            "photo": "public-data/poi-images/poi-1821461d-f0069811.webp",
+            "thumbnail": "public-data/poi-images/poi-1821461d-f0069811-thumb.webp"
+          }
+        ],
+        "description": "נחל דן זורם בחלקו בתוך קיבוץ דפנה. במקום יש מדשאות וירידה כיפית למים"
+      }
+    ],
+    "middle": {
+      "longitude": 35.637502,
+      "latitude": 33.233276,
+      "elevation": 153.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "פלג הדן": {
+    "id": 340,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.639164,
+      "latitude": 33.222699,
+      "elevation": 117.0
+    },
+    "elevation_gain_m": 2.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 2.0
+  },
+  "איילת השחר שדות צפוניים": {
+    "id": 345,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.57301,
+      "latitude": 33.036188,
+      "elevation": 150.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "מעבר הולכי רגל גשר להבות": {
+    "id": 348,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.628595,
+      "latitude": 33.146493,
+      "elevation": 75.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "שביל גישה גשר להבות": {
+    "id": 351,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.629213,
+      "latitude": 33.147179,
+      "elevation": 70.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "שביל אופניים יובלים": {
+    "id": 352,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.580968,
+      "latitude": 33.222522,
+      "elevation": 169.0
+    },
+    "elevation_gain_m": 2.2,
+    "elevation_loss_m": 4.0,
+    "net_elevation_change_m": -1.8
+  },
+  "שביל אופניים דפנה רחבה": {
+    "id": 364,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.631196,
+      "latitude": 33.224132,
+      "elevation": 125.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "רחוב הירדן מקטע מרכזי": {
+    "id": 369,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "middle": {
+      "longitude": 35.575401,
+      "latitude": 33.205509,
+      "elevation": 108.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 0.0,
+    "net_elevation_change_m": 0.0
+  },
+  "שביל אופניים 918 דפנה [split archive 88]": {
+    "id": 88,
+    "status": "deprecated",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "originalName": "שביל אופניים 918 דפנה",
+    "deprecated": true,
+    "routeAnchors": [
+      [
+        35.641096,
+        33.217738
+      ],
+      [
+        35.635319,
+        33.22102
+      ]
+    ]
+  },
+  "סובב דפנה": {
+    "id": 81,
+    "status": "deprecated",
+    "deprecated": true,
+    "routeAnchors": [
+      [
+        35.637647,
+        33.233444
+      ],
+      [
+        35.643241,
+        33.235553
+      ],
+      [
+        35.647041,
+        33.234447
+      ]
+    ]
+  },
+  "סובב דפנה - 1": {
+    "id": 242,
+    "status": "deprecated",
+    "splitFrom": 81,
+    "splitFromName": "סובב דפנה",
+    "deprecated": true,
+    "routeAnchors": [
+      [
+        35.635409,
+        33.233602
+      ],
+      [
+        35.638922,
+        33.233634
+      ]
+    ]
+  },
+  "שאר ישוב היקפי": {
+    "id": 87,
+    "status": "deprecated",
+    "deprecated": true,
+    "routeAnchors": [
+      [
+        35.652488,
+        33.229541
+      ],
+      [
+        35.65315,
+        33.231945
+      ],
+      [
+        35.64674,
+        33.231525
+      ]
+    ]
+  },
+  "דרך הפטרולים קיבוץ שמיר": {
+    "id": 20,
+    "status": "deprecated",
+    "deprecated": true,
+    "routeAnchors": [
+      [
+        35.66489,
+        33.17409
+      ],
+      [
+        35.664116,
+        33.178531
+      ],
+      [
+        35.663784,
+        33.184368
+      ]
+    ]
+  },
+  "שביל חום ליד חורבת עומרית [split archive 104]": {
+    "id": 104,
+    "status": "deprecated",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "originalName": "שביל חום ליד חורבת עומרית",
+    "deprecated": true,
+    "routeAnchors": [
+      [
+        35.666785,
+        33.212143
+      ],
+      [
+        35.671151,
+        33.211148
+      ],
+      [
+        35.673583,
+        33.21386
+      ],
+      [
+        35.675722,
+        33.222588
+      ],
+      [
+        35.678525,
+        33.231224
+      ],
+      [
+        35.684616,
+        33.238329
+      ]
+    ]
+  },
+  "כביש 918 גשר הפקק [split archive 51]": {
+    "id": 51,
+    "status": "deprecated",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "originalName": "כביש 918 גשר הפקק",
+    "deprecated": true,
+    "routeAnchors": [
+      [
+        35.645878,
+        33.107474
+      ],
+      [
+        35.64375,
+        33.099723
+      ],
+      [
+        35.643843,
+        33.092621
+      ],
+      [
+        35.641164,
+        33.085205
+      ],
+      [
+        35.636034,
+        33.078684
+      ],
+      [
+        35.634592,
+        33.070736
+      ],
+      [
+        35.634924,
+        33.062803
+      ],
+      [
+        35.635113,
+        33.054784
+      ],
+      [
+        35.631903,
+        33.047365
+      ],
+      [
+        35.630189,
+        33.041626
+      ]
+    ]
+  },
+  "כביש 918 גשר הפקק - 2 [split archive 285]": {
+    "id": 285,
+    "status": "deprecated",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "splitFrom": 51,
+    "splitFromName": "כביש 918 גשר הפקק",
+    "originalName": "כביש 918 גשר הפקק - 2",
+    "deprecated": true,
+    "routeAnchors": [
+      [
+        35.629612,
+        33.043632
+      ],
+      [
+        35.63024,
+        33.041442
+      ]
+    ]
+  },
+  "נחל קליל": {
+    "id": 80,
+    "status": "deprecated",
+    "todo": "check winter conditions",
+    "deprecated": true,
+    "routeAnchors": [
+      [
+        35.644139,
+        33.205855
+      ],
+      [
+        35.648413,
+        33.205643
+      ]
+    ]
+  },
+  "כביש 918 גבעת האם [split archive 194]": {
+    "id": 194,
+    "status": "deprecated",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "originalName": "כביש 918 גבעת האם",
+    "deprecated": true,
+    "routeAnchors": [
+      [
+        35.649622,
+        33.206351
+      ],
+      [
+        35.648908,
+        33.208679
+      ]
+    ]
+  },
+  "כביש 918 כפר סאלד [archive 52]": {
+    "id": 52,
+    "status": "deprecated",
+    "deprecated": true,
+    "routeAnchors": [
+      [
+        35.652503,
+        33.195411
+      ],
+      [
+        35.651319,
+        33.199776
+      ],
+      [
+        35.650214,
+        33.204297
+      ]
+    ],
+    "originalName": "כביש 918 כפר סאלד"
+  },
+  "כביש 918 צומת כפר סאלד": {
+    "id": 218,
+    "status": "deprecated",
+    "splitFrom": 52,
+    "splitFromName": "כביש 918 כפר סאלד",
+    "deprecated": true,
+    "routeAnchors": [
+      [
+        35.651847,
+        33.198219
+      ],
+      [
+        35.650658,
+        33.202647
+      ]
+    ]
+  },
+  "שביל שדות כפר סאלד נחל רחום [split archive 215]": {
+    "id": 215,
+    "status": "deprecated",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "originalName": "שביל שדות כפר סאלד נחל רחום",
+    "deprecated": true,
+    "routeAnchors": [
+      [
+        35.650756,
+        33.190437
+      ],
+      [
+        35.647804,
+        33.184051
+      ],
+      [
+        35.646504,
+        33.178008
+      ]
+    ]
+  },
+  "שביל תל קליל": {
+    "id": 112,
+    "status": "deprecated",
+    "deprecated": true,
+    "routeAnchors": [
+      [
+        35.647085,
+        33.183446
+      ],
+      [
+        35.648966,
+        33.188683
+      ],
+      [
+        35.650953,
+        33.192357
+      ]
+    ]
+  },
+  "ירדן מערב שדות כפר בלום [split archive 45]": {
+    "id": 45,
+    "status": "deprecated",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "originalName": "ירדן מערב שדות כפר בלום",
+    "deprecated": true,
+    "routeAnchors": [
+      [
+        35.609918,
+        33.165579
+      ],
+      [
+        35.614518,
+        33.159828
+      ],
+      [
+        35.621332,
+        33.155469
+      ],
+      [
+        35.627196,
+        33.150398
+      ],
+      [
+        35.628811,
+        33.143289
+      ],
+      [
+        35.628825,
+        33.135652
+      ],
+      [
+        35.627708,
+        33.128028
+      ]
+    ]
+  },
+  "ירדן מזרחי שביל צפוני [split archive 39]": {
+    "id": 39,
+    "status": "deprecated",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "originalName": "ירדן מזרחי שביל צפוני",
+    "deprecated": true,
+    "routeAnchors": [
+      [
+        35.628832,
+        33.128072
+      ],
+      [
+        35.629629,
+        33.1359
+      ],
+      [
+        35.629663,
+        33.143711
+      ],
+      [
+        35.628548,
+        33.149181
+      ]
+    ]
+  },
+  "עין תאו [split archive 84]": {
+    "id": 84,
+    "status": "deprecated",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "originalName": "עין תאו",
+    "deprecated": true,
+    "routeAnchors": [
+      [
+        35.574261,
+        33.14592
+      ],
+      [
+        35.570844,
+        33.141407
+      ],
+      [
+        35.57026,
+        33.134365
+      ],
+      [
+        35.56938,
+        33.129268
+      ],
+      [
+        35.568957,
+        33.122161
+      ]
+    ]
+  },
+  "שביל אופניים 9779 קרית שמונה [split archive 91]": {
+    "id": 91,
+    "status": "deprecated",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "originalName": "שביל אופניים 9779 קרית שמונה",
+    "deprecated": true,
+    "routeAnchors": [
+      [
+        35.598477,
+        33.193776
+      ],
+      [
+        35.594011,
+        33.195668
+      ],
+      [
+        35.584563,
+        33.19786
+      ]
+    ]
+  },
+  "נחל עיון בית הלל [split archive 77]": {
+    "id": 77,
+    "status": "deprecated",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "originalName": "נחל עיון בית הלל",
+    "deprecated": true,
+    "routeAnchors": [
+      [
+        35.601578,
+        33.214516
+      ],
+      [
+        35.602186,
+        33.216735
+      ],
+      [
+        35.606441,
+        33.218899
+      ]
+    ]
+  },
+  "שביל אופניים 99 קיאקי הגושרים [split archive 98]": {
+    "id": 98,
+    "status": "deprecated",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "originalName": "שביל אופניים 99 קיאקי הגושרים",
+    "deprecated": true,
+    "routeAnchors": [
+      [
+        35.609908,
+        33.225301
+      ],
+      [
+        35.614168,
+        33.224786
+      ]
+    ]
+  },
+  "כביש 9888 סדנה [split archive 57]": {
+    "id": 57,
+    "status": "deprecated",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "originalName": "כביש 9888 סדנה",
+    "deprecated": true,
+    "routeAnchors": [
+      [
+        35.609212,
+        33.218167
+      ],
+      [
+        35.609364,
+        33.219089
+      ]
+    ]
+  },
+  "מפגש נחל קליל בניאס": {
+    "id": 71,
+    "status": "deprecated",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "routeAnchors": [
+      [
+        35.642755,
+        33.204892
+      ],
+      [
+        35.642579,
+        33.204875
+      ],
+      [
+        35.642755,
+        33.204892
+      ]
+    ]
+  },
+  "שביל ישראל נחל דן": {
+    "id": 107,
+    "status": "deprecated",
+    "deprecated": true,
+    "routeAnchors": [
+      [
+        35.627449,
+        33.232712
+      ],
+      [
+        35.628258,
+        33.239527
+      ],
+      [
+        35.63369,
+        33.244902
+      ],
+      [
+        35.64203,
+        33.247332
+      ],
+      [
+        35.65061,
+        33.250598
+      ]
+    ]
+  },
+  "שביל ישראל מאגר דולב": {
+    "id": 251,
+    "status": "deprecated",
+    "splitFrom": 107,
+    "splitFromName": "שביל ישראל נחל דן",
+    "deprecated": true,
+    "routeAnchors": [
+      [
+        35.628662,
+        33.23771
+      ],
+      [
+        35.628256,
+        33.242058
+      ],
+      [
+        35.634491,
+        33.245333
+      ],
+      [
+        35.642509,
+        33.247593
+      ],
+      [
+        35.650801,
+        33.250608
+      ]
+    ]
+  },
+  "שביל ישראל מאגר דולב - 2": {
+    "id": 253,
+    "status": "deprecated",
+    "splitFrom": 251,
+    "splitFromName": "שביל ישראל מאגר דולב",
+    "deprecated": true,
+    "routeAnchors": [
+      [
+        35.632722,
+        33.244482
+      ],
+      [
+        35.636843,
+        33.246121
+      ],
+      [
+        35.64336,
+        33.247978
+      ],
+      [
+        35.651123,
+        33.250612
+      ]
+    ]
+  },
+  "בקעת יחמור [split archive 150]": {
+    "id": 150,
+    "status": "deprecated",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "originalName": "בקעת יחמור",
+    "deprecated": true,
+    "routeAnchors": [
+      [
+        35.567895,
+        33.046035
+      ],
+      [
+        35.55974,
+        33.048677
+      ],
+      [
+        35.553448,
+        33.052103
+      ],
+      [
+        35.551726,
+        33.058943
+      ],
+      [
+        35.545635,
+        33.062102
+      ],
+      [
+        35.547366,
+        33.06923
+      ],
+      [
+        35.548188,
+        33.074851
+      ],
+      [
+        35.548932,
+        33.081074
+      ]
+    ]
+  },
+  "כביש מערכת שדה אליעזר [split archive 353]": {
+    "id": 353,
+    "status": "deprecated",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "splitFrom": 150,
+    "splitFromName": "בקעת יחמור",
+    "originalName": "כביש מערכת שדה אליעזר",
+    "deprecated": true,
+    "routeAnchors": [
+      [
+        35.56896,
+        33.046043
+      ],
+      [
+        35.562264,
+        33.047055
+      ],
+      [
+        35.557653,
+        33.048215
+      ]
+    ]
+  },
+  "רחוב פנימי שדה אליעזר [split archive 355]": {
+    "id": 355,
+    "status": "deprecated",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "splitFrom": 353,
+    "splitFromName": "כביש מערכת שדה אליעזר",
+    "originalName": "רחוב פנימי שדה אליעזר",
+    "deprecated": true,
+    "routeAnchors": [
+      [
+        35.569814,
+        33.046049
+      ],
+      [
+        35.56309,
+        33.04716
+      ]
+    ]
+  },
+  "רחוב פנימי שדה אליעזר [split archive 357]": {
+    "id": 357,
+    "status": "deprecated",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "splitFrom": 355,
+    "splitFromName": "רחוב פנימי שדה אליעזר",
+    "originalName": "רחוב פנימי שדה אליעזר",
+    "deprecated": true,
+    "routeAnchors": [
+      [
+        35.570296,
+        33.046052
+      ],
+      [
+        35.567581,
+        33.046147
+      ]
+    ]
+  },
+  "ככר כניסה שדה אליעזר": {
+    "id": 360,
+    "status": "deprecated",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "splitFrom": 357,
+    "splitFromName": "רחוב פנימי שדה אליעזר",
+    "routeAnchors": [
+      [
+        35.56745098861134,
+        33.04601714239237
+      ],
+      [
+        35.56750541317243,
+        33.04624256283323
+      ],
+      [
+        35.56752953450581,
+        33.0464566486788
+      ]
+    ]
+  },
+  "ירדן מזרח גשר הפקק [split archive 36]": {
+    "id": 36,
+    "status": "deprecated",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "originalName": "ירדן מזרח גשר הפקק",
+    "deprecated": true,
+    "routeAnchors": [
+      [
+        35.624388,
+        33.062477
+      ],
+      [
+        35.626461,
+        33.054819
+      ],
+      [
+        35.628619,
+        33.047177
+      ],
+      [
+        35.629776,
+        33.04135
+      ]
+    ]
+  },
+  "ירדן מזרח גשר הפקק - 2 [split archive 287]": {
+    "id": 287,
+    "status": "deprecated",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "splitFrom": 36,
+    "splitFromName": "ירדן מזרח גשר הפקק",
+    "originalName": "ירדן מזרח גשר הפקק - 2",
+    "deprecated": true,
+    "routeAnchors": [
+      [
+        35.629712,
+        33.041948
+      ],
+      [
+        35.62903,
+        33.040372
+      ]
+    ]
+  },
+  "ירדן מזרח גשר הפקק - 2 - 2 [split archive 291]": {
+    "id": 291,
+    "status": "deprecated",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "splitFrom": 287,
+    "splitFromName": "ירדן מזרח גשר הפקק - 2",
+    "originalName": "ירדן מזרח גשר הפקק - 2 - 2",
+    "deprecated": true,
+    "routeAnchors": [
+      [
+        35.629228,
+        33.040368
+      ],
+      [
+        35.628621,
+        33.040363
+      ]
+    ]
+  },
+  "ציר הנפט בניאס שמיר": {
+    "id": 208,
+    "status": "deprecated",
+    "quality": {
+      "overall": 4,
+      "safety": 3,
+      "comfort": 5,
+      "scenery": 5
+    },
+    "deprecated": true,
+    "routeAnchors": [
+      [
+        35.689347,
+        33.23753
+      ],
+      [
+        35.691765,
+        33.229335
+      ],
+      [
+        35.695161,
+        33.221738
+      ],
+      [
+        35.695184,
+        33.216699
+      ],
+      [
+        35.695019,
+        33.208661
+      ],
+      [
+        35.693266,
+        33.200645
+      ],
+      [
+        35.692277,
+        33.192425
+      ],
+      [
+        35.691288,
+        33.184205
+      ],
+      [
+        35.690299,
+        33.175984
+      ]
+    ]
+  },
+  "ציר הנפט בניאס שמיר - 2 [split archive 258]": {
+    "id": 258,
+    "status": "deprecated",
+    "quality": {
+      "overall": 4,
+      "safety": 3,
+      "comfort": 5,
+      "scenery": 5
+    },
+    "splitFrom": 208,
+    "splitFromName": "ציר הנפט בניאס שמיר",
+    "originalName": "ציר הנפט בניאס שמיר - 2",
+    "deprecated": true,
+    "routeAnchors": [
+      [
+        35.694459,
+        33.222067
+      ],
+      [
+        35.695363,
+        33.217922
+      ],
+      [
+        35.6944,
+        33.209491
+      ],
+      [
+        35.693361,
+        33.201431
+      ],
+      [
+        35.692345,
+        33.192986
+      ],
+      [
+        35.691329,
+        33.184541
+      ],
+      [
+        35.690312,
+        33.176097
+      ]
+    ]
+  },
+  "שביל אופניים 99 דפנה [split archive 95]": {
+    "id": 95,
+    "status": "deprecated",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "originalName": "שביל אופניים 99 דפנה",
+    "deprecated": true,
+    "routeAnchors": [
+      [
+        35.642534,
+        33.228553
+      ],
+      [
+        35.638995,
+        33.226436
+      ],
+      [
+        35.634151,
+        33.224867
+      ]
+    ]
+  },
+  "שביל אופניים 99 דפנה [split archive 332]": {
+    "id": 332,
+    "status": "deprecated",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "splitFrom": 95,
+    "splitFromName": "שביל אופניים 99 דפנה",
+    "originalName": "שביל אופניים 99 דפנה",
+    "deprecated": true,
+    "routeAnchors": [
+      [
+        35.639397,
+        33.226595
+      ],
+      [
+        35.634569,
+        33.224971
+      ]
+    ]
+  },
+  "רחוב הדולב בית הלל [split archive 141]": {
+    "id": 141,
+    "status": "deprecated",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "originalName": "רחוב הדולב בית הלל",
+    "deprecated": true,
+    "routeAnchors": [
+      [
+        35.604721,
+        33.215301
+      ],
+      [
+        35.602073,
+        33.214799
+      ]
+    ]
+  },
+  "פארק הזהב קריית שמונה [split archive 143]": {
+    "id": 143,
+    "status": "deprecated",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "originalName": "פארק הזהב קריית שמונה",
+    "deprecated": true,
+    "routeAnchors": [
+      [
+        35.575863,
+        33.209937
+      ],
+      [
+        35.574301,
+        33.205544
+      ],
+      [
+        35.576037,
+        33.202314
+      ]
+    ]
+  },
+  "פארק הזהב קריית שמונה - 2 [split archive 366]": {
+    "id": 366,
+    "status": "deprecated",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "splitFrom": 143,
+    "splitFromName": "פארק הזהב קריית שמונה",
+    "originalName": "פארק הזהב קריית שמונה - 2",
+    "deprecated": true,
+    "routeAnchors": [
+      [
+        35.573656,
+        33.204816
+      ],
+      [
+        35.576332,
+        33.201398
+      ]
+    ]
+  },
+  "גבעת שחומית [split archive 142]": {
+    "id": 142,
+    "status": "deprecated",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "originalName": "גבעת שחומית",
+    "deprecated": true,
+    "routeAnchors": [
+      [
+        35.57771,
+        33.204722
+      ],
+      [
+        35.577305,
+        33.202025
+      ],
+      [
+        35.577509,
+        33.206261
+      ]
+    ]
+  },
+  "רחוב הנרייטה סאלד [split archive 146]": {
+    "id": 146,
+    "status": "deprecated",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "originalName": "רחוב הנרייטה סאלד",
+    "deprecated": true,
+    "routeAnchors": [
+      [
+        35.573173,
+        33.199528
+      ],
+      [
+        35.569664,
+        33.200778
+      ]
+    ]
+  },
+  "רחוב הנרייטה סאלד - 2": {
+    "id": 362,
+    "status": "deprecated",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "splitFrom": 146,
+    "splitFromName": "רחוב הנרייטה סאלד",
+    "routeAnchors": [
+      [
+        35.56975120665177,
+        33.20067069217241
+      ],
+      [
+        35.569673513076765,
+        33.200776061772714
+      ],
+      [
+        35.569518472039704,
+        33.20083036803055
+      ]
+    ]
+  },
+  "קרית שמונה פארק גאולוגי [split archive 86]": {
+    "id": 86,
+    "status": "deprecated",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "originalName": "קרית שמונה פארק גאולוגי",
+    "deprecated": true,
+    "routeAnchors": [
+      [
+        35.566536,
+        33.199058
+      ],
+      [
+        35.564417,
+        33.199069
+      ],
+      [
+        35.562265,
+        33.199786
+      ],
+      [
+        35.56075,
+        33.201097
+      ]
+    ]
+  },
+  "כביש גישה שדה נחמיה [split archive 160]": {
+    "id": 160,
+    "status": "deprecated",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "originalName": "כביש גישה שדה נחמיה",
+    "deprecated": true,
+    "routeAnchors": [
+      [
+        35.61924,
+        33.183677
+      ],
+      [
+        35.618802,
+        33.182946
+      ]
+    ]
+  },
+  "אגמון החולה דרום [split archive 148]": {
+    "id": 148,
+    "status": "deprecated",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "originalName": "אגמון החולה דרום",
+    "deprecated": true,
+    "routeAnchors": [
+      [
+        35.620259,
+        33.099259
+      ],
+      [
+        35.612196,
+        33.096873
+      ],
+      [
+        35.603145,
+        33.097342
+      ],
+      [
+        35.595713,
+        33.09874
+      ],
+      [
+        35.594572,
+        33.106342
+      ],
+      [
+        35.594924,
+        33.11006
+      ]
+    ]
+  },
+  "נחל אשף [split archive 161]": {
+    "id": 161,
+    "status": "deprecated",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "originalName": "נחל אשף",
+    "deprecated": true,
+    "routeAnchors": [
+      [
+        35.566489,
+        33.002853
+      ],
+      [
+        35.566728,
+        33.005848
+      ],
+      [
+        35.570813,
+        33.00947
+      ]
+    ]
+  },
+  "דרך נוף הרי נפתלי מצפה לירן [split archive 166]": {
+    "id": 166,
+    "status": "deprecated",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "originalName": "דרך נוף הרי נפתלי מצפה לירן",
+    "deprecated": true,
+    "routeAnchors": [
+      [
+        35.558918,
+        33.210393
+      ],
+      [
+        35.562102,
+        33.217035
+      ],
+      [
+        35.563006,
+        33.224635
+      ],
+      [
+        35.56506,
+        33.229409
+      ],
+      [
+        35.568826,
+        33.235933
+      ],
+      [
+        35.572098,
+        33.238957
+      ]
+    ]
+  },
+  "רחוב הוורדים דרום קריית שמונה [split archive 183]": {
+    "id": 183,
+    "status": "deprecated",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "originalName": "רחוב הוורדים דרום קריית שמונה",
+    "deprecated": true,
+    "routeAnchors": [
+      [
+        35.579144,
+        33.200181
+      ],
+      [
+        35.580295,
+        33.205083
+      ],
+      [
+        35.579914,
+        33.211613
+      ]
+    ]
+  },
+  "נחל מכברם [split archive 76]": {
+    "id": 76,
+    "status": "deprecated",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "originalName": "נחל מכברם",
+    "deprecated": true,
+    "routeAnchors": [
+      [
+        35.576607,
+        33.031017
+      ],
+      [
+        35.583957,
+        33.033561
+      ],
+      [
+        35.585642,
+        33.04138
+      ],
+      [
+        35.576873,
+        33.042851
+      ],
+      [
+        35.572122,
+        33.044247
+      ]
+    ]
+  },
+  "נחל מכברם [split archive 341]": {
+    "id": 341,
+    "status": "deprecated",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "splitFrom": 76,
+    "splitFromName": "נחל מכברם",
+    "originalName": "נחל מכברם",
+    "deprecated": true,
+    "routeAnchors": [
+      [
+        35.572685,
+        33.030355
+      ],
+      [
+        35.576759,
+        33.030959
+      ],
+      [
+        35.583969,
+        33.033674
+      ],
+      [
+        35.585679,
+        33.041461
+      ],
+      [
+        35.576802,
+        33.042855
+      ]
+    ]
+  },
+  "נחל גרשום, דרך הצינור [split archive 153]": {
+    "id": 153,
+    "status": "deprecated",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "originalName": "נחל גרשום, דרך הצינור",
+    "deprecated": true,
+    "routeAnchors": [
+      [
+        35.566616,
+        33.082399
+      ],
+      [
+        35.557901,
+        33.082511
+      ],
+      [
+        35.549185,
+        33.083269
+      ],
+      [
+        35.544986,
+        33.083383
+      ]
+    ]
+  },
+  "אגמון החולה": {
+    "id": 1,
+    "status": "deprecated",
+    "deprecated": true,
+    "routeAnchors": [
+      [
+        35.600957,
+        33.1099
+      ],
+      [
+        35.61062,
+        33.109788
+      ],
+      [
+        35.618601,
+        33.105776
+      ],
+      [
+        35.620141,
+        33.099205
+      ],
+      [
+        35.611609,
+        33.096991
+      ],
+      [
+        35.602095,
+        33.097199
+      ],
+      [
+        35.595515,
+        33.100028
+      ],
+      [
+        35.594333,
+        33.108025
+      ]
+    ]
+  },
+  "דרך הפטרולים יער מורדות הגולן": {
+    "id": 17,
+    "status": "deprecated",
+    "deprecated": true,
+    "routeAnchors": [
+      [
+        35.656096,
+        33.129325
+      ],
+      [
+        35.66081,
+        33.137005
+      ],
+      [
+        35.664886,
+        33.144748
+      ],
+      [
+        35.668082,
+        33.153035
+      ],
+      [
+        35.668415,
+        33.161657
+      ],
+      [
+        35.666051,
+        33.169584
+      ]
+    ]
+  },
+  "דרך נוף הרי נפתלי קרית שמונה": {
+    "id": 23,
+    "status": "legacy"
+  },
+  "הר עלמון": {
+    "id": 28,
+    "status": "legacy"
+  },
+  "כביש 918 בניאס": {
+    "id": 50,
+    "status": "deprecated",
+    "deprecated": true,
+    "routeAnchors": [
+      [
+        35.648673,
+        33.20939
+      ],
+      [
+        35.644743,
+        33.214192
+      ]
+    ]
+  },
+  "כביש 99 לשניר": {
+    "id": 59,
+    "status": "deprecated",
+    "deprecated": true,
+    "routeAnchors": [
+      [
+        35.663568,
+        33.242106
+      ],
+      [
+        35.669484,
+        33.248382
+      ],
+      [
+        35.677353,
+        33.251226
+      ],
+      [
+        35.683108,
+        33.24767
+      ],
+      [
+        35.692117,
+        33.247848
+      ]
+    ]
+  },
+  "כביש גישה נבי יהודה": {
+    "id": 66,
+    "status": "deprecated",
+    "deprecated": true,
+    "routeAnchors": [
+      [
+        35.655576,
+        33.21748
+      ]
+    ]
+  },
+  "כביש מערכת בית הלל": {
+    "id": 70,
+    "status": "legacy"
+  },
+  "נחל דישון": {
+    "id": 73,
+    "status": "legacy"
+  },
+  "סובב שמורת החולה": {
+    "id": 82,
+    "status": "deprecated",
+    "deprecated": true,
+    "todo": "check if relevant",
+    "routeAnchors": [
+      [
+        35.616608,
+        33.074711
+      ],
+      [
+        35.608129,
+        33.07986
+      ],
+      [
+        35.59965,
+        33.085008
+      ],
+      [
+        35.591223,
+        33.090182
+      ],
+      [
+        35.588677,
+        33.098487
+      ],
+      [
+        35.587198,
+        33.107173
+      ],
+      [
+        35.580253,
+        33.11094
+      ],
+      [
+        35.572492,
+        33.109471
+      ],
+      [
+        35.573944,
+        33.100789
+      ],
+      [
+        35.576522,
+        33.093295
+      ],
+      [
+        35.586757,
+        33.094274
+      ]
+    ]
+  },
+  "ציר הנפט": {
+    "id": 85,
+    "status": "deprecated",
+    "deprecated": true,
+    "data": [
+      {
+        "type": "slope",
+        "information": "שיפוע תלול מאוד",
+        "location": [
+          33.221327,
+          35.697358
+        ]
+      }
+    ],
+    "routeAnchors": [
+      [
+        35.689394,
+        33.237347
+      ],
+      [
+        35.691899,
+        33.229077
+      ],
+      [
+        35.695676,
+        33.221636
+      ],
+      [
+        35.695135,
+        33.216005
+      ],
+      [
+        35.694854,
+        33.207675
+      ],
+      [
+        35.693088,
+        33.199365
+      ],
+      [
+        35.692089,
+        33.190878
+      ],
+      [
+        35.691048,
+        33.182385
+      ],
+      [
+        35.690085,
+        33.173882
+      ],
+      [
+        35.690242,
+        33.166989
+      ],
+      [
+        35.688661,
+        33.160401
+      ],
+      [
+        35.687619,
+        33.154294
+      ],
+      [
+        35.686591,
+        33.145972
+      ],
+      [
+        35.685559,
+        33.137745
+      ],
+      [
+        35.687798,
+        33.12961
+      ]
+    ]
+  },
+  "שביל ישראל ושביל אדום הרי נפתלי": {
+    "id": 106,
+    "status": "legacy"
+  },
+  "שביל עלמה": {
+    "id": 108,
+    "status": "legacy"
+  },
+  "שביל שדות כפר סאלד [archive 111]": {
+    "id": 111,
+    "status": "deprecated",
+    "deprecated": true,
+    "routeAnchors": [
+      [
+        35.650618,
+        33.190194
+      ],
+      [
+        35.647669,
+        33.183335
+      ],
+      [
+        35.645636,
+        33.176119
+      ],
+      [
+        35.641828,
+        33.170193
+      ]
+    ],
+    "originalName": "שביל שדות כפר סאלד"
+  },
+  "שדות בית הלל מזרח": {
+    "id": 115,
+    "status": "legacy"
+  },
+  "תל חצור שביל שחור": {
+    "id": 127,
+    "status": "legacy"
+  },
+  "נחל גרשום": {
+    "id": 138,
+    "status": "legacy"
+  },
+  "רחוב הוורדים קריית שמונה": {
+    "id": 145,
+    "status": "legacy"
+  },
+  "Derech habitachon segment": {
+    "id": 199,
+    "status": "deprecated",
+    "deprecated": true,
+    "routeAnchors": [
+      [
+        35.676261,
+        33.25095
+      ],
+      [
+        35.680163,
+        33.247845
+      ],
+      [
+        35.687896,
+        33.2474
+      ]
+    ]
+  },
+  "New segment": {
+    "id": 219,
+    "status": "deprecated",
+    "deprecated": true,
+    "routeAnchors": [
+      [
+        35.654232,
+        33.196486
+      ],
+      [
+        35.657132,
+        33.19338
+      ]
+    ]
+  },
+  "צומת חורשת טל [split archive 300]": {
+    "id": 300,
+    "status": "deprecated",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "originalName": "צומת חורשת טל",
+    "deprecated": true,
+    "routeAnchors": [
+      [
+        35.631527,
+        33.223927
+      ],
+      [
+        35.631184,
+        33.224135
+      ]
+    ]
+  },
+  "צומת חורשת טל": {
+    "id": 328,
+    "status": "deprecated",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "splitFrom": 300,
+    "splitFromName": "צומת חורשת טל",
+    "routeAnchors": [
+      [
+        35.63182296498752,
+        33.22376333851297
+      ],
+      [
+        35.631495,
+        33.223929
+      ],
+      [
+        35.631271510480104,
+        33.22417634033158
+      ]
+    ]
+  },
+  "רחבת כניסה מטעי דפנה": {
+    "id": 329,
+    "status": "deprecated",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "splitFrom": 300,
+    "splitFromName": "צומת חורשת טל",
+    "routeAnchors": [
+      [
+        35.6312335482165,
+        33.22417589918132
+      ],
+      [
+        35.63103775287357,
+        33.22414245056977
+      ],
+      [
+        35.630975020054336,
+        33.22415000741729
+      ]
+    ]
+  },
+  "New segment - 2": {
+    "id": 363,
+    "status": "deprecated",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "routeAnchors": [
+      [
+        35.6309581,
+        33.2241527
+      ],
+      [
+        35.631161,
+        33.224134
+      ],
+      [
+        35.631292,
+        33.224137
+      ]
+    ]
+  }
+}

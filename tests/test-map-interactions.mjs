@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import {
   buildNetworkSegments,
+  findClosestRouteSegment,
   getClosestPointOnLineSegment,
   metersPerPixelAtLatitude,
   pixelDistance,
@@ -19,6 +20,35 @@ import {
   assert.equal(segs.length, 1, "only the valid named multi-point segment survives");
   assert.equal(segs[0].segmentName, "A");
   assert.equal(segs[0].coordinates.length, 2);
+}
+
+// Logical and physical representations hand interaction ownership over at the
+// same zoom where their paint transitions.
+{
+  const segments = buildNetworkSegments([
+    {
+      properties: { name: "logical", interactionMaxZoom: 12 },
+      geometry: { coordinates: [[0, 0], [1, 0]] },
+    },
+    {
+      properties: { name: "physical", interactionMinZoom: 10.5 },
+      geometry: { coordinates: [[0, 0.1], [1, 0.1]] },
+    },
+  ]);
+  const event = { point: { x: 0, y: 0 }, lngLat: { lng: 0, lat: 0 } };
+  const mapAt = (zoom) => ({
+    getZoom: () => zoom,
+    isMoving: () => false,
+    project: ([lng, lat]) => ({ x: lng * 10, y: lat * 10 }),
+  });
+  assert.equal(
+    findClosestRouteSegment(mapAt(10), event, segments)?.segmentName,
+    "logical",
+  );
+  assert.equal(
+    findClosestRouteSegment(mapAt(12), event, segments)?.segmentName,
+    "physical",
+  );
 }
 
 // getClosestPointOnLineSegment projects onto, and clamps to, the segment.

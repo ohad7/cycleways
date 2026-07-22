@@ -1,0 +1,652 @@
+{
+  "version": 1,
+  "entries": [
+    {
+      "slug": "banias-gan-hatsafon",
+      "name": "בניאס וגן הצפון",
+      "summary": "מסלול שעובר בשבילי האופניים היפים ביותר בארץ",
+      "route": "3PGt1FjLexhTUYMBZAzgKDBF8xGuCVkRpQKUcFBHzZ2UJ7kz75uZNebhgrf3MWHWiWEAscUDViet4y8QjacovT9cMWwQncmrVVeEZpGcGoLuhNzPH8NAEDJKkmnWabep43xqXb2WbUuqHpMtk94tftEusfvXbTGGCEfzXnkPVgdBS7rgkwbBGFu8DhNGZkRPcXqW2wqtra6dSHZt38gfWAZkUyrTSyNZvP6FkhoEBWRM7V3RrfPyCVobB1T8e8osJcvW59JmDvGeB1yjaevskWJwiTivjr5sDMspKYjKhQZeWN8YX79jgLJWx69BT8B3K94WhQVhA1wf7Zp7xYWy9dggHRmgs6QxNnnYD8xacKEH6PDcehcCgESMTWXyzQqKU6Bd8hTfqGN3nPK9mtjEdeVWVVGJDU9bofndqYqvgph79PpDyioTWsudXRPdWxNZphjEGvoxhYYp71DydotMmtcYM4Rzc2J7wCHkSstXe3sec966HhcHiLQuHg9p14GwNpuHzjL6n6gHFbuHWp3EcqBLN49UBP2bEXzJ3MCMM98fbhrrHwKHrJS2xnkwdGCERqVTt1ZbZvJAMEPaisi7crv3o899faq2s1kJYr9YAcjkJzK8nEXQhkxJeaznwExp2zMpW7QMsonqtHfEz71XDgFm1xYoKyYtBALuJCS9YF5NzJuXNpYvuu4eDGrkNMevTX3q2LBnEUStsMB8y7kxiY91jy9X9dViFsSsW1Q3sZ9DGQFAkMekcmK2kZTBw5u7pxdEStH4AWz4ftZMz6dr1NzHjfomQCnyG6tGSebDp4kVmGVuvZwvJS912e",
+      "notes": "",
+      "featured": true,
+      "distanceKm": 14.7,
+      "elevationGainM": 67,
+      "elevationLossM": 67,
+      "regionId": "hula-valley",
+      "passesNear": [
+        "hagoshrim",
+        "beit-hillel"
+      ],
+      "difficulty": "easy",
+      "style": "family",
+      "roadMix": {
+        "paved": 0.603136687900715,
+        "dirt": 0.3727874940146249,
+        "road": 0.024075818084660187
+      },
+      "qualityScore": 3,
+      "start": {
+        "name": "שער כניסה שדה נחמיה",
+        "description": "שער הכניסה הצהוב של שדה נחמיה. ליד השער חניית כורכר רחבה, פונים שמאלה מיד לפני הבוטקה לכיוון גשר הולכי רגל ומיד ימינה לכיוון הנחל ומתחילים במסלול",
+        "images": [
+          {
+            "photo": "public-data/poi-images/banias-gan-hatsafon-start-4d7040b6.webp",
+            "thumbnail": "public-data/poi-images/banias-gan-hatsafon-start-4d7040b6-thumb.webp"
+          }
+        ]
+      },
+      "heroImage": {
+        "photo": "public-data/poi-images/poi-38b469d3-eadbb56a.webp",
+        "thumbnail": "public-data/poi-images/poi-38b469d3-eadbb56a-thumb.webp",
+        "alt": "חניון הדקל"
+      },
+      "routeShape": {
+        "type": "circular",
+        "endpointDistanceM": 2
+      },
+      "surfaceType": "mixed",
+      "startPlaceIds": [
+        "hagoshrim",
+        "beit-hillel"
+      ],
+      "placeMatches": [
+        {
+          "id": "hagoshrim",
+          "relation": "near",
+          "matchType": "radius",
+          "distanceM": 422,
+          "routeProgressMeters": 7562
+        },
+        {
+          "id": "beit-hillel",
+          "relation": "near",
+          "matchType": "radius",
+          "distanceM": 429,
+          "routeProgressMeters": 9702
+        }
+      ],
+      "routeMapImage": {
+        "photo": "public-data/route-map-images/banias-gan-hatsafon-map-8ab7be6f.webp",
+        "thumbnail": "public-data/route-map-images/banias-gan-hatsafon-map-8ab7be6f-thumb.webp",
+        "alt": "מפת מסלול בניאס וגן הצפון",
+        "source": {
+          "type": "mapbox-screenshot",
+          "routeTokenHash": "sha256:4f5d5c4fe65b9ec350310203dc092136b243ae28391ee50d7fb80f67c1ae547e",
+          "mapVersion": "6ee5d31a1bbd",
+          "style": "mapbox://styles/mapbox/outdoors-v12",
+          "width": 1200,
+          "height": 800,
+          "generatedAt": "2026-06-06T16:52:38.757Z"
+        }
+      }
+    },
+    {
+      "slug": "sovev-beit-hillel",
+      "name": "סובב בית הלל",
+      "summary": "מסלול קצר ונעים מסביב לבית הלל, בלב הגליל העליון",
+      "route": "L6uMJzG7WcTJXbEArfhpTyhjKsHdCubXDzu1Kf5521JmYpSovsKF4UyV7yBZwDNp9mtW4R5WCYAQikJZLrto1HbaQa7MFCaUkXQhEk8vf6YBXVpiFSggjCCr4bMYUNCDUwAhSUxKDeXXUwTm1t7GeV4r4XBP8VNXjLJrdg1WeTBzeUEhhRciykg2sULwARAWNV1P9VTXPSx6tUr6NmbFHL7ZugZ4HrX8kNHLHzv3aGXehhe3jiCdtrZTprrV8F4QsPxXpzekyBpbak6e5Y2fuC6KZ6jFDKqxhS6RuGss2v3wysnCAympBTXF",
+      "notes": "",
+      "featured": true,
+      "distanceKm": 6.5,
+      "elevationGainM": 12,
+      "elevationLossM": 12,
+      "regionId": "hula-valley",
+      "passesNear": [
+        "beit-hillel",
+        "shdeh-nehemia"
+      ],
+      "difficulty": "easy",
+      "style": "family",
+      "roadMix": {
+        "paved": 0.9866683669311136,
+        "dirt": 0,
+        "road": 0.013331633068886514
+      },
+      "qualityScore": 3,
+      "start": {
+        "name": "חניון כניסה בית הלל",
+        "description": "המסלול מתחיל בחניון שליד  הכניסה הצפונית לבית הלל שעל כביש 9888 קצת אחרי השער הצהוב של המושב",
+        "images": [
+          {
+            "photo": "public-data/poi-images/sovev-beit-hillel-start-88a84776.webp",
+            "thumbnail": "public-data/poi-images/sovev-beit-hillel-start-88a84776-thumb.webp"
+          }
+        ]
+      },
+      "routeShape": {
+        "type": "circular",
+        "endpointDistanceM": 6
+      },
+      "surfaceType": "paved",
+      "startPlaceIds": [
+        "beit-hillel",
+        "shdeh-nehemia"
+      ],
+      "placeMatches": [
+        {
+          "id": "beit-hillel",
+          "relation": "near",
+          "matchType": "radius",
+          "distanceM": 46,
+          "routeProgressMeters": 1
+        },
+        {
+          "id": "shdeh-nehemia",
+          "relation": "near",
+          "matchType": "radius",
+          "distanceM": 5,
+          "routeProgressMeters": 1501
+        }
+      ],
+      "routeMapImage": {
+        "photo": "public-data/route-map-images/sovev-beit-hillel-map-43357d52.webp",
+        "thumbnail": "public-data/route-map-images/sovev-beit-hillel-map-43357d52-thumb.webp",
+        "alt": "מפת מסלול סובב בית הלל",
+        "source": {
+          "type": "mapbox-screenshot",
+          "routeTokenHash": "sha256:1b4e57e3cc362d4c8869f0ade487f914867a1954b2794ea94764cfacae1e5dfb",
+          "mapVersion": "6ee5d31a1bbd",
+          "style": "mapbox://styles/mapbox/outdoors-v12",
+          "width": 1200,
+          "height": 800,
+          "generatedAt": "2026-06-06T16:52:55.733Z"
+        }
+      }
+    },
+    {
+      "slug": "historic-jordan",
+      "name": "הירדן ההיסטורי",
+      "summary": "מסלול דרך נחלים ישנים ותעלות רכיבה מכפר בלום דרך הירדן ההיסטורי, אגמון החולה ותעלת הביטחון",
+      "intro": "רכיבה מכפר בלום לאורך הירדן ההיסטורי ששוקם, לצד שדות שקד וזית, דרך אגמון החולה ותעלת הירדן המזרחית, עם הרבה קטעי עפר פתוחים ונוף מים חקלאי.",
+      "route": "7SPKgTSEz3nhsGcbu4WBvWZfBmFxDQixpo5bdjdVCHmAj7ecteifutivDXXBzSxgg8ckfphz56AuYKx8ZRrHh7dgmb4kPUBbZUjT5zXatSAJeJFpcRU3J4Q5W2GKpdcps8geLxoweBz4AkRakutn7jd8UCxaYMqDkJ76fn1XfRPPNWT2mYetDqqwatiDi8eqLpU3eMwiZba9r7Sx7CR26UuAmgwZVTFbCDsChRJpEAQsQ31yWAdwPE8L3VkLD9W9PghFrXCnY8tYdhQtKNyWMjR35UkGihxj3w9ptEZFHo3wrEYBVEpAnpgD4yPpWdGds7kxjoTK3ktwuMkkoqz55Ggv4vmFwGNbhU3vcPLa9CwWiiA5U75VxWVMPXmtFPGBYhFGdiB2eMyKYyvB3sQjdykbKh9XsrXe3AWdsw5e5eNaS8PrgTtzP1aDiAdtFVmRxxdyQDDuNTswLPF4s6H3ATpHzzE1hhVDBY3BsSDHZfmVscf7WwKt3bnnmEJTwQL9rM3cyt9fAWXQxq5hpT63RWv3K1G1dMoLdNbZ3xPbAnEd3n9Ga6xSs3MxpthVK8vre8Ag3br4LfQ495rxmkpjHKAipQiz12feeoAqGoWzi9F7oaBsXdcR69VpTWLTQCCpvSH9kA7v4yA9188nF8nrZ4i5xRuhLzraCB6YwMaboKquuJu8QH5E2MtYatTRQyGcamD4Vv9tLxAXJVNWhJ3CVyjq1RHdp12GLzsRY8zeqkuTtrRy7g5gMHDF2tZKj3bRANPF2n7bDGXgcVpTV4XtuBVJTCvqcqBVxohbxjroNHFxxps3ywcJUd2w94jcZSfgskpDf3UuBrPG5rfB2MEjSkUkCZmupCoh6ipRBGsoTzjvyRErn8AuMn8TUMLkGp9YWUncM877Tmm51RFkytZ8axZqZZ7tmRU1TKdCtuUryKomczP11aLw5VZ2U2AwZqkHAUuKXCAhET8ELkbfyVFR23vp2cGznPy",
+      "notes": "",
+      "featured": false,
+      "distanceKm": 23.9,
+      "elevationGainM": 48,
+      "elevationLossM": 48,
+      "regionId": "hula-valley",
+      "passesNear": [
+        "neot-mordechai",
+        "agamon-hahula",
+        "kfar-blum"
+      ],
+      "difficulty": "moderate",
+      "style": "adventurous",
+      "roadMix": {
+        "paved": 0.2472875039979271,
+        "dirt": 0.752712496002073,
+        "road": 0
+      },
+      "qualityScore": 3,
+      "heroImage": {
+        "photo": "public-data/poi-images/poi-5b6da297-fd491b50.webp",
+        "thumbnail": "public-data/poi-images/poi-5b6da297-fd491b50-thumb.webp",
+        "alt": "בריכות נופרים"
+      },
+      "routeShape": {
+        "type": "circular",
+        "endpointDistanceM": 18
+      },
+      "surfaceType": "mixed",
+      "startPlaceIds": [
+        "neot-mordechai",
+        "agamon-hahula",
+        "kfar-blum"
+      ],
+      "placeMatches": [
+        {
+          "id": "neot-mordechai",
+          "relation": "near",
+          "matchType": "radius",
+          "distanceM": 388,
+          "routeProgressMeters": 2468
+        },
+        {
+          "id": "agamon-hahula",
+          "relation": "passes_through",
+          "matchType": "segment",
+          "segmentNames": [
+            "אגמון החולה צפון",
+            "אגמון החולה גישה מזרח"
+          ],
+          "distanceM": 132,
+          "routeProgressMeters": 10567
+        },
+        {
+          "id": "kfar-blum",
+          "relation": "passes_through",
+          "matchType": "segment",
+          "segmentNames": [
+            "ירדן מערב כפר בלום",
+            "ירדן מערב כפר בלום"
+          ],
+          "distanceM": 698,
+          "routeProgressMeters": 23242
+        }
+      ],
+      "routeMapImage": {
+        "photo": "public-data/route-map-images/historic-jordan-map-3e843005.webp",
+        "thumbnail": "public-data/route-map-images/historic-jordan-map-3e843005-thumb.webp",
+        "alt": "מפת מסלול הירדן ההיסטורי",
+        "source": {
+          "type": "mapbox-screenshot",
+          "routeTokenHash": "sha256:c767a41708fc125fe2d3a8a8303305d7ca3215623dd3c13b4515e24627564993",
+          "mapVersion": "6ee5d31a1bbd",
+          "style": "mapbox://styles/mapbox/outdoors-v12",
+          "width": 1200,
+          "height": 800,
+          "generatedAt": "2026-06-06T16:53:09.727Z"
+        }
+      },
+      "description": "רכיבה על גדות הירדן - הירדן ההיסטורי ששוקם אחרי שנים רבות, ותעלת הירדן שמזרימה את רוב המים כיום לכנרת. המסלול מתחיל בכפר בלום ועובר בשדות שקד וזית, ממשיך על גדת הירדן ההיסטורי עד אגמון החולה, ומשם חזרה דרך תעלת הירדן המזרחית בשדות היפים של קיבוץ עמיר \n"
+    },
+    {
+      "slug": "kovshey-hagolan",
+      "name": "מסע בעקבות כובשי הגולן",
+      "summary": "מגבעת האם ועד תצפית זעורה בדרך שעשו הלוחמים",
+      "description": "",
+      "route": "txbvXSMKBT8FdsxABiB48N5te84wENspXEyD1avp1P6g1VTyrGpPFeoufBAjY1vm1a7ijPEGLsmMW9SH59KKe1AjR2BhAiS2QXabSAd9G2jPWckKURfESYFCqGBXiQ4RnQcTgV4e7AF1jSdgR1aFkiZYxujgEn5b18pK38ZgSPW873G59ZEiU2f5SqWTJNt2jfJFCLjdXxAXpMwVBGS9nDAFryCEnC4yqYqq4JmkC2zvqrdS5u2ZHnowtzF4iMySpAp79PeDXF34Xez4ARj1icc9o8pXGX3jotSzCn",
+      "notes": "",
+      "featured": false,
+      "heroImage": {
+        "photo": "public-data/poi-images/kovshey-hagolan-hero-4403bbce.webp",
+        "thumbnail": "public-data/poi-images/kovshey-hagolan-hero-4403bbce-thumb.webp",
+        "alt": "מסע בעקבות כובשי הגולן"
+      },
+      "distanceKm": 12.5,
+      "elevationGainM": 719,
+      "elevationLossM": 19,
+      "regionId": "dafna-cluster",
+      "passesNear": [
+        "givat-haem",
+        "mitzpe-golani",
+        "ein-fit"
+      ],
+      "difficulty": "hard",
+      "style": "sporty",
+      "roadMix": {
+        "paved": 0.19272981851557294,
+        "dirt": 0.801407184910914,
+        "road": 0.0058629965735129954
+      },
+      "qualityScore": 3.0681961230094847,
+      "routeShape": {
+        "type": "one_way",
+        "endpointDistanceM": 6916
+      },
+      "surfaceType": "dirt",
+      "startPlaceIds": [
+        "givat-haem"
+      ],
+      "placeMatches": [
+        {
+          "id": "givat-haem",
+          "relation": "passes_through",
+          "matchType": "segment",
+          "segmentNames": [
+            "גבעת האם"
+          ],
+          "distanceM": 0,
+          "routeProgressMeters": 901
+        },
+        {
+          "id": "mitzpe-golani",
+          "relation": "near",
+          "matchType": "radius",
+          "distanceM": 733,
+          "routeProgressMeters": 7116
+        },
+        {
+          "id": "ein-fit",
+          "relation": "passes_through",
+          "matchType": "segment",
+          "segmentNames": [
+            "ציר הנפט עין פית",
+            "עין פית"
+          ],
+          "distanceM": 0,
+          "routeProgressMeters": 8967
+        }
+      ],
+      "routeMapImage": {
+        "photo": "public-data/route-map-images/kovshey-hagolan-map-2ee412e3.webp",
+        "thumbnail": "public-data/route-map-images/kovshey-hagolan-map-2ee412e3-thumb.webp",
+        "alt": "מפת מסלול מסע בעקבות כובשי הגולן",
+        "source": {
+          "type": "mapbox-screenshot",
+          "routeTokenHash": "sha256:a0ee06fea7634c16b7cc666d9b51064e985cb22a0ca98fea74336e441af1a533",
+          "mapVersion": "6ee5d31a1bbd",
+          "style": "mapbox://styles/mapbox/outdoors-v12",
+          "width": 1200,
+          "height": 800,
+          "generatedAt": "2026-06-06T16:53:22.044Z"
+        }
+      },
+      "intro": "מסלול שטח מאתגר שעובר בנקודות המרכזיות של כיבוש הגולן ב 9 ביוני 1967. הרכיבה מתחילה בכניסה מהכביש לגבעת האם, עולה במעלה ההר בדרך הפטרולים הסורית עד למצפה גולני, ומשם לעין פית ותצפית זעורה"
+    },
+    {
+      "slug": "sovev-dafna",
+      "name": "סובב דפנה",
+      "summary": "רכיבה סביב נחל דן וקיבוץ דפנה",
+      "description": "רכיבה נעימה מקיבוץ דפנה אל נחל דן והשדות שמסביבו. המסלול עובר ליד שמורת נחל שניר ובמסלול האופניים שבין הגושרים לדפנה",
+      "route": "3dT6KzGaYL1pwGNsjSUi1ojjGHAeMeTWp2ERKZLtuJUcdrvU9QZqRw1B4Nt5fdHygiow7cZDwRZqGe1jjsDBWjVPRbUNZq5b34GysgSo933BthDSHUK1WqvoBHPVFt83p4ZRQ991bxvpuXXyyiZjLW5XsuWFq6gX2bZgyvFwpK3Pc5fGE6p4knfcc8gpX7u8wn7UFbL7ndQT4Ko1Hk6usHyvoUKATMMip3r22SoCF9VfHW5VodYE7GTmHr4mRPPyLokxCqwvsCbvraDqqe92j4RgfZGEcAPCXNFLcPRJ4sPg42eB9hYo3TuAmNAsCmNs4aooYQ7cdEHRN6ApcxaGLgpMAHnFeaCbaoRnTDn9CfQnLUAE68Cqyo6kLi4RkYeHFGGm7ubqP3XuTQob7JpYf9cCnwFk5Pg7sBTk2HnGtmDsjpyog5Hhetf6HNTaqKCbqk7kUDta35gMv5CrjBxzXNzyv2QQ4BPkUH9N3SZKcwVJa16oiuVETLrnNmsDwpbQyB6EzcpUMk7hqnqJA2MENbny9nh1d9LViMSocX9t8mmx8rb6Mg47HTKwkwzgy1DPo3ni6jHzEtQwVeRQtFydUBywfNQ6JGWTAX6RjEqcRWSkqfQgsNGD85XW5ao5MqZKaZPxmyPP6AwfkjHg6c",
+      "notes": "",
+      "featured": true,
+      "distanceKm": 7.1,
+      "elevationGainM": 49,
+      "elevationLossM": 51,
+      "regionId": "galilee-panhandle",
+      "passesNear": [
+        "dafna",
+        "hagoshrim"
+      ],
+      "difficulty": "easy",
+      "style": "scenic",
+      "roadMix": {
+        "paved": 0.7488283013597943,
+        "dirt": 0.25117169864020567,
+        "road": 0
+      },
+      "qualityScore": 2.9999999999999996,
+      "start": {
+        "name": "מתחם דפנה׳לה",
+        "description": "מתחם בילוי חדש בקיבוץ דפנה. במקום יש מספר מקומות לעצירה למנוחה, כמו ג׳ולאן, קלומפוס, בוזה ופיצה טראק",
+        "images": [
+          {
+            "photo": "public-data/poi-images/sovev-dafna-start-12b6d107.webp",
+            "thumbnail": "public-data/poi-images/sovev-dafna-start-12b6d107-thumb.webp"
+          }
+        ]
+      },
+      "routeShape": {
+        "type": "circular",
+        "endpointDistanceM": 55
+      },
+      "surfaceType": "mixed",
+      "startPlaceIds": [
+        "dafna",
+        "hagoshrim"
+      ],
+      "placeMatches": [
+        {
+          "id": "dafna",
+          "relation": "near",
+          "matchType": "radius",
+          "distanceM": 238,
+          "routeProgressMeters": 4464
+        },
+        {
+          "id": "hagoshrim",
+          "relation": "near",
+          "matchType": "radius",
+          "distanceM": 428,
+          "routeProgressMeters": 4866
+        }
+      ],
+      "heroImage": {
+        "photo": "public-data/poi-images/poi-1821461d-91d526fa.webp",
+        "thumbnail": "public-data/poi-images/poi-1821461d-91d526fa-thumb.webp",
+        "alt": "נחל דן"
+      },
+      "routeMapImage": {
+        "photo": "public-data/route-map-images/sovev-dafna-map-bbee501b.webp",
+        "thumbnail": "public-data/route-map-images/sovev-dafna-map-bbee501b-thumb.webp",
+        "alt": "מפת מסלול סובב דפנה",
+        "source": {
+          "type": "mapbox-screenshot",
+          "routeTokenHash": "sha256:c9c4aadc35073fcf53cc3a2572340cc45147c20faedb9a07d604473999aee0bf",
+          "mapVersion": "6ee5d31a1bbd",
+          "style": "mapbox://styles/mapbox/outdoors-v12",
+          "width": 1200,
+          "height": 800,
+          "generatedAt": "2026-06-06T16:53:35.126Z"
+        }
+      },
+      "intro": "רכיבה נעימה מקיבוץ דפנה אל נחל דן והשדות שמסביבו. המסלול עובר ליד שמורת נחל שניר ובמסלול האופניים שבין הגושרים לדפנה"
+    },
+    {
+      "slug": "roman-roads",
+      "name": "דרכים רומיות",
+      "summary": "עליה בדרכים רומיות מכפר סאלד לרמת הגולן",
+      "description": "רכיבה בדרכים עתיקות (וקופצניות במיוחד) מכפר סאלד לציר הנפט, ומשם חזרה דרך תל עזזיאת וגבעת האם",
+      "route": "5umnczypBjmwPckH6cbzGjdf1swHE9FcuNBBdRfa8JuwM9BrC1WMGRk7nqEkjDveMgpebwLQvJfv1NMuARmKA5e7WkFagDWpVQiEHaCmdrph8eR3TrhYC4KB1HEV96jGu8Z8WtgxbMyeS8d9ZbbzvMT4xKUjw5qEL3bhqbnccmGuJuZthSV6GBhptWHTLgySYtK78swyyEQgeaoaLJvK8ypJ8hhcdLVP99GNHRpVfm1J1kZZFjkG2DeSANXEjSzzhKUJQL9Hccx81x7yTcPP39JH8DKVboPEDRqakDgjSnJPwZN9etbyhs8GLcVkg4aZMw581tYsYH4DDZ5F9eRc9zpXMHAKHBdxqckfsAeVKcpbJhTkmRKM8s43952cMubpNCQkxsuXvnpsWYAPqRg4xMitGsy2C4azy2DoFmR4Crfyd16fZcR9GB3rqRhFtv8ua35rE6xX9m8NxsPCqFVBPPAp84LTzQFb2W4LnSFPkC2ZnmDAqJxAcMYDnc2NdchhkVtk2YsX8yGJPYVNv3PnGeU5JE8e7WPCPUmmdEz8aaTXT4YQGKRodo6DLTYGS5BigeGRytUfm6kVNRqMjTDdioNsPHMgMWQu3csqkDkRnXQ2JMYgTWhzvFit5Ffke9xWFtnLRbhL5Gymt3Y6iUTff4K8speL4ngi9Q9X1Rp81qPqJa1fUaeA5LSQBfpUT3ZE51H7UVHW8h2rAj6xaAZCunC1QWCY8A61oNfSSMx6G1B24BPYzQCeaD4A47pKgtiGjvyfFCnd1bgjEYkfwwVCBFRc342ZM2XgMwggECYQtMVhfQiaoidcnQGaow8j3ouh8cYWXf2kdHCNdfdgpBxcArUoJPFc3W7JneeLXEbv7KarySAH5mZUD6ChGpsHpd6QidBZbtDLZJYgg7RzxhkWvjHwiFntqaNj3xNxfJRU18321duHr8",
+      "notes": "",
+      "featured": false,
+      "distanceKm": 27.3,
+      "elevationGainM": 602,
+      "elevationLossM": 603,
+      "regionId": "north-golan",
+      "passesNear": [
+        "ein-fit",
+        "mitzpe-golani",
+        "givat-haem",
+        "kfar-szold"
+      ],
+      "difficulty": "hard",
+      "style": "sporty",
+      "roadMix": {
+        "paved": 0.34995621588008213,
+        "dirt": 0.6425612166320558,
+        "road": 0.007482567487862042
+      },
+      "qualityScore": 3.4255137510742673,
+      "heroImage": {
+        "photo": "public-data/poi-images/roman-roads-hero-89879e81.webp",
+        "thumbnail": "public-data/poi-images/roman-roads-hero-89879e81-thumb.webp",
+        "alt": "דרכים רומיות"
+      },
+      "start": {
+        "name": "האגם הנעלם",
+        "description": "שער כניסה מקיבוץ כפר סאלד אל האגם הנעלם",
+        "images": [
+          {
+            "photo": "public-data/poi-images/roman-roads-start-04f9e8bb.webp",
+            "thumbnail": "public-data/poi-images/roman-roads-start-04f9e8bb-thumb.webp"
+          }
+        ]
+      },
+      "routeShape": {
+        "type": "circular",
+        "endpointDistanceM": 10
+      },
+      "surfaceType": "mixed",
+      "startPlaceIds": [
+        "ein-fit",
+        "mitzpe-golani",
+        "givat-haem",
+        "kfar-szold"
+      ],
+      "placeMatches": [
+        {
+          "id": "ein-fit",
+          "relation": "passes_through",
+          "matchType": "segment",
+          "segmentNames": [
+            "ציר הנפט עין פית"
+          ],
+          "distanceM": 749,
+          "routeProgressMeters": 14358
+        },
+        {
+          "id": "mitzpe-golani",
+          "relation": "passes_through",
+          "matchType": "segment",
+          "segmentNames": [
+            "ציר הנפט מצפה גולני"
+          ],
+          "distanceM": 0,
+          "routeProgressMeters": 16055
+        },
+        {
+          "id": "givat-haem",
+          "relation": "passes_through",
+          "matchType": "segment",
+          "segmentNames": [
+            "גבעת האם",
+            "כביש 918 כניסה לגבעת האם"
+          ],
+          "distanceM": 0,
+          "routeProgressMeters": 23032
+        },
+        {
+          "id": "kfar-szold",
+          "relation": "near",
+          "matchType": "radius",
+          "distanceM": 96,
+          "routeProgressMeters": 26360
+        }
+      ],
+      "routeMapImage": {
+        "photo": "public-data/route-map-images/roman-roads-map-11aa69c9.webp",
+        "thumbnail": "public-data/route-map-images/roman-roads-map-11aa69c9-thumb.webp",
+        "alt": "מפת מסלול דרכים רומיות",
+        "source": {
+          "type": "mapbox-screenshot",
+          "routeTokenHash": "sha256:0f8f1a20551a4d73879adc905e5a50cb5d63941fb911ffc163d2051455503cbd",
+          "mapVersion": "6ee5d31a1bbd",
+          "style": "mapbox://styles/mapbox/outdoors-v12",
+          "width": 1200,
+          "height": 800,
+          "generatedAt": "2026-06-06T16:53:45.836Z"
+        }
+      },
+      "intro": "רכיבה בדרכים עתיקות (וקופצניות במיוחד) מכפר סאלד לציר הנפט, ומשם חזרה דרך תל עזזיאת וגבעת האם"
+    },
+    {
+      "slug": "sovev-shear-yeshuv",
+      "name": "סובב שאר ישוב",
+      "summary": "סיבוב מסביב שאר ישוב וביקור בפינה קסומה על הבניאס",
+      "intro": "רכיבה קצרה ונעימה בכביש הביטחון של מושב שאר ישוב. המסלול מתחיל ליד קמפינג חניון הבניאס ומקיף את שאר ישוב דרך שדות ונופים, בסוף הסיבוב נעשה ירידה קטנה לכיוון גשר שאר ישוב ומשם בחזרה לנקודת ההתחלה",
+      "description": "רכיבה קצרה ונעימה בכביש הביטחון של מושב שאר ישוב. המסלול מתחיל ליד קמפינג חניון הבניאס ומקיף את שאר ישוב דרך שדות ונופים, בסוף הסיבוב נעשה ירידה קטנה לכיוון גשר שאר ישוב ומשם בחזרה לנקודת ההתחלה\n\n",
+      "route": "5awQ9PprYHvjnrAmpk118U2ABpz5coSPpZh5unPXeg4USTpyhjBXxYzBUFnsNafV9LBvBBx7MDYPen4yqqYTTtUKpT5iuGWwMd3ToDQ4HsCTzR8VNj4Y9eBtCkGtCF8WPwoX2wBXdqfpjWUma4HcZXPwLk5ZBrTQJbCs8KjP4b8RHozvJNQNUSE6igBotdnwS72rkvqB5vDDu7iv2XgyjrcoJ2phhUzEDS6LRj5CAqHXmoBNdBUPggKWebuDvqYQ2b88HBPcRUsmvcQ1hgkHAfDS2ZLtbpwhRHXcR5Ads1Ymh5agbmQu35J4oZ1H8GV2tyita678T8LdoCjASFrrWyzgqXADCnEstE8677g8qon2VnPeP5PasLP6c5hJ5M",
+      "notes": "",
+      "featured": false,
+      "routeMapImage": {
+        "photo": "public-data/route-map-images/sovev-shear-yeshuv-map-e0b908da.webp",
+        "thumbnail": "public-data/route-map-images/sovev-shear-yeshuv-map-e0b908da-thumb.webp",
+        "alt": "מפת מסלול סובב שאר ישוב",
+        "source": {
+          "type": "mapbox-screenshot",
+          "routeTokenHash": "sha256:fdf64e9baffac071fb1d734731308332dea648fbba128986d6a95250763c01dc",
+          "mapVersion": "00f59f7dd38d",
+          "style": "mapbox://styles/mapbox/outdoors-v12",
+          "width": 1200,
+          "height": 800,
+          "generatedAt": "2026-06-09T21:59:21.951Z"
+        }
+      },
+      "start": {
+        "name": "קמפינג חניון הבניאס",
+        "description": "",
+        "images": [
+          {
+            "photo": "public-data/poi-images/sovev-shear-yeshuv-start-ef0530c1.webp",
+            "thumbnail": "public-data/poi-images/sovev-shear-yeshuv-start-ef0530c1-thumb.webp"
+          }
+        ]
+      },
+      "distanceKm": 5.8,
+      "elevationGainM": 59,
+      "elevationLossM": 59,
+      "regionId": "galilee-panhandle",
+      "passesNear": [],
+      "placeMatches": [],
+      "startPlaceIds": [],
+      "difficulty": "easy",
+      "style": "scenic",
+      "routeShape": {
+        "type": "circular",
+        "endpointDistanceM": 1
+      },
+      "surfaceType": "paved",
+      "roadMix": {
+        "paved": 0.9223306013755331,
+        "dirt": 0.07766939862446691,
+        "road": 0
+      },
+      "qualityScore": 2.9999999999999996
+    },
+    {
+      "slug": "naftali-dishon-yosha",
+      "name": "נפתלי - דישון - יער ישע",
+      "summary": "רכיבה ביערות הרי נפתלי ובנחל דישון",
+      "intro": "עליה קלילה בדרך נוף הרי נפתלי, תצפית לעמק החולה מקרן נפתלי, יריד דרך נחל דישון המקסים, וחזרה ביער ישע, מסלול פחות מוכר ומטוייל",
+      "description": "",
+      "route": "QyTCT2w1skNvHjeujJ4sdKocN8FFEMwxamNTTeMddPvhJKJcbZvRqPamKJycYWQVYn4cBy3KguabuaAxiu5vokUPpC2CEDXUafk5ESWWBAYLdWeXS8MfJ1B3Z78R56qjj3jFyguxzfb9DVuDVwEPGFxGWcpEbNVzrfpB2DnVEz5JKVWVcDi3idKX8WoZ3pA6qj2XMkzdyQyjomB7rD6FrnvvY1urFwEJc36zr2SiahPLPR5Fkhc1xDdmaPGPhbobYbeLrVMMy9bzP9KNPB9CnUKaY3rft4S9BF1uPmUg2NapK9DZeZVYfYvmYYiErVonpySsouPCUPRRTLHkbUiYbWd7m2zvaHGCMi1nTBsUGe2e9rcqyaMiAGpptuGjzrTvNX33RWw8GzwawCt3cFV15gvPohrfGMqhNq4v7pcZjwc6bngT3xGLNGjwR1vebfUSdbbMwEVPxwnFz1dnRPWuz8rxAeoAhqxn5tZKc9j8cQQNQpLzAmHsXwtBafsYo8T3pJjs1a94aiutythrdxzoyQNgTEejLSVUadwjUhgFmMQa16vdcRUPCPKUBhxQBJ7UjnpvjJm88zwH4ox7Fk3EndBMdbREHHWdzRx9eiPKWcoPxZWGqScmWBcAp4vYZurzMSfyFD3isX54fxA5GQ4K3towVHdVca7Zwg4JQEhZkfgMmZ7rNPryPSZgJ7mrB4L6ebqZUmDxZnJY6thCvWhAEdWXkmEyef7D8EPzrJyZ6KNE7HKVT89bYb9y9cztghwkTEVaN8ef2wK9qmR6oMNwSEoBadgWAVTcrxdBzZrydd8tyD1nmBBSxaf15yW7FZXcvyW4TozEAcNJRNwBDmWci5W46mQ5vNTFgXjLz2fb5oBM5uyyr7ksHwvSPwFN5jbKAJ3LRtGLgfUJ3oCUSL5HJpNDHC9PVr1obhLbUZUEXNeCq5nxDk4pzkgmSVbZpxYDWkUpRzMNkfyDVbZiBfx7HJ12t9Gu85mtsvDVE7JAEGPz7wLZTUyuCZdzNNww46WfWinCMRw7cnvJsLmcfBJSiEJmrkdPCAnRxP2xPm1ynTuanWLrjqa6nFcK7NSNjjnb7UexPasHUYYwQV8pBCrkvyCTxMNzqE6QxJiBR3zEuqo2zk8t9f4aDPHUjnk9hs2x2TRaPAsiiTpmENp1XJ79MHpXaXw1Pn6e7FpU876QXfCKS5j8RBZnmKTsvPwtZ3ueSTUnNHhaRyi7K5kyXVBTn2pLCGufqahycLbRxTt9uxTtGnFr8p8uVbgEbWnqr5E6LqVzya6fSsech6UYxsvmACnvhVroXZnhD4qvYskgHRtP7QTYkqBFs4iFNShE3yVCmuC7UiqRtoZR5YJCXwskhTq5r5a77XJRDSm5pTyBWz3TFzBzzNoJPGk84VEtLQMyZXjEuHwDK4Wi97vEgqAqo1V2hqF4f151SmL27uXmcHGFaLo",
+      "notes": "",
+      "featured": false,
+      "routeMapImage": {
+        "photo": "public-data/route-map-images/naftali-dishon-yosha-map-6080d6ff.webp",
+        "thumbnail": "public-data/route-map-images/naftali-dishon-yosha-map-6080d6ff-thumb.webp",
+        "alt": "מפת מסלול נפתלי - דישון - יער ישע",
+        "source": {
+          "type": "mapbox-screenshot",
+          "routeTokenHash": "sha256:6aed7196d6cc9938593dc498adb12f4368b55aaad7aadafd2f3c21bd5764ceb8",
+          "mapVersion": "528fc6edbff9",
+          "style": "mapbox://styles/mapbox/outdoors-v12",
+          "width": 1200,
+          "height": 800,
+          "generatedAt": "2026-06-10T18:38:56.197Z"
+        }
+      },
+      "distanceKm": 54.3,
+      "elevationGainM": 845,
+      "elevationLossM": 845,
+      "regionId": "unknown",
+      "passesNear": [
+        "neot-mordechai",
+        "amir"
+      ],
+      "placeMatches": [
+        {
+          "id": "neot-mordechai",
+          "relation": "passes_through",
+          "matchType": "segment",
+          "segmentNames": [
+            "שדות נאות מרדכי מערב"
+          ],
+          "distanceM": 1930,
+          "routeProgressMeters": 45432
+        },
+        {
+          "id": "amir",
+          "relation": "near",
+          "matchType": "radius",
+          "distanceM": 121,
+          "routeProgressMeters": 49006
+        }
+      ],
+      "startPlaceIds": [
+        "neot-mordechai",
+        "amir"
+      ],
+      "difficulty": "hard",
+      "style": "sporty",
+      "routeShape": {
+        "type": "circular",
+        "endpointDistanceM": 5
+      },
+      "surfaceType": "mixed",
+      "roadMix": {
+        "paved": 0.19168147836972615,
+        "dirt": 0.6041459567206154,
+        "road": 0.20417256490965852
+      },
+      "qualityScore": 3.0000000000000004,
+      "heroImage": {
+        "photo": "public-data/poi-images/poi-11102fea-572cdcba.webp",
+        "thumbnail": "public-data/poi-images/poi-11102fea-572cdcba-thumb.webp",
+        "alt": "קרן נפתלי"
+      },
+      "start": {
+        "name": "חורשת הנופלים קריית שמונה",
+        "description": "חורשה קטנה על גבעה בכניסה לעיר, במקום עץ אקליפטוס מרשים ושלושה טנקי שלל ישנים צבועים ",
+        "images": [
+          {
+            "photo": "public-data/poi-images/naftali-dishon-yosha-start-226e5cfb.webp",
+            "thumbnail": "public-data/poi-images/naftali-dishon-yosha-start-226e5cfb-thumb.webp"
+          }
+        ]
+      }
+    }
+  ]
+}

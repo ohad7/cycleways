@@ -1,3 +1,4 @@
+import copy
 import hashlib
 import json
 import tempfile
@@ -337,18 +338,52 @@ class BaseRoutingAssetTests(unittest.TestCase):
                 {"Two-way test segment": {"id": 7, "status": "active"}},
             )
             self.assertEqual(geometry_validation["alignments"], 2)
-            features_by_key = {
-                feature["properties"]["alignmentKey"]: feature
-                for feature in alignment_geometry["features"]
-            }
+            self.assertEqual(alignment_geometry["schemaVersion"], 2)
+            self.assertEqual(geometry_validation["features"], 1)
+            self.assertEqual(geometry_validation["sharedBidirectionalSegments"], 1)
+            shared_feature = alignment_geometry["features"][0]
+            self.assertEqual(shared_feature["properties"]["alignmentKey"], "both")
+            self.assertFalse(shared_feature["properties"]["showDirectionArrow"])
             self.assertEqual(
-                features_by_key["aToB"]["geometry"]["coordinates"],
+                shared_feature["geometry"]["coordinates"],
                 [[35.0, 33.0], [35.001, 33.0]],
             )
-            self.assertEqual(
-                features_by_key["bToA"]["geometry"]["coordinates"],
-                [[35.001, 33.0], [35.0, 33.0]],
+
+            separated_asset = copy.deepcopy(asset)
+            separated_edge = copy.deepcopy(asset["edges"][0])
+            separated_edge["id"] = "edge-2"
+            separated_edge["coordinates"] = [
+                [35.0, 33.0001],
+                [35.001, 33.0001],
+            ]
+            separated_asset["edges"].append(separated_edge)
+            separated_overlay = json.loads(overlay_path.read_text())
+            separated_overlay["segments"]["7"]["alignments"]["bToA"]["published"] = {
+                "disposition": "accepted",
+                "mappingDigest": "separate-b-to-a",
+                "realization": {
+                    "type": "explicit",
+                    "edgeRefs": [
+                        {
+                            "edgeId": "edge-2",
+                            "direction": "reverse",
+                            "sequenceIndex": 0,
+                        }
+                    ],
+                },
+            }
+            write_json(overlay_path, separated_overlay)
+            separated_geometry, separated_validation = build_public_cw_alignment_geometry(
+                separated_asset,
+                overlay_path,
+                {"Two-way test segment": {"id": 7, "status": "active"}},
             )
+            self.assertEqual(separated_validation["features"], 2)
+            self.assertEqual(separated_validation["directionalFeatures"], 2)
+            self.assertTrue(all(
+                feature["properties"]["showDirectionArrow"]
+                for feature in separated_geometry["features"]
+            ))
 
             with self.assertRaisesRegex(ValueError, "production-v1.*V1"):
                 build_base_routing_asset(

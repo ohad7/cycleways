@@ -434,11 +434,6 @@ export default function BuildScreen({ navigation, route }) {
     () => buildRouteGeometryFeatureCollection(routeState.geometry),
     [routeState.geometry],
   );
-  const cwAlignmentGeometry = state.assets?.cwAlignmentGeometryData || {
-    type: "FeatureCollection",
-    features: [],
-  };
-
   const searchHighlight = useMemo(
     () => buildSearchHighlightFeatureCollection(mapUi.searchHighlight),
     [mapUi.searchHighlight],
@@ -2107,7 +2102,11 @@ export default function BuildScreen({ navigation, route }) {
     return {
       type: "FeatureCollection",
       features: prepareRouteNetworkFeatures(
-        publicRouteNetworkGeoJson(state.assets.geoJsonData, state.assets.networkJunctionsData),
+        publicRouteNetworkGeoJson(
+          state.assets.geoJsonData,
+          state.assets.networkJunctionsData,
+          state.assets.cwAlignmentGeometryData,
+        ),
         networkPresentationOptions,
       ),
     };
@@ -3596,37 +3595,23 @@ export default function BuildScreen({ navigation, route }) {
           <LineLayer id="network-shadow" style={networkLayerStyles.shadow} />
           <LineLayer id="network-casing" style={networkLayerStyles.casing} />
           <LineLayer id="network-line" style={networkLayerStyles.core} />
+          <SymbolLayer
+            id="cw-directional-alignments-arrows"
+            minZoomLevel={12}
+            filter={["==", ["get", "showDirectionArrow"], true]}
+            style={{
+              symbolPlacement: "line",
+              symbolSpacing: 90,
+              textField: "➤",
+              textSize: 13,
+              textColor: "#ffffff",
+              textHaloColor: ["get", "routeColor"],
+              textHaloWidth: 1.5,
+              textKeepUpright: false,
+              textRotationAlignment: "map",
+            }}
+          />
         </ShapeSource>
-        {cwAlignmentGeometry.features?.length > 0 ? (
-          <ShapeSource id="cw-directional-alignments" shape={cwAlignmentGeometry}>
-            <LineLayer
-              id="cw-directional-alignments-line"
-              minZoomLevel={11}
-              style={{
-                lineColor: "#087f8c",
-                lineWidth: 3,
-                lineOpacity: 0.82,
-                lineCap: "round",
-                lineJoin: "round",
-              }}
-            />
-            <SymbolLayer
-              id="cw-directional-alignments-arrows"
-              minZoomLevel={12}
-              style={{
-                symbolPlacement: "line",
-                symbolSpacing: 90,
-                textField: "➤",
-                textSize: 13,
-                textColor: "#ffffff",
-                textHaloColor: "#087f8c",
-                textHaloWidth: 1.5,
-                textKeepUpright: false,
-                textRotationAlignment: "map",
-              }}
-            />
-          </ShapeSource>
-        ) : null}
         <ShapeSource id="route-geometry" shape={displayedRouteGeometry}>
           {routeLineStyles.casing ? (
             <LineLayer id="route-casing" style={routeLineStyles.casing} />

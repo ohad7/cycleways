@@ -3,6 +3,46 @@
 **Date:** 2026-07-13  
 **Status:** accepted design — implementation in progress
 
+## 2026-07-22 amendment — logical overview and physical detail geometry
+
+The public CW map has two legitimate geometric representations, but they must
+not compete at the same visual weight:
+
+- the logical source LineString represents one stable named editorial corridor;
+- accepted directional alignments represent the physical base edges that a
+  rider can actually traverse; and
+- a published junction footprint represents the union of its reviewed internal
+  base edges, not a freehand connector or every possible movement polyline.
+
+The logical line is therefore an overview and authoring abstraction. It remains
+the visible network below detail zoom, remains the fallback for an active
+segment without published physical geometry, and remains the stable segment
+identity for cards, selection, and content. Between zoom 10.5 and 12 it
+cross-fades to the accepted physical representation. At zoom 12 and above the
+source line is not visibly painted when physical geometry is available.
+
+Physical alignment presentation is classified without a fuzzy distance rule.
+When accepted A-to-B and B-to-A geometries are exact reversals of the same
+physical trace, Build publishes one shared bidirectional feature and the map
+does not paint permanent arrows. Different traces, or a single available
+direction, remain separate directional features with repeated arrows. This
+makes ordinary bidirectional dirt roads visually simple while preserving both
+carriageways on divided corridors such as Road 99.
+
+Physical features inherit the logical segment's name, road classification,
+color, selection, and route-building behavior. They are part of the normal CW
+network source rather than a teal diagnostic overlay. Clicking the visible
+physical line must therefore select the same logical segment and place route
+points on the physical corridor. The logical and physical interaction ranges
+follow the same zoom transition as their paint, so an invisible source line
+cannot capture a detailed-map click.
+
+Published junction footprints remain visible as ordinary CW network geometry
+throughout the transition. Direction arrows are shown only for genuinely
+direction-limited physical edges/alignments; the map does not draw every
+entry-to-exit movement, which would create visual clutter. Route preview and
+navigation continue to show the exact selected junction movement.
+
 ## 2026-07-22 amendment — historical V6 anchor recovery
 
 The earlier conclusion that a V6 token becomes unrecoverable whenever one of
@@ -322,12 +362,13 @@ different product identity—for example different names, meaningful endpoints,
 classification, quality, or independently described experience—not merely
 because OSM uses separate carriageways.
 
-The low-zoom public network overview may render one logical corridor to avoid
+The low-zoom public network overview renders one logical corridor to avoid
 duplicate cards and visual clutter, but its card/selection state carries a
 compact `both directions`, `toward B only`, or `toward A only` availability
-indicator. At medium zoom, materially separated alignments render as both
-physical lines with arrows. Segment detail, direction selection, route preview,
-and navigation use the exact selected alignment. User-facing direction names
+indicator. At detail zoom, exact reverse alignments collapse to one physical
+bidirectional line without permanent arrows, while different alignments render
+as both physical lines with arrows and replace the logical source line.
+Segment detail, direction selection, route preview, and navigation use the exact selected alignment. User-facing direction names
 use endpoint/destination labels (and a compass fallback), never the
 storage-relative words “forward” and “reverse.” If only one direction has a
 reviewed realization, the other direction is explicitly unavailable rather

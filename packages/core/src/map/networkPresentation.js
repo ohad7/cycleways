@@ -1,3 +1,5 @@
+import { cwNetworkDetailOpacityExpression } from "./cwNetworkDetail.js";
+
 export const ROUTE_NETWORK_PRESENTATION_VARIANTS = Object.freeze({
   CURRENT: "current",
   TYPED_BOLD: "typed-bold",
@@ -391,7 +393,7 @@ export function routeNetworkLineStyleForPresentation(presentationInput = {}) {
     paint: {
       "line-color": ["get", "routeColor"],
       "line-width": presentation.coreWidth,
-      "line-opacity": ["get", "routeOpacity"],
+      "line-opacity": cwNetworkDetailOpacityExpression(["get", "routeOpacity"]),
     },
   };
 }
@@ -408,7 +410,10 @@ export function routeNetworkCasingStyleForPresentation(presentationInput = {}) {
     paint: {
       "line-color": ["get", "routeCasingColor"],
       "line-width": presentation.casingWidth,
-      "line-opacity": ["get", "routeCasingOpacity"],
+      "line-opacity": cwNetworkDetailOpacityExpression([
+        "get",
+        "routeCasingOpacity",
+      ]),
     },
   };
 }
@@ -425,7 +430,10 @@ export function routeNetworkShadowStyleForPresentation(presentationInput = {}) {
     paint: {
       "line-color": ["get", "routeShadowColor"],
       "line-width": presentation.shadowWidth,
-      "line-opacity": ["get", "routeShadowOpacity"],
+      "line-opacity": cwNetworkDetailOpacityExpression([
+        "get",
+        "routeShadowOpacity",
+      ]),
       "line-blur": 0.35,
     },
   };
@@ -455,7 +463,7 @@ export function routeNetworkHoverStyleForPresentation(presentationInput = {}) {
             7.6,
           ]
         : 5,
-      "line-opacity": 1,
+      "line-opacity": cwNetworkDetailOpacityExpression(1),
     },
   };
 }
@@ -484,7 +492,7 @@ export function routeNetworkFocusStyleForPresentation(presentationInput = {}) {
             9.4,
           ]
         : 7,
-      "line-opacity": 1,
+      "line-opacity": cwNetworkDetailOpacityExpression(1),
     },
   };
 }

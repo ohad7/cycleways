@@ -28,14 +28,80 @@ import {
   ROUTE_NETWORK_LINE_LAYER_ID,
   ROUTE_NETWORK_SHADOW_LAYER_ID,
   syncRouteGeometryLayer,
+  syncCwAlignmentLayers,
+  CW_ALIGNMENT_ARROW_LAYER_ID,
   VIDEO_CURSOR_DEFAULT_VARIANT,
   VIDEO_CURSOR_VARIANTS,
 } from "../src/map/mapLayers.js";
+import {
+  normalizeCwAlignmentFeatures,
+  publicRouteNetworkGeoJson,
+} from "@cycleways/core/domain/routeNetwork.js";
 
 assert.equal(
   getRouteFeatureColor({ properties: { roadType: "paved", stroke: "#0288d1" } }),
   "rgb(101, 170, 162)",
 );
+
+{
+  const logical = {
+    type: "FeatureCollection",
+    features: [
+      {
+        type: "Feature",
+        properties: { id: 174, name: "Road 99", roadType: "road" },
+        geometry: { type: "LineString", coordinates: [[35, 33], [35.01, 33]] },
+      },
+    ],
+  };
+  const coincident = {
+    type: "FeatureCollection",
+    features: [
+      {
+        type: "Feature",
+        properties: { segmentId: 174, segmentName: "Road 99", alignmentKey: "aToB" },
+        geometry: { type: "LineString", coordinates: [[35, 33], [35.01, 33]] },
+      },
+      {
+        type: "Feature",
+        properties: { segmentId: 174, segmentName: "Road 99", alignmentKey: "bToA" },
+        geometry: { type: "LineString", coordinates: [[35.01, 33], [35, 33]] },
+      },
+    ],
+  };
+  const shared = normalizeCwAlignmentFeatures(coincident);
+  assert.equal(shared.length, 1, "exact reverse alignments collapse to one line");
+  assert.equal(shared[0].properties.physicalDirectionality, "bidirectional");
+  assert.equal(shared[0].properties.showDirectionArrow, false);
+
+  const separated = {
+    ...coincident,
+    features: [
+      coincident.features[0],
+      {
+        ...coincident.features[1],
+        geometry: { type: "LineString", coordinates: [[35.01, 33.0001], [35, 33.0001]] },
+      },
+    ],
+  };
+  const physical = normalizeCwAlignmentFeatures(separated);
+  assert.equal(physical.length, 2, "separate carriageways remain two lines");
+  assert.ok(physical.every((feature) => feature.properties.showDirectionArrow));
+
+  const combined = publicRouteNetworkGeoJson(logical, null, separated);
+  assert.equal(combined.features.length, 3, "logical overview plus two physical lines");
+  const overview = combined.features.find(
+    (feature) => feature.properties.networkRole === "logical-segment",
+  );
+  assert.equal(overview.properties.networkDetailRole, "logical-overview");
+  assert.equal(overview.properties.interactionMaxZoom, 12);
+  const detail = combined.features.filter(
+    (feature) => feature.properties.networkRole === "alignment",
+  );
+  assert.equal(detail.length, 2);
+  assert.ok(detail.every((feature) => feature.properties.name === "Road 99"));
+  assert.ok(detail.every((feature) => feature.properties.roadType === "road"));
+}
 
 assert.equal(
   getRouteFeatureColor({ properties: { roadType: "dirt", stroke: "#ae9067" } }),
@@ -282,6 +348,32 @@ class FakeMap {
     casedMap.getLayer(ROUTE_NETWORK_LINE_LAYER_ID).before,
     ROUTE_GEOMETRY_LAYER_ID,
     "route network is inserted below built route geometry when both exist",
+  );
+
+  const directionalFeatures = prepareRouteNetworkFeatures({
+    type: "FeatureCollection",
+    features: [
+      {
+        type: "Feature",
+        properties: {
+          name: "Road 99",
+          showDirectionArrow: true,
+          networkDetailRole: "physical-detail",
+        },
+        geometry: { type: "LineString", coordinates: [[35, 33], [35.01, 33]] },
+      },
+    ],
+  });
+  const arrowsMap = new FakeMap();
+  addRouteNetworkLayers(arrowsMap, directionalFeatures);
+  syncCwAlignmentLayers(arrowsMap, {
+    type: "FeatureCollection",
+    features: directionalFeatures,
+  });
+  assert.deepEqual(
+    arrowsMap.getLayer(CW_ALIGNMENT_ARROW_LAYER_ID).filter,
+    ["==", ["get", "showDirectionArrow"], true],
+    "direction arrows share the normal CW network source and are feature-filtered",
   );
 }
 

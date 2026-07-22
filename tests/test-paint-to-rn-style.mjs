@@ -23,6 +23,13 @@ assert.deepEqual(out.lineOpacity, ["get", "routeOpacity"]);
 const styled = paintToRNStyle(routeNetworkLineStyleForPresentation({ variant: "typed-cased" }));
 assert.ok("lineColor" in styled);
 assert.ok(!Object.keys(styled).some((key) => key.includes("-")));
+const nativeOpacityExpression = JSON.stringify(styled.lineOpacity);
+assert.match(nativeOpacityExpression, /logical-overview/);
+assert.match(
+  nativeOpacityExpression,
+  /physical-detail/,
+  "native CW styling preserves the shared logical-to-physical zoom transition",
+);
 
 // Tolerates missing layout/paint.
 assert.deepEqual(paintToRNStyle({}), {});

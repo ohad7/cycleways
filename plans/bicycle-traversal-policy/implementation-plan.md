@@ -4,6 +4,24 @@
 **Status:** implementation in progress
 **Design:** [`design.md`](./design.md)
 
+## 2026-07-22 amendment — physical CW detail presentation
+
+- [x] Classify accepted alignment geometry during Build: exact reverse pairs
+  become one shared bidirectional feature; distinct or single-direction
+  realizations remain directional features with arrows.
+- [x] Preserve backward compatibility by applying the same normalization when
+  loading the previous unclassified alignment artifact.
+- [x] Merge physical alignments into the normal public CW network feature
+  collection and inherit the logical segment's styling and identity.
+- [x] Cross-fade logical source geometry to physical geometry from zoom 10.5 to
+  zoom 12 on both web and mobile.
+- [x] Keep published base-edge-derived junction footprints visible as ordinary
+  CW network geometry while avoiding movement-path arrow clutter.
+- [x] Make route building, hover, focus, and segment selection use the visible
+  physical line at detailed zoom instead of an invisible logical source line.
+- [x] Add shared/build/web/mobile regressions for bidirectional collapsing,
+  separated direction arrows, zoom-aware styling, and interaction ownership.
+
 ## 2026-07-22 amendment — historical V6 anchor compatibility
 
 - [x] Inventory the graph hashes in the published featured-route tokens and
@@ -1179,13 +1197,13 @@ node tests/test-canonical-hash.mjs
   with traversal of the manifest/release index. It must copy every referenced
   immutable routing contract, policy, legacy table, CW index, alignment asset,
   shard manifest, and shard, then verify their semantic and raw hashes.
-- [ ] Keep one logical feature/card/detail page at overview scale. At detail or
+- [x] Keep one logical feature/card/detail page at overview scale. At detail or
   selection scale show accepted physical alignments with arrows; coincident
-  reverse-of paths use a bidirectional indicator.
+  reverse-of paths render as one clean bidirectional line.
 - [ ] Add a compact availability badge/glyph to overview cards and selection
   state. At medium zoom, show both physical lines when they materially diverge;
   the neutral logical centerline is a low-zoom browse abstraction only.
-- [ ] Make either physical line select the same logical segment. Show endpoint-
+- [x] Make either physical line select the same logical segment. Show endpoint-
   oriented availability (“toward A/B”), never storage-relative
   forward/reverse labels.
 - [ ] Show a reviewed unavailable direction explicitly without presenting it as

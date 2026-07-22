@@ -1,0 +1,150 @@
+{
+  "manifest": {
+    "schemaVersion": 1,
+    "shardSchemaVersion": 1,
+    "routeShare": {
+      "edgeShareIdSchemaVersion": 1,
+      "edgeShareIds": "embedded-in-shards"
+    },
+    "scheme": {
+      "type": "lng-lat-grid",
+      "shardSizeDegrees": 0.05,
+      "edgeBoundaryPolicy": "duplicate-edge-bbox-intersections"
+    }
+  },
+  "summary": {
+    "shards": 115,
+    "sourceNodes": 37650,
+    "sourceEdges": 48895,
+    "representedEdges": 48895,
+    "edgeReferences": 51100,
+    "duplicatedSourceEdges": 2031,
+    "compactShardBytes": 67469009,
+    "messagePackShardBytes": 55985553,
+    "compactBinaryShardBytes": 5518292
+  },
+  "largestShards": [
+    {
+      "id": "g711_664",
+      "nodes": 2508,
+      "edges": 3256
+    },
+    {
+      "id": "g710_659",
+      "nodes": 2118,
+      "edges": 2645
+    },
+    {
+      "id": "g712_664",
+      "nodes": 1744,
+      "edges": 2293
+    },
+    {
+      "id": "g709_659",
+      "nodes": 1348,
+      "edges": 1679
+    },
+    {
+      "id": "g713_659",
+      "nodes": 1001,
+      "edges": 1333
+    },
+    {
+      "id": "g715_665",
+      "nodes": 973,
+      "edges": 1166
+    },
+    {
+      "id": "g710_664",
+      "nodes": 989,
+      "edges": 1148
+    },
+    {
+      "id": "g711_659",
+      "nodes": 878,
+      "edges": 1143
+    },
+    {
+      "id": "g711_660",
+      "nodes": 780,
+      "edges": 997
+    },
+    {
+      "id": "g712_666",
+      "nodes": 799,
+      "edges": 968
+    },
+    {
+      "id": "g710_665",
+      "nodes": 805,
+      "edges": 956
+    },
+    {
+      "id": "g712_663",
+      "nodes": 710,
+      "edges": 938
+    },
+    {
+      "id": "g710_663",
+      "nodes": 805,
+      "edges": 932
+    },
+    {
+      "id": "g709_662",
+      "nodes": 741,
+      "edges": 854
+    },
+    {
+      "id": "g713_664",
+      "nodes": 668,
+      "edges": 854
+    },
+    {
+      "id": "g709_660",
+      "nodes": 681,
+      "edges": 847
+    },
+    {
+      "id": "g711_663",
+      "nodes": 650,
+      "edges": 844
+    },
+    {
+      "id": "g711_665",
+      "nodes": 693,
+      "edges": 843
+    },
+    {
+      "id": "g713_667",
+      "nodes": 629,
+      "edges": 783
+    },
+    {
+      "id": "g709_664",
+      "nodes": 700,
+      "edges": 779
+    }
+  ],
+  "duplicatedSourceEdgeExamples": [
+    "e100255439_3",
+    "e1024609370_2",
+    "e1026047298_1",
+    "e1031123040_2",
+    "e1031123040_3",
+    "e1031123042_2",
+    "e1031123053_1",
+    "e1034078867_2",
+    "e1034078867_5",
+    "e1034078875_2",
+    "e1034078875_3",
+    "e1034078902_2",
+    "e1034089968_1",
+    "e1034089969_1",
+    "e1034141908_5",
+    "e1034141916_1",
+    "e1034141917_1",
+    "e1034180666_4",
+    "e1034180669_5",
+    "e1034180671_1"
+  ]
+}

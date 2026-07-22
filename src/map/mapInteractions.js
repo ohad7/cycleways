@@ -21,6 +21,12 @@ export function buildNetworkSegments(features) {
       return {
         segmentName: feature.properties?.name || null,
         coordinates,
+        minZoom: Number.isFinite(Number(feature.properties?.interactionMinZoom))
+          ? Number(feature.properties.interactionMinZoom)
+          : null,
+        maxZoom: Number.isFinite(Number(feature.properties?.interactionMaxZoom))
+          ? Number(feature.properties.interactionMaxZoom)
+          : null,
       };
     })
     .filter((segment) => segment.segmentName && segment.coordinates.length >= 2);
@@ -35,8 +41,13 @@ export function findClosestRouteSegment(map, event, networkSegments, thresholdPi
 
   let closest = null;
   let minPixelDistance = Infinity;
+  const zoom = typeof map.getZoom === "function" ? Number(map.getZoom()) : null;
 
   networkSegments.forEach((segment) => {
+    if (Number.isFinite(zoom)) {
+      if (Number.isFinite(segment.minZoom) && zoom < segment.minZoom) return;
+      if (Number.isFinite(segment.maxZoom) && zoom >= segment.maxZoom) return;
+    }
     const coords = segment.coordinates;
     for (let index = 0; index < coords.length - 1; index++) {
       const start = coords[index];

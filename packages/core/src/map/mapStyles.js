@@ -1,5 +1,6 @@
 // Pure data module — no mapbox calls, no imports from mapLayers.
 // Contains all layer/source ID constants and Mapbox paint/layout style specs.
+import { cwNetworkDetailOpacityExpression } from "./cwNetworkDetail.js";
 
 // ---------------------------------------------------------------------------
 // Source IDs
@@ -69,7 +70,7 @@ export const ROUTE_NETWORK_LINE_STYLE = {
   paint: {
     "line-color": ["get", "routeColor"],
     "line-width": ["get", "routeWidth"],
-    "line-opacity": ["get", "routeOpacity"],
+    "line-opacity": cwNetworkDetailOpacityExpression(["get", "routeOpacity"]),
   },
 };
 
@@ -81,7 +82,7 @@ export const ROUTE_NETWORK_HIT_STYLE = {
   paint: {
     "line-color": "#ffffff",
     "line-width": 20,
-    "line-opacity": 0.01,
+    "line-opacity": cwNetworkDetailOpacityExpression(0.01),
   },
 };
 
@@ -93,7 +94,7 @@ export const ROUTE_NETWORK_HOVER_STYLE = {
   paint: {
     "line-color": SEGMENT_HOVER,
     "line-width": 5,
-    "line-opacity": 1,
+    "line-opacity": cwNetworkDetailOpacityExpression(1),
   },
 };
 
@@ -105,7 +106,7 @@ export const ROUTE_NETWORK_FOCUS_STYLE = {
   paint: {
     "line-color": HIGHLIGHT_WHITE,
     "line-width": 7,
-    "line-opacity": 1,
+    "line-opacity": cwNetworkDetailOpacityExpression(1),
   },
 };
 

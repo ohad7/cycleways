@@ -7,7 +7,6 @@ import React, { useEffect, useRef, useState } from "react";
 import {
   addRouteNetworkLayers,
   clearCwAlignmentLayers,
-  CW_ALIGNMENT_HIT_LAYER_ID,
   clearVideoCursorLayer,
   clearRouteDirectionPulseLayer,
   clearRouteNetworkLayers,
@@ -321,11 +320,16 @@ function MapSurface({
       variant: networkPresentationVariant,
     };
     const features = prepareRouteNetworkFeatures(
-      publicRouteNetworkGeoJson(geoJsonData, networkJunctionsData),
+      publicRouteNetworkGeoJson(
+        geoJsonData,
+        networkJunctionsData,
+        cwAlignmentGeometry,
+      ),
       networkPresentationOptions,
     );
     networkSegmentsRef.current = buildNetworkSegments(features);
     addRouteNetworkLayers(map, features, networkPresentationOptions);
+    syncCwAlignmentLayers(map, { type: "FeatureCollection", features });
 
     const handleMouseMove = (event) => {
       const closest = findClosestRouteSegment(
@@ -365,17 +369,15 @@ function MapSurface({
       // to that feature's own handler — without this guard, points (which
       // always sit on network paths) would re-add a point on every tap.
       if (clickOnBlockingFeature(map, event)) return;
-      const feature = event.features?.[0];
-      const segmentName = feature?.properties?.name || null;
-      if (!segmentName) return;
-
-      event.preventDefault?.();
-      lastRouteClickRef.current = createClickStamp(event);
       const closest = findClosestRouteSegment(
         map,
         event,
         networkSegmentsRef.current,
       );
+      if (!closest?.segmentName) return;
+
+      event.preventDefault?.();
+      lastRouteClickRef.current = createClickStamp(event);
       clearHoverPreviewMarker(hoverPreviewMarkerRef);
       callbacksRef.current.onMapClick?.({
         lng: closest?.point?.lng ?? event.lngLat.lng,
@@ -395,12 +397,14 @@ function MapSurface({
         map.off("click", ROUTE_NETWORK_HIT_LAYER_ID, handleClick);
         clearHoverPreviewMarker(hoverPreviewMarkerRef);
         networkSegmentsRef.current = [];
+        clearCwAlignmentLayers(map);
         clearRouteNetworkLayers(map);
       });
     };
   }, [
     geoJsonData,
     networkJunctionsData,
+    cwAlignmentGeometry,
     networkBaseMapProfile,
     networkColorScheme,
     networkPresentationVariant,
@@ -409,28 +413,6 @@ function MapSurface({
     caps.networkLayers,
     caps.hoverPreview,
   ]);
-
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map || status !== "ready" || !caps.networkLayers) return undefined;
-    syncCwAlignmentLayers(map, cwAlignmentGeometry);
-    const handleAlignmentClick = (event) => {
-      const feature = event.features?.[0];
-      const segmentName = feature?.properties?.segmentName || null;
-      if (!segmentName) return;
-      event.preventDefault?.();
-      callbacksRef.current.onSegmentFocus?.(segmentName);
-    };
-    if (map.getLayer(CW_ALIGNMENT_HIT_LAYER_ID)) {
-      map.on("click", CW_ALIGNMENT_HIT_LAYER_ID, handleAlignmentClick);
-    }
-    return () => {
-      runMapCleanup(map, () => {
-        map.off("click", CW_ALIGNMENT_HIT_LAYER_ID, handleAlignmentClick);
-        clearCwAlignmentLayers(map);
-      });
-    };
-  }, [cwAlignmentGeometry, status, caps.networkLayers]);
 
   useEffect(() => {
     if (status !== "ready") return;

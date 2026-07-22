@@ -3424,7 +3424,7 @@ def build_public_cw_alignment_geometry(
     overlay_path: Path,
     segments_data: dict[str, Any],
 ) -> tuple[dict[str, Any], dict[str, Any]]:
-    """Project each accepted V2 alignment into a direction-detail map layer."""
+    """Project accepted V2 alignments into zoom-dependent physical CW geometry."""
     overlay = load_json(overlay_path, {})
     if int(overlay.get("schemaVersion") or 1) != 2:
         return {"schemaVersion": 1, "type": "FeatureCollection", "features": []}, {
@@ -3472,17 +3472,68 @@ def build_public_cw_alignment_geometry(
                 "geometry": {"type": "LineString", "coordinates": coordinates},
             }
         )
+    accepted_alignment_count = len(features)
+    features_by_segment: dict[int, list[dict[str, Any]]] = {}
+    for feature in features:
+        features_by_segment.setdefault(
+            int(feature["properties"]["segmentId"]), []
+        ).append(feature)
+
+    display_features: list[dict[str, Any]] = []
+    shared_segment_ids: list[int] = []
+    for segment_id, segment_features in sorted(features_by_segment.items()):
+        by_key = {
+            str(feature["properties"].get("alignmentKey") or ""): feature
+            for feature in segment_features
+        }
+        a_to_b = by_key.get("aToB")
+        b_to_a = by_key.get("bToA")
+        if (
+            a_to_b
+            and b_to_a
+            and a_to_b["geometry"]["coordinates"]
+            == list(reversed(b_to_a["geometry"]["coordinates"]))
+        ):
+            shared_feature = copy.deepcopy(a_to_b)
+            shared_feature["properties"].update({
+                "alignmentKey": "both",
+                "alignmentKeys": "aToB,bToA",
+                "aToBMappingDigest": a_to_b["properties"].get("mappingDigest"),
+                "bToAMappingDigest": b_to_a["properties"].get("mappingDigest"),
+                "physicalDirectionality": "bidirectional",
+                "showDirectionArrow": False,
+            })
+            display_features.append(shared_feature)
+            shared_segment_ids.append(segment_id)
+            continue
+
+        for feature in segment_features:
+            directional_feature = copy.deepcopy(feature)
+            directional_feature["properties"].update({
+                "physicalDirectionality": "directional",
+                "showDirectionArrow": True,
+            })
+            display_features.append(directional_feature)
+
     return {
-        "schemaVersion": 1,
+        "schemaVersion": 2,
         "policyId": base_routing_asset.get("policyId"),
         "policyDigest": base_routing_asset.get("policyDigest"),
         "routingContextDigest": (base_routing_asset.get("routingContract") or {}).get(
             "routingContextDigest"
         ),
         "type": "FeatureCollection",
-        "features": features,
+        "features": display_features,
     }, {
-        "alignments": len(features),
+        "alignments": accepted_alignment_count,
+        "features": len(display_features),
+        "sharedBidirectionalSegments": len(shared_segment_ids),
+        "sharedBidirectionalSegmentIds": shared_segment_ids,
+        "directionalFeatures": sum(
+            1
+            for feature in display_features
+            if feature["properties"].get("showDirectionArrow")
+        ),
         "edgeRefs": sum(
             len(sorted_overlay_edge_refs(mapping)) for mapping in mappings
         ),

@@ -122,21 +122,13 @@ const VIDEO_CURSOR_OPTION_VARIANTS = new Map([
 const VIDEO_CURSOR_VARIANT_NAMES = new Set(Object.values(VIDEO_CURSOR_VARIANTS));
 
 const EMPTY_FEATURE_COLLECTION = { type: "FeatureCollection", features: [] };
-const CW_ALIGNMENT_SOURCE_ID = "cw-directional-alignments";
-const CW_ALIGNMENT_LINE_LAYER_ID = "cw-directional-alignments-line";
-const CW_ALIGNMENT_ARROW_LAYER_ID = "cw-directional-alignments-arrows";
-export const CW_ALIGNMENT_HIT_LAYER_ID = "cw-directional-alignments-hit";
+export const CW_ALIGNMENT_ARROW_LAYER_ID = "cw-directional-alignments-arrows";
 
 export function clearCwAlignmentLayers(map) {
   if (!map) return;
-  [
-    CW_ALIGNMENT_HIT_LAYER_ID,
-    CW_ALIGNMENT_ARROW_LAYER_ID,
-    CW_ALIGNMENT_LINE_LAYER_ID,
-  ].forEach((id) => {
-    if (map.getLayer(id)) map.removeLayer(id);
-  });
-  if (map.getSource(CW_ALIGNMENT_SOURCE_ID)) map.removeSource(CW_ALIGNMENT_SOURCE_ID);
+  if (map.getLayer(CW_ALIGNMENT_ARROW_LAYER_ID)) {
+    map.removeLayer(CW_ALIGNMENT_ARROW_LAYER_ID);
+  }
 }
 
 export function syncCwAlignmentLayers(map, featureCollection) {
@@ -145,28 +137,27 @@ export function syncCwAlignmentLayers(map, featureCollection) {
   const features = Array.isArray(featureCollection?.features)
     ? featureCollection.features
     : [];
-  if (features.length === 0) return;
-  map.addSource(CW_ALIGNMENT_SOURCE_ID, {
-    type: "geojson",
-    data: { type: "FeatureCollection", features },
-  });
-  map.addLayer({
-    id: CW_ALIGNMENT_LINE_LAYER_ID,
-    type: "line",
-    source: CW_ALIGNMENT_SOURCE_ID,
-    minzoom: 11,
-    paint: {
-      "line-color": "#087f8c",
-      "line-width": ["interpolate", ["linear"], ["zoom"], 11, 2, 15, 4],
-      "line-opacity": 0.82,
-    },
-    layout: { "line-cap": "round", "line-join": "round" },
-  });
+  if (
+    !map.getSource(ROUTE_NETWORK_SOURCE_ID) ||
+    !features.some((feature) => feature?.properties?.showDirectionArrow === true)
+  ) {
+    return;
+  }
+  const beforeNetworkOverlayLayer = [
+    RECOMMENDED_ROUTES_LAYER_ID,
+    ROUTE_GEOMETRY_CASING_LAYER_ID,
+    ROUTE_GEOMETRY_LAYER_ID,
+    ROUTE_GEOMETRY_HIT_LAYER_ID,
+    ROUTE_POINTS_LAYER_ID,
+    DATA_MARKERS_CIRCLE_LAYER_ID,
+    DATA_MARKERS_LAYER_ID,
+  ].find((id) => map.getLayer(id));
   map.addLayer({
     id: CW_ALIGNMENT_ARROW_LAYER_ID,
     type: "symbol",
-    source: CW_ALIGNMENT_SOURCE_ID,
+    source: ROUTE_NETWORK_SOURCE_ID,
     minzoom: 12,
+    filter: ["==", ["get", "showDirectionArrow"], true],
     layout: {
       "symbol-placement": "line",
       "symbol-spacing": 90,
@@ -178,21 +169,15 @@ export function syncCwAlignmentLayers(map, featureCollection) {
     },
     paint: {
       "text-color": "#ffffff",
-      "text-halo-color": "#087f8c",
+      "text-halo-color": ["get", "routeColor"],
       "text-halo-width": 1.5,
     },
-  });
-  map.addLayer({
-    id: CW_ALIGNMENT_HIT_LAYER_ID,
-    type: "line",
-    source: CW_ALIGNMENT_SOURCE_ID,
-    minzoom: 11,
-    paint: { "line-color": "rgba(0,0,0,0)", "line-width": 18 },
-  });
+  }, beforeNetworkOverlayLayer);
 }
 
 export function getRouteNetworkLayerIds() {
   return [
+    CW_ALIGNMENT_ARROW_LAYER_ID,
     ROUTE_NETWORK_HIT_LAYER_ID,
     ROUTE_NETWORK_FOCUS_LAYER_ID,
     ROUTE_NETWORK_HOVER_LAYER_ID,
