@@ -183,29 +183,35 @@ const straight = (startLng, lat, steps = 20) =>
   assert.ok(review.blocking.length > 0);
 }
 
-// A facility-class conflict is refused before the write, not reported after it.
+// Facility class no longer gates way membership (policy 2026-07-23): the
+// pre-write check reports no conflict even for a road-evidenced segment placed
+// in a cycleway way. A genuine cycleway is routinely evidenced as a path, so
+// this collision was a tagging quirk, not a hazard; parallel-facility-risk
+// still guards a road running beside its separate cycleway.
 {
   const source = {
     type: "FeatureCollection",
     features: [line(174, "כביש 99", straight(35.6, 33.2), { roadType: "road" })],
   };
-  const registry = applyWay(emptyRegistry(), "cycleway-99", {
+  const cyclewayRegistry = applyWay(emptyRegistry(), "cycleway-99", {
     name: "שביל אופניים 99",
     kind: "cycleway",
     aliases: [],
     spokenName: null,
   });
-  const conflict = assignmentFacilityConflict(source, registry, 174, "cycleway-99");
-  assert.ok(conflict);
-  assert.equal(conflict.waivable, false);
+  assert.equal(
+    assignmentFacilityConflict(source, cyclewayRegistry, 174, "cycleway-99"),
+    null,
+    "a roadway segment may now be named as part of a cycleway way",
+  );
 
-  const compatible = applyWay(registry, "road-99", {
+  const roadRegistry = applyWay(cyclewayRegistry, "road-99", {
     name: "כביש 99",
     kind: "road",
     aliases: [],
     spokenName: null,
   });
-  assert.equal(assignmentFacilityConflict(source, compatible, 174, "road-99"), null);
+  assert.equal(assignmentFacilityConflict(source, roadRegistry, 174, "road-99"), null);
 }
 
 // An unrelated canonical blocker stays visible but does not freeze incremental

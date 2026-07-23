@@ -129,11 +129,11 @@ def facility_class_from_route_class(route_class: str | None) -> str:
 
 
 def facility_classes_compatible(a: str | None, b: str | None) -> bool:
-    if not a or not b:
-        return True
-    if a == "neutral" or b == "neutral":
-        return True
-    return a == b
+    # Policy (2026-07-23): facility class does not gate way membership. Mirrors
+    # facilityClassesCompatible in packages/core/src/data/navigationWays.js. See
+    # that function for why the facility-class-conflict check was removed;
+    # parallel-facility-risk still guards a road running beside its cycleway.
+    return True
 
 
 def issue(code: str, severity: str, **fields: Any) -> dict[str, Any]:
@@ -554,8 +554,10 @@ def review_way_structure(
             )
         )
 
-    # Facility-class conflict: non-waivable. This is the rule that actually
-    # prevents a roadway being absorbed into a cycleway way.
+    # Facility-class conflict. Disabled by policy (2026-07-23): facility class no
+    # longer gates way membership — see facility_classes_compatible, which now
+    # always returns True, so this loop never emits. parallel-facility-risk below
+    # still blocks a road running alongside its separate cycleway.
     way_class = facility_class_for_kind(way_kind)
     for member in members:
         evidence = member_evidence.get(member)

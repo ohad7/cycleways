@@ -308,20 +308,18 @@
       "expectedMaxDegree": 0
     },
     {
-      "name": "a roadway member inside a cycleway way is a non-waivable blocker",
+      "name": "facility class no longer gates membership: a roadway member in a cycleway way is allowed",
       "wayId": "cycleway-99",
       "wayKind": "cycleway",
       "memberIds": [97, 174],
       "adjacency": { "97": [174], "174": [97] },
       "memberEvidence": { "97": { "routeClass": "cycleway" }, "174": { "routeClass": "secondary" } },
-      "expectedIssues": [
-        { "code": "facility-class-conflict", "severity": "error", "segmentId": 174, "waivable": false }
-      ],
+      "expectedIssues": [],
       "expectedComponentCount": 1,
       "expectedMaxDegree": 1
     },
     {
-      "name": "a facility-class conflict cannot be acknowledged away",
+      "name": "an acknowledgement for the retired facility-class-conflict no longer matches any issue",
       "wayId": "cycleway-99",
       "wayKind": "cycleway",
       "memberIds": [97, 174],
@@ -329,7 +327,6 @@
       "memberEvidence": { "97": { "routeClass": "cycleway" }, "174": { "routeClass": "secondary" } },
       "acknowledgedIssueFingerprints": ["facility-class-conflict|cycleway-99|segmentId=174"],
       "expectedIssues": [
-        { "code": "facility-class-conflict", "severity": "error", "segmentId": 174, "waivable": false },
         { "code": "structure-acknowledgement-unmatched", "severity": "warning" }
       ],
       "expectedComponentCount": 1,

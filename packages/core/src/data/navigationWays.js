@@ -130,14 +130,22 @@ export function facilityClassFromRouteClass(routeClass) {
 }
 
 /**
- * Two facility classes are compatible when either is neutral or they match.
- * A roadway member inside a cycleway way (or the reverse) is the unsafe case
- * the non-waivable `facility-class-conflict` blocker exists for.
+ * Whether two facility classes may share one named way.
+ *
+ * Policy (2026-07-23): facility class does not gate way membership. A curator
+ * may name any segment as part of any way. This is the single point that
+ * governs the `facility-class-conflict` blocker, so the editor pre-check, the
+ * validator, and the Python build all follow it by construction; the Python
+ * mirror `facility_classes_compatible` matches.
+ *
+ * The check was removed because base-graph evidence routinely maps a genuine
+ * cycleway onto a `path`/`footway` edge (facility class `trail-path`), so a
+ * real bike-path segment collided with its own bike-path way through a tagging
+ * quirk rather than any real hazard. The geometry-based `parallel-facility-risk`
+ * blocker still catches a road running alongside its separate cycleway.
  */
-export function facilityClassesCompatible(a, b) {
-  if (!a || !b) return true;
-  if (a === "neutral" || b === "neutral") return true;
-  return a === b;
+export function facilityClassesCompatible() {
+  return true;
 }
 
 // ---------------------------------------------------------------------------
