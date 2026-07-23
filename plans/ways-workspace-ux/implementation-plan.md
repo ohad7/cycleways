@@ -2,11 +2,10 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
-**Goal:** Rebuild the editor's Ways workspace as Option A from `design.md` — two modes
-(review inbox / way library) with one search, a clickable progress bar, way cards carrying
-real stats, members ordered along the way, the map as the assignment surface, and a
-keyboard-triaged work queue — without changing the guidance data model, its transactions,
-or its validator.
+**Goal:** Rebuild the editor's Ways workspace as Option A from `design.md`,
+then apply the 2026-07-23 revision: סקירה is a complete color-coded CW network
+overview, while דרכים remains the way library and Network exposes compact
+attribution immediately on segment selection.
 
 **Architecture:** All new derivation logic (ordering, candidates, health sentences, unified
 search, merged work queue, formatting) lands in a new pure module
@@ -38,6 +37,9 @@ create a way, workspace round-trips) with no console errors.
 - A stale suggestion artifact stays read-only.
 - Panel copy is Hebrew, `dir="rtl"`; the panel column is 430px (`.ways-workspace .app-shell`).
 - Network's `הכוונה ושם דרך` section keeps its current scope and ids.
+
+The two suggestion constraints above are retained only for the dormant
+artifact/tooling path. The editor UI no longer loads or presents suggestions.
 
 ---
 
@@ -167,3 +169,19 @@ screens — `#ways-library` (`#ways-list`, `#ways-create`), `#ways-detail`
 - [x] Run `node tests/test-navigation-way-editor-wiring.mjs`, `node tests/test-ways-workspace.mjs`,
       `node tests/test-navigation-way-editor.mjs`, `node tests/test-navigation-ways.mjs`,
       then the full `npm test`. Commit.
+
+### Task 7: Replace the suggestion inbox with a network overview
+
+**Files:** Modify `editor/index.html`, `editor/editor.js`,
+`editor/styles.css`, `tests/test-navigation-way-editor-wiring.mjs`
+
+- [x] Remove suggestion controls and startup/save-time suggestion loading from
+      the editor surface.
+- [x] Render named-way members with a distinct palette and every non-member in
+      muted grey through `ways-overview-layer`.
+- [x] Add overview totals and a matching clickable/hoverable legend.
+- [x] Highlight all members of a way while its דרכים card is hovered.
+- [x] Move the Network attribution preview outside the collapsed editor, keep a
+      direct open-in-Ways action visible, and move Quality below attribution.
+- [x] Add static regression coverage for overview markup/layers, whole-way
+      hover, removed suggestion UI, and Network information order.

@@ -13,18 +13,16 @@ classification, route presentation, navigation, and featured snapshots.
 
 - The editor has a first-class **Ways** workspace. It lists each canonical way
   once and owns display/audible name, kind, reference, members, validation,
-  whole-way map highlight, and the suggestion queue. Network retains only
+  whole-way map highlight, and a color-coded network overview. Network retains only
   per-segment role, way assignment, and section label.
 - Ways now exposes the complete CRUD workflow: create with a required first
   member, inspect, update, delete with member cleanup, search/select any active
   segment, assign/reassign/unassign it, and remove individual members. Last-
   member removal is redirected to way deletion so an invalid empty way cannot
   be produced.
-- The Ways suggestion queue contains 169 conceptual digest-bound groups for
-  the 280 unreviewed segments, consolidated from 176 evidence-component rows.
-  Each group is validator-scored and supports search, filter, map preview,
-  edit-and-accept, reject/reopen, and optional audible-name acceptance only
-  after an explicit iOS verification checkbox.
+- The 169 conceptual digest-bound groups for the 280 unreviewed segments remain
+  an offline evidence artifact, consolidated from 176 evidence-component rows.
+  The editor no longer loads or presents them.
 - Numbered-road and numbered-cycleway components now target one conceptual
   identity (`road-90`, `road-99`, `road-918`, `road-959`, `cycleway-99`, and
   `cycleway-9779`). Equal-name informal corridors remain separate for curator
@@ -766,10 +764,9 @@ Build now:
   member list, and map preview;
 - full create/read/update/delete and segment search/select/assign/reassign/
   unassign operations, with last-member and replacement safeguards;
-- the suggestion queue inside Ways rather than the Network sidebar;
+- the color-coded network overview inside Ways;
 - structure findings surfaced per way with the acknowledgement control; and
-- an import view for the suggestion artifact with per-group accept, edit, or
-  reject.
+- direct way/member CRUD without a suggestion import surface.
 
 Defer until repeat need is demonstrated, and mark each below as deferred:
 

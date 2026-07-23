@@ -1128,9 +1128,11 @@ condition changes in the background.
 
 Ways are first-class editorial entities in a top-level **Ways** workspace.
 That workspace owns the registry list, each way's display/audible name, kind,
-reference, active members, validation findings, map highlight, and the
-digest-bound suggestion queue. A way is shown exactly once even when its
-members form several disconnected evidence components.
+reference, active members, validation findings, map highlight, and a
+color-coded overview of the complete CW network. The digest-bound suggestions
+remain an offline evidence artifact but are not loaded or presented by the
+editor. A way is shown exactly once even when its members form several
+disconnected evidence components.
 
 The existing Network workspace's **CW network** focus retains a compact
 `הכוונה ושם דרך` section on the selected segment. Network owns only the
@@ -1140,8 +1142,7 @@ pronunciation, kind, or reference fields.
 
 Because an empty canonical way is invalid, manual way creation starts from a
 selected Network segment and atomically creates the registry entity plus its
-first membership. A suggestion may perform the same combined operation. The
-Ways workspace does not save an empty placeholder entity.
+first membership. The Ways workspace does not save an empty placeholder entity.
 
 The section has three explicit role choices:
 

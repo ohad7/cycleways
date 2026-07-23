@@ -17,6 +17,7 @@ const styles = read("../editor/styles.css");
 // --- markup ---------------------------------------------------------------
 for (const id of [
   "segment-guidance-details",
+  "segment-guidance-summary",
   "guidance-preview",
   "guidance-role",
   "guidance-way-id",
@@ -43,6 +44,8 @@ for (const id of [
   "ways-library",
   "ways-detail",
   "ways-review",
+  "ways-overview-summary",
+  "ways-overview-legend",
   "ways-list",
   "way-detail-back",
   "way-detail-menu",
@@ -55,8 +58,6 @@ for (const id of [
   "way-editor-save",
   "way-editor-cancel",
   "way-editor-delete",
-  "ways-queue-filters",
-  "guidance-suggestion-list",
 ]) {
   assert.ok(html.includes(`id="${id}"`), `index.html is missing #${id}`);
 }
@@ -70,6 +71,10 @@ for (const removed of [
   "ways-selected-segment",
   "guidance-suggestion-search",
   "guidance-suggestion-filter",
+  "guidance-suggestion-binding",
+  "guidance-suggestion-list",
+  "ways-queue-filters",
+  "ways-queue-refresh",
 ]) {
   assert.equal(
     html.includes(`id="${removed}"`),
@@ -86,22 +91,36 @@ for (const role of ["named-way", "standalone", "unnamed"]) {
 // Segment assignment stays in Network.
 const inspectorStart = html.indexOf('id="network-selection-panel"');
 const inspectorEnd = html.indexOf('id="base-graph-panel"');
+const guidanceSummaryAt = html.indexOf('id="segment-guidance-summary"');
 const guidanceAt = html.indexOf('id="segment-guidance-details"');
+const qualityAt = html.indexOf('class="segment-quality-details"');
 assert.ok(
   inspectorStart < guidanceAt && guidanceAt < inspectorEnd,
   "guidance authoring must live in the CW network segment inspector",
 );
-// Way-owned fields and the suggestion queue live in their own first-class
+assert.ok(
+  inspectorStart < guidanceSummaryAt
+  && guidanceSummaryAt < guidanceAt
+  && guidanceAt < qualityAt
+  && qualityAt < inspectorEnd,
+  "compact way attribution must be visible above its editor, with Quality last",
+);
+assert.equal(
+  html.slice(guidanceAt, html.indexOf(">", guidanceAt) + 1).includes(" open"),
+  false,
+  "the full attribution editor should stay collapsed until requested",
+);
+// Way-owned fields and the network overview live in their own first-class
 // workspace, rather than contaminating the Network sidebar.
 const waysStart = html.indexOf('id="ways-panel"');
 const waysEnd = html.indexOf('id="network-selection-panel"');
-const suggestionsAt = html.indexOf('id="ways-review"');
+const overviewAt = html.indexOf('id="ways-review"');
 const wayEditorAt = html.indexOf('id="ways-detail"');
 assert.ok(
   waysStart < wayEditorAt
-  && wayEditorAt < suggestionsAt
-  && suggestionsAt < waysEnd,
-  "the Ways workspace must own way details and the review queue",
+  && wayEditorAt < overviewAt
+  && overviewAt < waysEnd,
+  "the Ways workspace must own way details and the network overview",
 );
 assert.equal(
   html.includes('id="guidance-way-spoken-name"'),
@@ -123,6 +142,8 @@ for (const key of [
   "waysModeReview:",
   "waysModeLibrary:",
   "waysSearchResults:",
+  "waysOverviewSummary:",
+  "waysOverviewLegend:",
   "waysUndoButton:",
   "wayCandidates:",
   "wayEditorSpokenName:",
@@ -132,7 +153,16 @@ for (const key of [
 }
 assert.ok(editor.includes("renderGuidanceSection();"), "guidance is not rendered");
 assert.ok(editor.includes("await loadGuidanceRegistry();"), "registry is not loaded at startup");
-assert.ok(editor.includes("await loadGuidanceSuggestions();"), "suggestions are not loaded at startup");
+assert.equal(
+  html.includes("guidance-suggestion-list"),
+  false,
+  "the removed suggestion review must not be rendered",
+);
+assert.equal(
+  editor.slice(editor.lastIndexOf('map.on("load"')).includes("loadGuidanceSuggestions"),
+  false,
+  "the editor must not fetch the removed suggestion artifact at startup",
+);
 assert.match(
   editor,
   /function setAlert\(message\) \{\s*showAlert\("Action failed", message\);\s*setStatus\(message, "error"\);\s*\}/,
@@ -218,6 +248,7 @@ assert.ok(
 // The map is the assignment surface: one source, four role layers, and a click
 // path that attaches a candidate rather than opening a form.
 for (const layerId of [
+  "ways-overview-layer",
   "ways-highlight-casing",
   "ways-taken-layer",
   "ways-candidate-layer",
@@ -248,6 +279,18 @@ assert.ok(
   editor.includes("setGuidanceUndo(before,"),
   "membership writes must be undoable",
 );
+assert.ok(
+  editor.includes("bindWayHover(card, entry.wayId)"),
+  "hovering a library card must highlight its complete way",
+);
+assert.ok(
+  editor.includes('waysRole = "overview"'),
+  "the overview must project every active CW segment onto the map",
+);
+assert.ok(
+  editor.includes("properties.overviewColor = navigationWayId"),
+  "overview lines must carry their way-specific colour",
+);
 // Pointing at a member or candidate row must answer "which segment is that?".
 assert.ok(
   editor.includes("bindWaysRowHover(line, row.segmentId)"),
@@ -261,34 +304,15 @@ assert.ok(
   editor.includes("function revealHoveredSegment(segmentId)"),
   "a hovered segment hidden behind the chrome must be brought into view",
 );
-// The several segments a suggestion groups into one road get distinct colours
-// on the map, on-map id labels, and matching chip swatches.
-assert.ok(
-  editor.includes("function waysPreviewColorMap()"),
-  "each previewed segment must get its own colour",
-);
-assert.ok(
-  editor.includes('["coalesce", ["get", "previewColor"], "#f2c94c"]'),
-  "the preview line colour must be data-driven per segment",
-);
-assert.ok(
-  editor.includes('"text-field": ["get", "previewLabel"]'),
-  "a multi-segment suggestion must label each segment on the map",
-);
-assert.ok(
-  editor.includes('swatch.style.background = colors.get(segmentId)')
-  || editor.includes("swatch.style.background = colors.get(segmentId) || WAYS_PREVIEW_SINGLE"),
-  "queue chips must carry the segment's map colour",
-);
 assert.ok(
   editor.includes("document.addEventListener(\"keydown\", handleWaysKeydown)"),
-  "queue triage must be keyboard-first",
+  "the Ways search shortcut must remain wired",
 );
 // Derivation lives in the pure module, so the panel stays a projection of
 // tested logic rather than growing its own copy.
 assert.match(
   editor,
-  /import \{[^}]*buildWorkQueue,[^}]*\} from "\.\/lib\/ways-workspace\.mjs";/s,
+  /import \{[^}]*buildGeometryIndex,[^}]*waySummary,[^}]*\} from "\.\/lib\/ways-workspace\.mjs";/s,
   "the editor must consume the tested workspace module",
 );
 
@@ -331,27 +355,24 @@ assert.ok(
   server.includes("withGuidanceWriteLock"),
   "digest check and replacement must be serialized",
 );
-assert.ok(
-  server.includes('url.pathname === "/api/navigation-way-suggestions"'),
-  "server is missing the scored suggestion endpoint",
-);
-
 // --- styles ---------------------------------------------------------------
 for (const selector of [
+  ".segment-guidance-summary",
   ".guidance-preview",
   ".guidance-issue-error",
   ".guidance-coverage",
-  ".guidance-suggestion-card",
   ".ways-panel",
   ".ways-header",
   ".ways-mode",
   ".ways-bar",
+  ".ways-overview-summary",
+  ".ways-overview-legend",
+  ".ways-overview-row",
   ".way-card",
   ".way-health",
   ".way-member-row",
   ".way-gap-row",
   ".way-candidate-row",
-  ".ways-queue-filters",
 ]) {
   assert.ok(styles.includes(selector), `styles are missing ${selector}`);
 }

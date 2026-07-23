@@ -1,10 +1,36 @@
 # Ways Workspace UX Redesign
 
 **Date:** 2026-07-23
-**Status:** Design A implemented 2026-07-23 (all three phases). Design B kept as
-the recorded alternative; its chain proposal remains the natural next step.
+**Status:** Design A implemented 2026-07-23. The same-day network-overview
+revision below supersedes the review-inbox portions of A.
 **Related designs:** `navigation-way-names` (the data model and the CRUD
 contract this UI must honor), `network-editor-workflow`, `editor-performance-ux`
+
+## 2026-07-23 network-overview revision
+
+The digest-bound model suggestions did not make classification easier in
+practice, so the editor no longer loads or renders them. The **סקירה** mini tab
+is now a spatial overview of the complete active CW network:
+
+- every registered navigation way receives a distinct stable color;
+- all active segments that are not members of a registered navigation way
+  render in muted grey, including unreviewed, standalone, and intentionally
+  unnamed segments;
+- the panel shows named-way/unassigned totals and a matching legend; clicking a
+  legend row opens the way, while hovering it highlights the complete facility;
+- entering סקירה fits the active CW network so the overview is immediately
+  legible.
+
+The **דרכים** list remains the CRUD library. Hovering a way card highlights all
+of its member segments without selecting it or moving the map.
+
+In Network, rider-facing attribution is visible immediately after selecting a
+CW segment. A compact summary shows the resolved way or fallback and offers a
+direct button into the way detail. The full role/assignment editor is collapsed
+under `עריכת שיוך ניווט`; Quality moves below it because it is secondary.
+
+The old A.5 queue, suggestion keyboard shortcuts, and stale-artifact UI are
+historical only and are not part of the current editor.
 
 ## Why
 
@@ -275,22 +301,18 @@ there), which is B's leverage without B's cost.
 - The data model, the transactions, and the validator. Every action still goes
   through one validated save; the editor still reports exactly the issue codes
   Build reports.
-- Digest binding and the read-only stale-artifact rule.
 - The blocking-issue acknowledgment checkboxes (parallel-facility risk, iOS
   audible verification). They are deliberate friction on the two decisions that
   are expensive to get wrong.
-- The Network tab's compact `הכוונה ושם דרך` section keeps its scope (role,
-  way assignment, `sectionLabel`) and its link into Ways.
+- The Network tab's compact navigation section keeps its scope (role, way
+  assignment, `sectionLabel`) and its link into Ways; only its information
+  hierarchy changes.
 
 ## Open questions
 
 - **Library ordering** — resolved as built: the list stays sorted by name, and
   the `⚠`/`⛔` counters act as filters instead of a competing sort. Both counters
   exclude `segment-unreviewed`, which the coverage counter already owns.
-- Should the review queue be ordered geographically (walk the network) rather
-  than by confidence? Geographic order keeps the map still and makes consecutive
-  decisions share context. Not built: the queue currently runs suggestion groups
-  first, then unreviewed segments by id.
 - The editor has no routing evidence, so a facility-class conflict can only be
   refused client-side for the `roadType: road` case; everything else is caught by
   the server on the round trip. That gap predates this work.
@@ -304,7 +326,8 @@ there), which is B's leverage without B's cost.
   `ways-member-layer`, `ways-preview-layer`, all fed by one `ways-context` source
   tagged per selection. The white casing exists because the accent alone reads as
   one more basemap road on the outdoors style.
-- Keyboard: `/` search, `Enter` accept, `Backspace` reject, `←`/`→` move the
-  queue, `Esc` back to the library — all inert while a field has focus.
-- Clicking an unclassified segment on the map opens the review queue positioned
-  at that segment, so no map click is a dead end.
+- Keyboard: `/` focuses search and `Esc` returns from a detail to the library;
+  both are inert while a field has focus.
+- `ways-overview-layer` paints the complete active network from the same
+  `ways-context` source. Clicking a named segment opens its way; clicking an
+  unassigned segment opens that segment in Network.

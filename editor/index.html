@@ -103,10 +103,10 @@
 
       <aside class="details">
         <div class="details-scroll">
-          <!-- Ways workspace. One mode is on screen at a time: the review
-               inbox burns down the classification gap, the library curates the
-               registry. The map is the assignment surface, so there is no
-               segment-assignment form here.
+          <!-- Ways workspace. One mode is on screen at a time: the overview
+               paints the complete classified network, while the library
+               curates the registry. The map is the assignment surface, so
+               there is no segment-assignment form here.
                See plans/ways-workspace-ux/design.md. -->
           <section id="ways-panel" class="panel workspace-panel ways-panel" hidden dir="rtl">
             <header class="ways-header">
@@ -231,12 +231,13 @@
               <div id="way-candidates" class="way-candidates"></div>
             </section>
 
-            <section id="ways-review" class="ways-screen" hidden aria-label="סקירת סיווגים">
-              <div id="ways-queue-filters" class="ways-queue-filters" role="group" aria-label="סינון תור"></div>
-              <div id="guidance-suggestion-binding" class="guidance-suggestion-binding"></div>
-              <div id="guidance-suggestion-list" class="ways-queue" aria-live="polite"></div>
-              <div id="ways-queue-next" class="ways-queue-next"></div>
-              <button id="ways-queue-refresh" class="mini-button" type="button">רענון ההצעות</button>
+            <section id="ways-review" class="ways-screen" hidden aria-label="סקירת רשת CW">
+              <div id="ways-overview-summary" class="ways-overview-summary" aria-live="polite"></div>
+              <div class="ways-overview-key">
+                <span>כל צבע מייצג דרך ניווט אחת</span>
+                <span><i class="ways-overview-swatch is-unassigned"></i> לא משויך לדרך ניווט</span>
+              </div>
+              <div id="ways-overview-legend" class="ways-overview-legend" aria-label="מקרא דרכי ניווט"></div>
             </section>
           </section>
 
@@ -276,20 +277,20 @@
                 <option value="road">road</option>
               </select>
 
-              <details class="segment-quality-details">
-                <summary>Quality</summary>
-                <div id="segment-quality" class="quality-section" aria-label="Segment quality"></div>
-              </details>
             </form>
 
             <!-- Guidance classification. The internal name above stays the
                  editor/build key; this section owns the rider-facing identity.
                  See plans/navigation-way-names/design.md. -->
-            <details id="segment-guidance-details" class="segment-guidance-details" open>
-              <summary>הכוונה ושם דרך</summary>
+            <div id="segment-guidance-summary" class="segment-guidance-summary" dir="rtl">
+              <div id="guidance-preview" class="guidance-preview" aria-live="polite"></div>
+              <button id="guidance-open-way" class="mini-button" type="button" hidden>
+                פתיחת הדרך ב־Ways
+              </button>
+            </div>
+            <details id="segment-guidance-details" class="segment-guidance-details">
+              <summary>עריכת שיוך ניווט</summary>
               <div class="segment-guidance" dir="rtl">
-                <div id="guidance-preview" class="guidance-preview" aria-live="polite"></div>
-
                 <label class="field-label" for="guidance-role">סיווג</label>
                 <select id="guidance-role" class="text-input">
                   <option value="">— לא סווג —</option>
@@ -302,7 +303,6 @@
                   <label class="field-label" for="guidance-way-id">דרך</label>
                   <select id="guidance-way-id" class="text-input"></select>
                   <div class="action-row guidance-way-actions">
-                    <button id="guidance-open-way" class="mini-button" type="button">פתיחה בלשונית Ways</button>
                     <button id="guidance-create-way" class="mini-button" type="button">דרך חדשה…</button>
                   </div>
                   <label class="field-label" for="guidance-section-label">תווית קטע (רשות)</label>
@@ -335,6 +335,11 @@
             </div>
 
             <div id="network-segment-routing" class="network-segment-routing" aria-live="polite"></div>
+
+            <details class="segment-quality-details">
+              <summary>Quality</summary>
+              <div id="segment-quality" class="quality-section" aria-label="Segment quality"></div>
+            </details>
           </section>
 
           <section id="base-graph-panel" class="panel workspace-panel" hidden>

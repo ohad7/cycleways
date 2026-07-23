@@ -330,16 +330,12 @@ const state = {
     loading: false,
     saving: false,
     error: null,
-    suggestions: null,
-    suggestionsLoading: false,
-    // One panel screen at a time: the review inbox, the way library, or one
+    // One panel screen at a time: the network overview, the way library, or one
     // way's detail. See plans/ways-workspace-ux/design.md.
     panelMode: "library",
     search: "",
     searchOpen: false,
     healthFilter: null,
-    queueFilter: "all",
-    queueIndex: 0,
     // The previous documents of the last membership write, so a mis-click on
     // the map is one button away from being undone.
     undo: null,
@@ -349,10 +345,8 @@ const state = {
     geometryIndexSource: null,
     model: null,
     hoverSegmentId: null,
+    hoverWayId: null,
     hoverRevealTimer: null,
-    queueFocusKey: null,
-    queueAccept: null,
-    queueReject: null,
     selectedWayId: null,
     creatingWay: false,
     previewSegmentIds: [],
@@ -568,6 +562,8 @@ const els = {
   waysLibrary: document.getElementById("ways-library"),
   waysDetail: document.getElementById("ways-detail"),
   waysReview: document.getElementById("ways-review"),
+  waysOverviewSummary: document.getElementById("ways-overview-summary"),
+  waysOverviewLegend: document.getElementById("ways-overview-legend"),
   waysCreate: document.getElementById("ways-create"),
   waysList: document.getElementById("ways-list"),
   wayDetailBack: document.getElementById("way-detail-back"),
@@ -581,9 +577,6 @@ const els = {
   wayEditorActions: document.getElementById("way-editor-actions"),
   wayCandidates: document.getElementById("way-candidates"),
   wayCandidateCount: document.getElementById("way-candidate-count"),
-  waysQueueFilters: document.getElementById("ways-queue-filters"),
-  waysQueueNext: document.getElementById("ways-queue-next"),
-  waysQueueRefresh: document.getElementById("ways-queue-refresh"),
   wayEditorId: document.getElementById("way-editor-id"),
   wayEditorName: document.getElementById("way-editor-name"),
   wayEditorKind: document.getElementById("way-editor-kind"),
@@ -618,6 +611,7 @@ const els = {
   segmentStatus: document.getElementById("segment-status"),
   segmentRoadType: document.getElementById("segment-road-type"),
   segmentQuality: document.getElementById("segment-quality"),
+  guidanceSummary: document.getElementById("segment-guidance-summary"),
   guidanceDetails: document.getElementById("segment-guidance-details"),
   guidancePreview: document.getElementById("guidance-preview"),
   guidanceRole: document.getElementById("guidance-role"),
@@ -634,8 +628,6 @@ const els = {
   guidanceIssues: document.getElementById("guidance-issues"),
   guidanceSave: document.getElementById("guidance-save"),
   guidanceCoverage: document.getElementById("guidance-coverage"),
-  guidanceSuggestionBinding: document.getElementById("guidance-suggestion-binding"),
-  guidanceSuggestionList: document.getElementById("guidance-suggestion-list"),
   segmentTodo: document.getElementById("segment-todo"),
   segmentNotes: document.getElementById("segment-notes"),
   addData: document.getElementById("add-data"),
@@ -2943,6 +2935,7 @@ function updateWorkspaceLayerVisibility() {
   setLayerVisibility("segments-layer", showSegments);
   setLayerVisibility("selected-segment", showSelectedSegment);
   for (const layerId of [
+    "ways-overview-layer",
     "ways-highlight-casing",
     "ways-taken-layer",
     "ways-candidate-layer",
@@ -9079,7 +9072,7 @@ async function setWorkspaceMode(mode) {
     state.baseOverlay.enabled = false;
     state.guidance.previewSegmentIds = [];
     renderWaysManager();
-    setStatus("Ways mode: manage each public name once, review suggestions, and inspect its member segments.");
+    setStatus("Ways mode: inspect the network overview and manage each public name once.");
   } else if (mode === "video-sync") {
     state.baseOverlay.enabled = false;
     setStatus("Video Sync mode: pick a route, paste a YouTube URL, click on the map to add keyframes.");
@@ -9096,6 +9089,9 @@ async function setWorkspaceMode(mode) {
   }
 
   renderAll();
+  if (mode === "ways" && state.guidance.panelMode === "review") {
+    fitGuidanceRecords(state.activeFeatures);
+  }
 }
 
 function clearDrawState() {
@@ -11646,66 +11642,95 @@ function stepGuidanceQueue(delta) {
   renderWaysManager();
 }
 
+const WAYS_OVERVIEW_UNASSIGNED = "#9ca3af";
+const WAYS_OVERVIEW_PALETTE = [
+  "#2563eb",
+  "#dc2626",
+  "#059669",
+  "#7c3aed",
+  "#ea580c",
+  "#0891b2",
+  "#c026d3",
+  "#4d7c0f",
+  "#4338ca",
+  "#be123c",
+  "#0f766e",
+  "#a16207",
+  "#6d28d9",
+  "#0369a1",
+  "#b91c1c",
+  "#15803d",
+  "#9d174d",
+  "#0e7490",
+];
+
+function waysOverviewColorMap(model) {
+  return new Map(
+    model.ways.map((entry, index) => [
+      entry.wayId,
+      WAYS_OVERVIEW_PALETTE[index % WAYS_OVERVIEW_PALETTE.length],
+    ]),
+  );
+}
+
+function bindWayHover(node, wayId) {
+  node.addEventListener("mouseenter", () => {
+    state.guidance.hoverWayId = wayId;
+    updateWaysContextSource();
+  });
+  node.addEventListener("mouseleave", () => {
+    if (state.guidance.hoverWayId !== wayId) return;
+    state.guidance.hoverWayId = null;
+    updateWaysContextSource();
+  });
+}
+
 function renderWaysReview(model) {
-  const filters = [
-    ["all", "הכול"],
-    ["warning", "אזהרות"],
-    ["no-suggestion", "ללא הצעה"],
-  ];
-  els.waysQueueFilters.replaceChildren();
-  for (const [value, label] of filters) {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = `ways-chip${state.guidance.queueFilter === value ? " active" : ""}`;
-    button.textContent = label;
-    button.addEventListener("click", () => {
-      state.guidance.queueFilter = value;
-      state.guidance.queueIndex = 0;
-      renderWaysManager();
-    });
-    els.waysQueueFilters.append(button);
+  const colorByWayId = waysOverviewColorMap(model);
+  const namedMemberCount = model.ways.reduce(
+    (sum, entry) => sum + entry.memberIds.length,
+    0,
+  );
+  const activeCount = model.index.size;
+  const unassignedCount = Math.max(0, activeCount - namedMemberCount);
+
+  els.waysOverviewSummary.replaceChildren();
+  const headline = document.createElement("strong");
+  headline.textContent = "מפת רשת CW";
+  const summary = document.createElement("span");
+  summary.textContent =
+    `${namedMemberCount} מקטעים ב־${model.ways.length} דרכים`
+    + ` · ${unassignedCount} אינם משויכים לדרך ניווט`;
+  els.waysOverviewSummary.append(headline, summary);
+
+  els.waysOverviewLegend.replaceChildren();
+  for (const entry of model.ways) {
+    const row = document.createElement("button");
+    row.type = "button";
+    row.className = "ways-overview-row";
+    const swatch = document.createElement("i");
+    swatch.className = "ways-overview-swatch";
+    swatch.style.background = colorByWayId.get(entry.wayId);
+    const name = document.createElement("strong");
+    name.textContent = entry.way.name;
+    const count = document.createElement("span");
+    count.textContent = `${entry.memberIds.length} מקטעים`;
+    row.append(swatch, name, count);
+    bindWayHover(row, entry.wayId);
+    row.addEventListener("click", () => selectGuidanceWay(entry.wayId));
+    els.waysOverviewLegend.append(row);
   }
 
-  renderGuidanceQueueBinding();
-  els.waysQueueRefresh.disabled = state.guidance.suggestionsLoading;
-  els.guidanceSuggestionList.replaceChildren();
-  state.guidance.queueAccept = null;
-  state.guidance.queueReject = null;
-
-  if (state.guidance.suggestionsLoading) {
-    els.guidanceSuggestionList.textContent = "טוען ומאמת הצעות…";
-    els.waysQueueNext.textContent = "";
-    return;
-  }
-
-  const queue = model.queue;
-  if (queue.length === 0) {
-    const done = document.createElement("div");
-    done.className = "ways-queue-done";
-    const headline = document.createElement("strong");
-    headline.textContent = state.guidance.queueFilter === "all"
-      ? "אין מה לסקור — כל המקטעים הפעילים מסווגים"
-      : "אין פריטים במסנן הנוכחי";
-    const hint = document.createElement("span");
-    hint.textContent = "אפשר לעבור ללשונית הדרכים ולבדוק את מבנה הדרכים";
-    done.append(headline, hint);
-    els.guidanceSuggestionList.append(done);
-    els.waysQueueNext.textContent = "";
-    return;
-  }
-
-  const index = clampQueueIndex(queue);
-  const item = queue[index];
-  focusQueueItemOnMap(item);
-  if (item.kind === "suggestion") {
-    renderQueueSuggestionCard(item, queue, index);
-  } else {
-    renderQueueSegmentCard(item, queue, index);
-  }
-  const next = queue[index + 1];
-  els.waysQueueNext.textContent = next
-    ? `הבא בתור: ${queueItemTitle(next)}`
-    : "זהו הפריט האחרון בתור";
+  const unassigned = document.createElement("div");
+  unassigned.className = "ways-overview-row is-unassigned";
+  const swatch = document.createElement("i");
+  swatch.className = "ways-overview-swatch is-unassigned";
+  const name = document.createElement("strong");
+  name.textContent = "לא משויך לדרך ניווט";
+  const count = document.createElement("span");
+  count.textContent = `${unassignedCount} מקטעים`;
+  unassigned.append(swatch, name, count);
+  els.waysOverviewLegend.append(unassigned);
 }
 
 function guidanceForSelectedSegment() {
@@ -11744,7 +11769,10 @@ function populateGuidanceWayOptions(selectedWayId) {
 
 function populateGuidanceWayFields(wayId) {
   if (els.guidanceOpenWay) {
-    els.guidanceOpenWay.disabled = !(state.guidance.registry?.ways || {})[wayId];
+    const way = (state.guidance.registry?.ways || {})[wayId];
+    els.guidanceOpenWay.hidden = !way;
+    els.guidanceOpenWay.disabled = !way;
+    if (way) els.guidanceOpenWay.textContent = `פתיחת ${way.name} ב־Ways`;
   }
 }
 
@@ -11829,11 +11857,6 @@ function waysWorkspaceModel() {
     ways,
     selected,
     candidates: selected ? wayCandidates(selected.memberIds, index) : [],
-    queue: buildWorkQueue({
-      suggestions: state.guidance.suggestions,
-      index,
-      filter: state.guidance.queueFilter,
-    }),
     coverage: state.guidance.review?.coverage || null,
     issues,
   };
@@ -11844,6 +11867,7 @@ function selectGuidanceWay(wayId, { fit = true } = {}) {
   state.guidance.creatingWay = false;
   state.guidance.selectedWayId = wayId;
   state.guidance.previewSegmentIds = [];
+  state.guidance.hoverWayId = null;
   state.guidance.panelMode = "detail";
   state.guidance.identityDirty = false;
   state.guidance.spokenOpen = Boolean(
@@ -11879,18 +11903,9 @@ function selectSegmentInWays(segmentId, { fit = true } = {}) {
  * Put an unclassified segment in front of the curator as the queue item it
  * really is, instead of leaving the map click with nowhere to go.
  */
-function focusUnreviewedSegment(segmentId) {
-  state.guidance.panelMode = "review";
-  state.guidance.queueFilter = "all";
-  const queue = buildWorkQueue({
-    suggestions: state.guidance.suggestions,
-    index: waysGeometryIndex(),
-    filter: "all",
-  });
-  const position = queue.findIndex((item) => item.segmentIds.includes(Number(segmentId)));
-  if (position >= 0) state.guidance.queueIndex = position;
-  state.guidance.previewSegmentIds = [Number(segmentId)];
-  renderWaysManager();
+async function focusUnreviewedSegment(segmentId) {
+  await setWorkspaceMode("overlay");
+  selectSegmentById(segmentId, true);
 }
 
 
@@ -11950,18 +11965,19 @@ function beginCreateGuidanceWay() {
 
 function setWaysPanelMode(mode) {
   state.guidance.panelMode = mode;
+  state.guidance.hoverWayId = null;
   // The severity filter belongs to the library; leaving it behind would hide
   // ways with no explanation on the way back.
   if (mode === "review") state.guidance.healthFilter = null;
   closeWaysSearch();
   renderWaysManager();
+  if (mode === "review") fitGuidanceRecords(state.activeFeatures);
 }
 
 function renderWaysHeader(model) {
   const coverage = model.coverage;
   const reviewed = coverage?.reviewedSegments ?? 0;
   const active = coverage?.activeSegments ?? 0;
-  const remaining = coverage?.unreviewedSegments ?? 0;
   const warnings = model.issues.filter(
     (entry) => entry.severity === "warning"
       && !entry.acknowledged
@@ -11971,7 +11987,7 @@ function renderWaysHeader(model) {
     (entry) => entry.severity === "error" && entry.code !== "segment-unreviewed",
   ).length;
 
-  els.waysModeReviewCount.textContent = coverage ? `· ${remaining}` : "";
+  els.waysModeReviewCount.textContent = coverage ? `· ${reviewed}/${active}` : "";
   els.waysModeLibraryCount.textContent = `· ${model.ways.length}`;
   els.waysProgressFill.style.width = active > 0
     ? `${Math.round((reviewed / active) * 100)}%`
@@ -12086,6 +12102,7 @@ function renderWaysLibrary(model) {
     stats.textContent = entry.summary;
     card.append(title, stats);
     card.addEventListener("click", () => selectGuidanceWay(entry.wayId));
+    bindWayHover(card, entry.wayId);
     els.waysList.append(card);
   }
   if (visible.length === 0) {
@@ -12382,6 +12399,9 @@ function renderWaysManager() {
     window.clearTimeout(state.guidance.hoverRevealTimer);
     state.guidance.hoverSegmentId = null;
   }
+  if (!["library", "review"].includes(mode)) {
+    state.guidance.hoverWayId = null;
+  }
   if (mode === "library") {
     renderWaysLibrary(model);
   } else if (mode === "detail") {
@@ -12434,20 +12454,38 @@ function waysPreviewColorMap() {
 function waysContextFeatureCollection() {
   const model = state.guidance.model;
   if (!model || state.workspaceMode !== "ways") return EMPTY_FEATURE_COLLECTION;
+  const panelMode = state.guidance.panelMode;
   const memberIds = new Set(model.selected?.memberIds || []);
   const candidateIds = new Map(
     model.candidates.map((candidate) => [candidate.segmentId, candidate]),
   );
   const previewIds = new Set((state.guidance.previewSegmentIds || []).map(Number));
   const previewColors = waysPreviewColorMap();
+  const overviewColors = waysOverviewColorMap(model);
   const labelPreview = previewColors.size > 1;
   const features = [];
   for (const { feature, sourceIndex } of state.activeFeatures) {
     const segmentId = Number(feature.properties?.id);
+    const guidance = feature.properties?.guidance;
+    const navigationWayId =
+      guidance?.role === "named-way" && overviewColors.has(guidance.wayId)
+        ? guidance.wayId
+        : null;
     let waysRole = null;
     if (segmentId === state.guidance.hoverSegmentId) {
       // Pointing at a row answers "which one is that?" without a click.
       waysRole = "hover";
+    } else if (
+      state.guidance.hoverWayId
+      && navigationWayId === state.guidance.hoverWayId
+    ) {
+      // A library/legend row represents the complete named facility, not one
+      // arbitrary member, so hover lights every member at once.
+      waysRole = "hover";
+    } else if (panelMode === "review") {
+      waysRole = "overview";
+    } else if (panelMode === "library") {
+      continue;
     } else if (previewIds.has(segmentId)) {
       waysRole = "preview";
     } else if (memberIds.has(segmentId)) {
@@ -12459,6 +12497,12 @@ function waysContextFeatureCollection() {
     }
     if (!waysRole) continue;
     const properties = { ...feature.properties, sourceIndex, waysRole };
+    if (waysRole === "overview") {
+      properties.overviewColor = navigationWayId
+        ? overviewColors.get(navigationWayId)
+        : WAYS_OVERVIEW_UNASSIGNED;
+      properties.overviewAssigned = Boolean(navigationWayId);
+    }
     if (waysRole === "preview") {
       properties.previewColor = previewColors.get(segmentId) || WAYS_PREVIEW_SINGLE;
       if (labelPreview) properties.previewLabel = `#${segmentId}`;
@@ -12505,7 +12549,7 @@ function handleWaysMapSegmentClick(feature) {
     return;
   }
   if (!guidance) {
-    focusUnreviewedSegment(segmentId);
+    focusUnreviewedSegment(segmentId).catch(showError);
     return;
   }
   state.guidance.previewSegmentIds = [segmentId];
@@ -12893,8 +12937,10 @@ function renderGuidanceSection({ preserveFormRole = false } = {}) {
   const guidance = guidanceForSelectedSegment();
   const segmentId = selectedSegmentId();
 
+  els.guidanceSummary.hidden = !feature;
   els.guidanceDetails.hidden = !feature;
   if (!feature) {
+    els.guidanceOpenWay.hidden = true;
     renderGuidanceCoverage();
     return;
   }
@@ -12906,6 +12952,7 @@ function renderGuidanceSection({ preserveFormRole = false } = {}) {
   els.guidanceNamedWayFields.hidden = role !== "named-way";
   els.guidanceStandaloneFields.hidden = role !== "standalone";
   els.guidanceKindField.hidden = role !== "standalone" && role !== "unnamed";
+  els.guidanceOpenWay.hidden = true;
 
   if (role === "named-way") {
     const selectedWayId = guidance?.wayId || els.guidanceWayId.value || "";
@@ -12995,7 +13042,6 @@ async function saveGuidanceDocuments(nextSource, nextRegistry, successMessage) {
     refreshActiveFeatures();
     renderAll();
     setStatus(successMessage);
-    loadGuidanceSuggestions().catch(showError);
     return true;
   } catch (error) {
     setAlert(error instanceof Error ? error.message : String(error));
@@ -14510,15 +14556,12 @@ function wireWaysWorkspaceEvents() {
     fitGuidanceRecords(guidanceWayMemberRecords(state.guidance.selectedWayId));
   });
 
-  els.waysQueueRefresh.addEventListener("click", () =>
-    loadGuidanceSuggestions().catch(showError));
-
   document.addEventListener("keydown", handleWaysKeydown);
 }
 
 /**
- * Classification is a few hundred repeated decisions, so the queue is
- * keyboard-first. Every shortcut is inert while a field has focus.
+ * The Ways workspace keeps one global search shortcut; all destructive or
+ * mutating actions remain explicit buttons.
  */
 function handleWaysKeydown(event) {
   if (state.workspaceMode !== "ways") return;
@@ -14544,20 +14587,6 @@ function handleWaysKeydown(event) {
       setWaysPanelMode("library");
     }
     return;
-  }
-  if (state.guidance.panelMode !== "review") return;
-  if (event.key === "Enter") {
-    event.preventDefault();
-    state.guidance.queueAccept?.();
-  } else if (event.key === "Backspace") {
-    event.preventDefault();
-    state.guidance.queueReject?.().catch?.(showError);
-  } else if (event.key === "ArrowLeft") {
-    event.preventDefault();
-    stepGuidanceQueue(1);
-  } else if (event.key === "ArrowRight") {
-    event.preventDefault();
-    stepGuidanceQueue(-1);
   }
 }
 
@@ -15800,6 +15829,21 @@ async function addMapLayers() {
   // that could continue it, and the segments another way already owns — so the
   // map can answer "does this segment continue this way?".
   // See plans/ways-workspace-ux/design.md.
+  if (!map.getLayer("ways-overview-layer")) {
+    map.addLayer({
+      id: "ways-overview-layer",
+      type: "line",
+      source: "ways-context",
+      filter: ["==", ["get", "waysRole"], "overview"],
+      layout: { "line-join": "round", "line-cap": "round", visibility: "none" },
+      paint: {
+        "line-color": ["get", "overviewColor"],
+        "line-width": ["interpolate", ["linear"], ["zoom"], 10, 5, 14, 7, 16, 9],
+        "line-opacity": ["case", ["get", "overviewAssigned"], 0.95, 0.78],
+      },
+    });
+  }
+
   if (!map.getLayer("ways-highlight-casing")) {
     map.addLayer({
       id: "ways-highlight-casing",
@@ -18687,7 +18731,6 @@ map.on("load", async () => {
     // Guidance authoring is metadata-only, so it loads alongside the source
     // without touching the matcher or base topology.
     await loadGuidanceRegistry();
-    await loadGuidanceSuggestions();
     await setWorkspaceMode(state.workspaceMode);
   } catch (error) {
     showError(error);

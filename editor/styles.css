@@ -2662,14 +2662,36 @@ button.direction-review-queue-item {
 
 /* Guidance (navigation-way) authoring. The rider-facing identity is shown
    alongside the internal editor name so it stays obvious that they differ. */
-.segment-guidance-details {
+.segment-guidance-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   margin-top: 8px;
   border-top: 1px solid rgba(255, 255, 255, 0.12);
   padding-top: 8px;
 }
 
+.segment-guidance-summary[hidden] {
+  display: none;
+}
+
+.segment-guidance-summary .guidance-preview {
+  flex: 1;
+  min-width: 0;
+}
+
+.segment-guidance-summary .mini-button {
+  flex: none;
+}
+
+.segment-guidance-details {
+  margin-top: 4px;
+}
+
 .segment-guidance-details > summary {
   cursor: pointer;
+  color: var(--muted);
+  font-size: 12px;
   font-weight: 600;
 }
 
@@ -2730,8 +2752,9 @@ button.direction-review-queue-item {
 }
 
 /* --- Ways workspace -------------------------------------------------------
-   One mode on screen at a time: a review inbox and a way library, over a map
-   that is the assignment surface. See plans/ways-workspace-ux/design.md. */
+   One mode on screen at a time: a complete network overview and a way library,
+   over a map that is the assignment surface.
+   See plans/ways-workspace-ux/design.md. */
 
 .ways-panel {
   display: grid;
@@ -3287,7 +3310,101 @@ button.direction-review-queue-item {
   font-variant-numeric: tabular-nums;
 }
 
-/* --- review inbox --------------------------------------------------------- */
+/* --- network overview ----------------------------------------------------- */
+
+.ways-overview-summary {
+  display: grid;
+  gap: 3px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 11px;
+  background: color-mix(in srgb, var(--accent) 5%, var(--panel));
+}
+
+.ways-overview-summary strong {
+  font-size: 16px;
+}
+
+.ways-overview-summary span,
+.ways-overview-key {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.ways-overview-key {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 6px 12px;
+}
+
+.ways-overview-key span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ways-overview-legend {
+  display: grid;
+  gap: 4px;
+}
+
+.ways-overview-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 7px 8px;
+  color: inherit;
+  background: transparent;
+  text-align: right;
+}
+
+button.ways-overview-row {
+  cursor: pointer;
+}
+
+button.ways-overview-row:hover {
+  border-color: #f97316;
+  background: color-mix(in srgb, #f97316 9%, var(--panel));
+}
+
+.ways-overview-row strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+}
+
+.ways-overview-row span {
+  color: var(--muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.ways-overview-row.is-unassigned {
+  border-top: 1px solid var(--line);
+  border-radius: 0;
+  margin-top: 3px;
+}
+
+.ways-overview-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  background: var(--accent);
+}
+
+.ways-overview-swatch.is-unassigned {
+  background: #9ca3af;
+  opacity: 0.65;
+}
+
+/* Legacy suggestion-card styles remain temporarily for the digest artifact
+   tooling, but the editor no longer renders a suggestion review surface. */
 
 .ways-queue-filters {
   display: flex;
