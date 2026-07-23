@@ -87,6 +87,45 @@ const base = {
   );
 }
 
+// Catalog routes are injected by the running app and are deliberately
+// visual-only: CI scenarios must keep carrying deterministic routeState.
+{
+  const catalogRoute = {
+    ...resolveScenario(base).navigationRoute,
+    slug: "sovev-beit-hillel",
+  };
+  const visual = resolveScenario(
+    {
+      ...base,
+      visualOnly: true,
+      route: { catalogSlug: "sovev-beit-hillel" },
+    },
+    { catalogNavigationRoute: catalogRoute },
+  );
+  assert.equal(visual.navigationRoute.slug, "sovev-beit-hillel");
+  assert.equal(visual.navigationRoute.requiresStartAcquisition, true);
+  assert.throws(
+    () =>
+      resolveScenario(
+        { ...base, route: { catalogSlug: "sovev-beit-hillel" } },
+        { catalogNavigationRoute: catalogRoute },
+      ),
+    /catalog routes are visual-only/,
+  );
+  assert.throws(
+    () =>
+      resolveScenario(
+        {
+          ...base,
+          visualOnly: true,
+          route: { catalogSlug: "another-route" },
+        },
+        { catalogNavigationRoute: catalogRoute },
+      ),
+    /loaded catalog route "sovev-beit-hillel" instead/,
+  );
+}
+
 // Validation failures name the scenario and the problem.
 assert.throws(() => resolveScenario({ ...base, name: undefined }), /missing a name/);
 assert.throws(() => resolveScenario({ ...base, route: {} }), /test-scenario.*route/);

@@ -1,7 +1,6 @@
 {
   "schemaVersion": 1,
   "shardSchemaVersion": 1,
-  "generatedAt": "2026-07-23T20:16:23.933602Z",
   "sourceRoutingSchemaVersion": 3,
   "defaultFormat": "compact",
   "routeShare": {
@@ -2687,5 +2686,6 @@
       "f03acd80": "cdf1b8c4afe8db6d759c2d9b6a5ecf2df230c9e9e463e2a55d0892e933e4150d"
     },
     "legacyCwBaseIndexSha256": "c9831b6a52c74796263e9714c9cb6d326f672455adb6e33ced777c83557fc479"
-  }
+  },
+  "generatedAt": "2026-07-23T20:16:23.933602Z"
 }

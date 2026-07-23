@@ -1776,22 +1776,74 @@ export default function BuildScreen({ navigation, route }) {
     setDevPickerVisible(true);
   }, [clearDevJourneyState]);
 
-  // Resolve the picked scenario through the same resolver the headless suite
-  // uses (identical fixes for the same seed) and install its simulated source.
-  // Shared journeys arm Ride Intro and wait for its real Start action. Legacy
-  // session-only scenarios still use pendingNavigationRouteId so nav.start()
-  // runs only after the session has re-bound to the scenario route.
+  // Resolve the picked scenario and install its simulated source. Visual
+  // catalog scenarios first restore their catalog token through the planner's
+  // real route-loading path; fixture scenarios remain deterministic for the
+  // headless suite. Shared journeys arm Ride Intro and wait for its real Start
+  // action. Legacy session-only scenarios use pendingNavigationRouteId so
+  // nav.start() runs only after the session has re-bound to the scenario route.
   const handleDevScenarioSelect = useCallback(
     async (scenario, bookmark = null) => {
       if (!__DEV__) return;
       let resolved;
       try {
-        let currentNavigationRoute = navigationRoute;
+        const catalogSlug =
+          typeof scenario?.route?.catalogSlug === "string"
+            ? scenario.route.catalogSlug
+            : null;
+        let catalogNavigationRoute = null;
+        if (catalogSlug) {
+          let entries = catalogEntries;
+          let entry = entries.find((candidate) => candidate.slug === catalogSlug);
+          if (!entry) {
+            entries = await loadRouteCatalogEntries();
+            entries = Array.isArray(entries) ? entries : [];
+            setCatalogEntries(entries);
+            entry = entries.find((candidate) => candidate.slug === catalogSlug);
+          }
+          if (!entry?.route) {
+            throw new Error(`catalog route "${catalogSlug}" is unavailable`);
+          }
+          setDevPickerVisible(false);
+          const restoredRouteState = await handleLoadRouteParam(entry.route, {
+            returnSnapshot: true,
+          });
+          if (!restoredRouteState) {
+            setDevPickerVisible(true);
+            throw new Error(`could not decode catalog route "${catalogSlug}"`);
+          }
+          setConfirmedRidePlan(null);
+          setPendingExternalPlan(null);
+          setDevScenarioRoute(null);
+          setSelectedCatalogSlug(catalogSlug);
+          catalogNavigationRoute = navigationRouteFromRouteState(
+            restoredRouteState,
+            {
+              param: entry.route,
+              format: entry.routeFormat || null,
+            },
+            {
+              source: "catalog",
+              slug: entry.slug,
+              name: entry.name,
+              summary: entry.summary || "",
+              routeShape: { type: routeShapeType(entry) },
+              start: entry.start || null,
+              end: entry.end || null,
+              mapVersion: state.assets?.manifest?.version || null,
+              segmentsHash: state.assets?.manifest?.hashes?.segments || null,
+            },
+          );
+        }
+
+        let scenarioNavigationRoute = catalogSlug
+          ? catalogNavigationRoute
+          : navigationRoute;
         if (
-          scenario?.route === "current" &&
-          currentNavigationRoute?.canNavigate === true &&
-          (!Array.isArray(currentNavigationRoute.junctions)
-            || !Array.isArray(currentNavigationRoute.crossings))
+          (scenario?.route === "current" || catalogSlug) &&
+          scenarioNavigationRoute?.canNavigate === true &&
+          (!Array.isArray(scenarioNavigationRoute.junctions)
+            || !Array.isArray(scenarioNavigationRoute.crossings))
         ) {
           // current-route-generic bypasses Ride Intro/confirmRidePlan, which is
           // where prepared junctions are normally attached. Resolve them here
@@ -1801,13 +1853,13 @@ export default function BuildScreen({ navigation, route }) {
             preparedRouteJunctions.status === "ready" &&
             Array.isArray(preparedRouteJunctions.junctions) &&
             ridePlan?.effectiveRoute?.id === preparedRouteJunctions.routeId &&
-            ridePlan.effectiveRoute.geometry.length === currentNavigationRoute.geometry.length &&
+            ridePlan.effectiveRoute.geometry.length === scenarioNavigationRoute.geometry.length &&
             ridePlan.effectiveRoute.geometry.every((point, index) =>
-              point.lat === currentNavigationRoute.geometry[index]?.lat &&
-              point.lng === currentNavigationRoute.geometry[index]?.lng,
+              point.lat === scenarioNavigationRoute.geometry[index]?.lat &&
+              point.lng === scenarioNavigationRoute.geometry[index]?.lng,
             )
               ? preparedRouteJunctions.junctions
-              : await computeRouteJunctions(currentNavigationRoute.geometry);
+              : await computeRouteJunctions(scenarioNavigationRoute.geometry);
           if (!Array.isArray(prepared)) {
             throw new Error("could not prepare junction and roundabout cues");
           }
@@ -1816,15 +1868,16 @@ export default function BuildScreen({ navigation, route }) {
             && Array.isArray(preparedRouteJunctions.crossings)
             && ridePlan?.effectiveRoute?.id === preparedRouteJunctions.routeId
               ? preparedRouteJunctions.crossings
-              : computeRouteCrossings(currentNavigationRoute);
-          currentNavigationRoute = {
-            ...currentNavigationRoute,
+              : computeRouteCrossings(scenarioNavigationRoute);
+          scenarioNavigationRoute = {
+            ...scenarioNavigationRoute,
             junctions: prepared,
             crossings: Array.isArray(preparedCrossings) ? preparedCrossings : null,
           };
         }
         resolved = resolveScenario(scenario, {
-          currentNavigationRoute,
+          currentNavigationRoute: scenarioNavigationRoute,
+          catalogNavigationRoute: catalogSlug ? scenarioNavigationRoute : null,
         });
       } catch (error) {
         Alert.alert("Scenario error", String(error?.message || error));
@@ -1930,9 +1983,11 @@ export default function BuildScreen({ navigation, route }) {
     },
     [
       armDevJourneyIntro,
+      catalogEntries,
       computeRouteCrossings,
       computeRouteJunctions,
       devSpeed,
+      handleLoadRouteParam,
       locationState,
       nav,
       navigationRoute,
@@ -1941,6 +1996,8 @@ export default function BuildScreen({ navigation, route }) {
       rideSetupFix,
       rideSetupLocationStatus,
       rideSetupNow,
+      state.assets?.manifest?.hashes?.segments,
+      state.assets?.manifest?.version,
     ],
   );
 

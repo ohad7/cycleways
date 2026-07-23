@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { navigationRouteFromRouteState } from "@cycleways/core/navigation/navigationRoute.js";
+import { reverseNavigationRoute } from "@cycleways/core/navigation/effectiveNavigationRoute.js";
 import {
   buildRouteCues,
   selectActiveCue,
@@ -329,6 +330,54 @@ function routeFrom(geometry, extra = {}) {
   assert.ok(near(turns[0].distanceMeters, 9.3, 2), "kept the first turn");
 }
 
+// A same-way bend immediately before a junction must not steal the named
+// maneuver. Both corners fall inside the junction gate and below the hard
+// spacing floor, so the corner closest to the actual node owns the decision.
+{
+  const geometry = [
+    { lat: 33.001, lng: 35 },
+    { lat: 33.0001, lng: 35 }, // same-way left bend
+    { lat: 33.00005, lng: 35.00008 }, // junction + way transition
+    { lat: 32.9995, lng: 35.00008 }, // right onto the new way
+  ];
+  const baseline = routeFrom(geometry);
+  const transition = baseline.geometry[2].distanceFromStartMeters;
+  const total = baseline.distanceMeters;
+  const guidance = (startMeters, endMeters, identity, name) => ({
+    startMeters,
+    endMeters,
+    guidanceIdentity: identity,
+    name,
+    spokenName: name,
+    role: "named-way",
+    kind: "road",
+  });
+  const route = routeFrom(geometry, {
+    junctions: [geometry[2]],
+    guidanceMode: "guidance-v1",
+    guidanceSpans: [
+      guidance(0, transition, "way:approach", "Approach way"),
+      guidance(transition, total, "way:9888", "כביש 9888"),
+    ],
+  });
+  route.oppositeGuidanceSpans = [
+    guidance(0, total - transition, "way:9888", "כביש 9888"),
+    guidance(total - transition, total, "way:approach", "Approach way"),
+  ];
+
+  const forward = findType(buildRouteCues(route), "turn");
+  assert.equal(forward.length, 1);
+  assert.equal(forward[0].direction, "right");
+  assert.ok(near(forward[0].distanceMeters, transition, 1));
+  assert.equal(forward[0].ontoGuidance.guidanceIdentity, "way:9888");
+
+  const reverse = findType(buildRouteCues(reverseNavigationRoute(route)), "turn");
+  assert.equal(reverse.length, 1);
+  assert.equal(reverse[0].direction, "left");
+  assert.ok(near(reverse[0].distanceMeters, total - transition, 1));
+  assert.equal(reverse[0].ontoGuidance.guidanceIdentity, "way:approach");
+}
+
 // --- Compound turns: close pairs are linked, not dropped ------------------
 {
   const route = routeFrom([
@@ -586,6 +635,18 @@ import { buildRouteCues as _brc } from "@cycleways/core/navigation/navigationCue
   const route = navigationRouteFromRouteState(sovev, { param: "sovev" });
   const cues = buildRouteCues(route);
   const turns = findType(cues, "turn");
+  const road9888 = turns.find(
+    (turn) => turn.ontoGuidance?.guidanceIdentity === "way:road-9888",
+  );
+  const road9888Span = route.guidanceSpans.find(
+    (span) => span.guidanceIdentity === "way:road-9888",
+  );
+  assert.ok(road9888, "real route has a named maneuver onto Road 9888");
+  assert.equal(road9888.direction, "right");
+  assert.ok(
+    Math.abs(road9888.distanceMeters - road9888Span.startMeters) < 2,
+    "Road 9888 maneuver is anchored to its way transition, not the preceding bend",
+  );
   assert.ok(
     turns.length > 0 && turns.length <= 10,
     `curve noise is gone (was 16 turns, got ${turns.length})`,

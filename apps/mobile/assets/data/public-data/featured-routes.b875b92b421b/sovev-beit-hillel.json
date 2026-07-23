@@ -1,16 +1,16 @@
 {
   "schemaVersion": 2,
   "slug": "sovev-beit-hillel",
-  "generatedAt": "2026-07-23T20:17:52.700Z",
+  "generatedAt": "2026-07-23T20:55:39.249Z",
   "source": {
     "routeTokenHash": "sha256:66b57553302ce1b14f59bae07486aa5c6fbbed2412ac05cf52289794bd9769d1",
     "routeFormat": "base_route_v4",
-    "mapVersion": "71a935c29650",
+    "mapVersion": "e7718a3366fd",
     "assetHashes": {
       "bikeRoads": "5e82b8a909b021433f275e205addda8a9e240d8f346f28944e280d520c514955",
-      "segments": "683270e1de8006323bbdc74771e9d550072aeca4b51428060e8a294dd5f43c9b",
+      "segments": "b87bc696528eb0b79464435fd3c7e7a21d0b3653b81461b2892c12c381072a68",
       "cwBaseIndex": "34a78c04437e747acd193c3e2dc39422220330e30479984f63a30c8154510ca9",
-      "baseRoutingShards": "cbc13b78af2d811d78e8af7ef372bca4f532f1ab061086207ea168b3a9baafa4"
+      "baseRoutingShards": "be4ce11b87d50d17fad8736475fa6f9a468ca83c0f1267a6caf2ca726fe27852"
     }
   },
   "route": {
@@ -998,15 +998,15 @@
         ]
       },
       {
-        "id": "class:1:2372-2543",
-        "guidanceIdentity": null,
-        "role": null,
-        "resolutionStatus": "unreviewed",
-        "name": "כביש",
-        "spokenName": "כביש",
-        "kind": "road",
-        "icon": "road",
-        "isFallback": true,
+        "id": "standalone:375:1:2372-2543",
+        "guidanceIdentity": "standalone:375",
+        "role": "standalone",
+        "resolutionStatus": "resolved",
+        "name": "כביש גישה קייאקי כפר בלום",
+        "spokenName": "כביש גישה קייאקי כפר בלום",
+        "kind": "cycleway",
+        "icon": "cycleway",
+        "isFallback": false,
         "startMeters": 2372.438525978485,
         "endMeters": 2543.1385259784847,
         "distanceMeters": 170.69999999999982,
@@ -1020,12 +1020,12 @@
             "startMeters": 2372.438525978485,
             "endMeters": 2543.1385259784847,
             "networkRole": "segment",
-            "resolutionStatus": "unreviewed",
-            "guidanceIdentity": null,
-            "name": null,
-            "spokenName": null,
-            "role": null,
-            "kind": "road",
+            "resolutionStatus": "resolved",
+            "guidanceIdentity": "standalone:375",
+            "name": "כביש גישה קייאקי כפר בלום",
+            "spokenName": "כביש גישה קייאקי כפר בלום",
+            "role": "standalone",
+            "kind": "cycleway",
             "wayId": null,
             "segmentIds": [
               375

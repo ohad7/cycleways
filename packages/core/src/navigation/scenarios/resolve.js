@@ -1,8 +1,7 @@
-// Shared scenario loader (nav-scenario-harness). Both the headless runner
-// (tests/test-nav-scenarios.mjs) and the in-app dev picker resolve scenarios
-// through this one function, so a scenario that passes CI is byte-identical
-// to the ride replayed on the simulator. Fails fast with messages that name
-// the scenario and the offending field.
+// Shared scenario loader (nav-scenario-harness). Deterministic scenarios carry
+// routeState fixtures for headless replay. Visual catalog scenarios instead
+// receive a route decoded by the running app, so they reflect the installed
+// release's current route, geometry, and guidance metadata.
 import { navigationRouteFromRouteState } from "../navigationRoute.js";
 import { generateTrack } from "../trackGenerator.js";
 import { applyGpsGap, insertDwell } from "../trackTools.js";
@@ -16,7 +15,13 @@ const CONNECTOR_MODES = new Set([
   "none",
 ]);
 
-export function resolveScenario(scenario, { currentNavigationRoute = null } = {}) {
+export function resolveScenario(
+  scenario,
+  {
+    currentNavigationRoute = null,
+    catalogNavigationRoute = null,
+  } = {},
+) {
   const name = scenario?.name;
   if (typeof name !== "string" || name.length === 0) {
     throw new Error("scenario is missing a name");
@@ -35,6 +40,28 @@ export function resolveScenario(scenario, { currentNavigationRoute = null } = {}
       ...currentNavigationRoute,
       id: `${currentNavigationRoute.id}:scenario-${name}`,
     };
+  } else if (scenario.route?.catalogSlug) {
+    if (scenario.visualOnly !== true) {
+      throw err("catalog routes are visual-only; deterministic scenarios require routeState");
+    }
+    if (catalogNavigationRoute?.canNavigate !== true) {
+      throw err(`could not load catalog route "${scenario.route.catalogSlug}"`);
+    }
+    if (
+      catalogNavigationRoute.slug &&
+      catalogNavigationRoute.slug !== scenario.route.catalogSlug
+    ) {
+      throw err(
+        `loaded catalog route "${catalogNavigationRoute.slug}" instead of "${scenario.route.catalogSlug}"`,
+      );
+    }
+    navigationRoute = {
+      ...catalogNavigationRoute,
+      id: `${catalogNavigationRoute.id}:scenario-${name}`,
+      // Catalog rides enter navigation from the route start through Ride Setup.
+      // Preserve that acquisition rule for loops whose start and end overlap.
+      requiresStartAcquisition: true,
+    };
   } else if (scenario.route?.routeState) {
     navigationRoute = navigationRouteFromRouteState(attestScenarioRouteState(
       scenario.route.routeState,
@@ -51,7 +78,7 @@ export function resolveScenario(scenario, { currentNavigationRoute = null } = {}
     // as riding backwards — progress counts down and wrong-way fires.
     navigationRoute = { ...navigationRoute, requiresStartAcquisition: true };
   } else {
-    throw err('route must be "current" or { routeState }');
+    throw err('route must be "current", { catalogSlug }, or { routeState }');
   }
 
   let fixes;

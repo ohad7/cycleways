@@ -2,9 +2,9 @@
   "schemaVersion": 1,
   "generatedAt": "2026-07-23",
   "sourceDocument": "plans/navigation-way-names/model-suggestions.md",
-  "evidenceSetDigest": "sha256:5bc9f48c044e5c9fad68085f7ae332ca33f092da66e293124e5c74d4deb55035",
+  "evidenceSetDigest": "sha256:06d944228e4a2324ad8c2723aa7e3241b0f2297c709671ad9e7b2e921bb2d161",
   "boundFiles": {
-    "data/map-source.geojson": "057aa40d8adb008b4f20f2a1fa33d5f713ed10efdd8f7a07300641046b897021",
+    "data/map-source.geojson": "97bfe05f098b1dd00b69b813fe133fcaa4c6a3c72ac8c971b7bfda04894e81c7",
     "data/navigation-ways.json": "9855ec4e7922858973e0296facafb141e6a97f673d6c7594d46feb7a75872d6c",
     "data/cw-base-overlay.json": "2db09ffef7b4ec38e8f1cec41092f664a61ee0defaf9f41170b0c41367285dd2",
     "data/network-junctions.json": "e23ca87d82adc2c32ea6b3f75e505a55bd86dd18649299f4be60e81b81ed3e28",
@@ -2449,6 +2449,6 @@
       "unnamed": 54
     }
   },
-  "reboundAt": "2026-07-23T20:15:33.691Z",
+  "reboundAt": "2026-07-23T20:54:42.844Z",
   "reboundReason": "editor-guidance-only-transaction"
 }

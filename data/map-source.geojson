@@ -64553,7 +64553,13 @@
           "scenery": 3
         },
         "splitFrom": 139,
-        "splitFromName": "גדר המערכת בית הלל"
+        "splitFromName": "גדר המערכת בית הלל",
+        "guidance": {
+          "role": "standalone",
+          "name": "כביש גישה קייאקי כפר בלום",
+          "kind": "cycleway",
+          "spokenName": "כביש גישה קייאקי כפר בלום"
+        }
       },
       "geometry": {
         "type": "LineString",

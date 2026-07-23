@@ -4170,6 +4170,14 @@
     },
     "splitFrom": 139,
     "splitFromName": "גדר המערכת בית הלל",
+    "guidance": {
+      "role": "standalone",
+      "name": "כביש גישה קייאקי כפר בלום",
+      "kind": "cycleway",
+      "spokenName": "כביש גישה קייאקי כפר בלום",
+      "guidanceIdentity": "standalone:375",
+      "resolutionStatus": "resolved"
+    },
     "middle": {
       "longitude": 35.608394,
       "latitude": 33.19939,

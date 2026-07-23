@@ -847,10 +847,15 @@ export function useCyclewaysApp({
   // full page reload. Pushes the previous route state onto the undo stack,
   // requests a map fit to the loaded geometry, and mirrors the param onto the
   // URL. Returns false when the routing session isn't ready or the param
-  // doesn't decode, so callers can fall back to a full-page restore.
+  // doesn't decode, so callers can fall back to a full-page restore. Dev
+  // visualizations may request the restored snapshot as the return value;
+  // normal callers retain the existing true/false contract.
   // Concurrent loads are rejected while one is already in flight.
   const handleLoadRouteParam = useCallback(
-    async (routeParam, { pushHistory = false } = {}) => {
+    async (
+      routeParam,
+      { pushHistory = false, returnSnapshot = false } = {},
+    ) => {
       if (
         !routeParam ||
         !routeManagerRef.current ||
@@ -899,7 +904,7 @@ export function useCyclewaysApp({
           },
         }));
         (pushHistory ? pushUrlParam : setUrlParam)("route", routeParam);
-        return true;
+        return returnSnapshot ? snapshot : true;
       } catch (error) {
         dispatchRoute({ type: "route/error", error });
         return false;

@@ -128,6 +128,53 @@ function nearestJunctionIndex(point, junctions) {
   return selectedIndex;
 }
 
+function hasNamedGuidanceTransitionBetween(previous, candidate, guidanceSpans) {
+  const lower = Number(previous?.distanceMeters) - 0.5;
+  const upper = Number(candidate?.distanceMeters) + 1;
+  return (Array.isArray(guidanceSpans) ? guidanceSpans : []).some(
+    (span, index, spans) => {
+      const start = Number(span?.startMeters);
+      const identity = span?.guidanceIdentity || null;
+      const previousIdentity = index > 0
+        ? spans[index - 1]?.guidanceIdentity || null
+        : null;
+      return (
+        start > 0 &&
+        start >= lower &&
+        start <= upper &&
+        identity &&
+        identity !== previousIdentity
+      );
+    },
+  );
+}
+
+function shouldReplaceCloseCornerAtSameJunction(
+  previous,
+  candidate,
+  guidanceSpans,
+) {
+  if (
+    previous?.type !== "turn" ||
+    candidate?.type !== "turn" ||
+    previous.direction === candidate.direction ||
+    !Number.isInteger(previous._nearestJunctionIndex) ||
+    previous._nearestJunctionIndex !== candidate._nearestJunctionIndex
+  ) {
+    return false;
+  }
+  if (!hasNamedGuidanceTransitionBetween(previous, candidate, guidanceSpans)) {
+    return false;
+  }
+  const previousDistance = Number(previous._junctionDistanceMeters);
+  const candidateDistance = Number(candidate._junctionDistanceMeters);
+  return (
+    Number.isFinite(previousDistance) &&
+    Number.isFinite(candidateDistance) &&
+    candidateDistance < previousDistance
+  );
+}
+
 function canMergeSamePhysicalTurn(first, second) {
   if (
     first?.type !== "turn" ||
@@ -358,6 +405,10 @@ export function buildRouteCues(navigationRoute, options = {}) {
   const totalMeters = geometry[geometry.length - 1].distanceFromStartMeters;
   const cueGeometry = cueGeometryWithoutNearDuplicates(geometry);
   const cues = [{ type: "start", distanceMeters: 0 }];
+  const guidanceEnabled = navigationRoute?.guidanceMode === "guidance-v1";
+  const guidanceSpans = guidanceEnabled && Array.isArray(navigationRoute?.guidanceSpans)
+    ? navigationRoute.guidanceSpans
+    : [];
 
   // Turn/bend cues from sharp heading deltas, distance-gated to avoid spam.
   // With junction data (network nodes with 3+ edges, baked onto the route at
@@ -416,9 +467,7 @@ export function buildRouteCues(navigationRoute, options = {}) {
         type = "bend";
       }
     }
-    if (distanceMeters - lastTurnDistance < MIN_TURN_SPACING_M) continue;
-    lastTurnDistance = distanceMeters;
-    cornerCues.push({
+    const corner = {
       type,
       distanceMeters,
       direction: turn > 0 ? "right" : "left",
@@ -426,8 +475,33 @@ export function buildRouteCues(navigationRoute, options = {}) {
       _geometryIndex: i,
       _geometryEndIndex: i,
       _nearestJunctionIndex: closestJunctionIndex,
+      _junctionDistanceMeters: Number.isInteger(closestJunctionIndex)
+        ? getDistance(cueGeometry[i], plainJunctions[closestJunctionIndex])
+        : null,
       topologyConfirmed: type === "turn" && plainJunctions !== null,
-    });
+    };
+    if (distanceMeters - lastTurnDistance < MIN_TURN_SPACING_M) {
+      const previous = cornerCues.at(-1);
+      // A same-way bend can sit immediately before a real junction maneuver.
+      // Both corners then fall inside the broad junction gate, while the hard
+      // spacing floor historically kept the earlier bend and discarded the
+      // actual turn. A named-way transition between opposite-direction
+      // candidates proves that this is a guidance handoff rather than ordinary
+      // geometry noise; retain the candidate physically closest to the node.
+      if (
+        shouldReplaceCloseCornerAtSameJunction(
+          previous,
+          corner,
+          guidanceSpans,
+        )
+      ) {
+        cornerCues[cornerCues.length - 1] = corner;
+        lastTurnDistance = distanceMeters;
+      }
+      continue;
+    }
+    lastTurnDistance = distanceMeters;
+    cornerCues.push(corner);
   }
 
   for (const traversal of roundaboutTraversals) {
@@ -504,6 +578,7 @@ export function buildRouteCues(navigationRoute, options = {}) {
     delete cue._geometryIndex;
     delete cue._geometryEndIndex;
     delete cue._nearestJunctionIndex;
+    delete cue._junctionDistanceMeters;
   }
   cues.push(...cornerCues);
 
@@ -530,10 +605,6 @@ export function buildRouteCues(navigationRoute, options = {}) {
       cue.junctionName = junctionSpan.junctionName;
     }
   }
-  const guidanceEnabled = navigationRoute?.guidanceMode === "guidance-v1";
-  const guidanceSpans = guidanceEnabled && Array.isArray(navigationRoute?.guidanceSpans)
-    ? navigationRoute.guidanceSpans
-    : [];
   if (guidanceEnabled) {
     // Guidance mode owns naming for every span, including the ones that read as
     // a facility class. The internal-name `enter-segment` path below is the

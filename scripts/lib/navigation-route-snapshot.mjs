@@ -21,11 +21,19 @@ function roundedRouteState(routeState) {
     lat: Math.round(Number(point.lat) * 1e6) / 1e6,
     lng: Math.round(Number(point.lng) * 1e6) / 1e6,
   }));
+  const points = Array.isArray(routeState.points) && routeState.points.length >= 2
+    ? routeState.points.map((point, index) => {
+        const id = `route-point-${index + 1}`;
+        return {
+          ...point,
+          id,
+          ...(point.occurrenceId !== undefined ? { occurrenceId: id } : {}),
+        };
+      })
+    : [{ id: "start", ...geometry[0] }, { id: "end", ...geometry.at(-1) }];
   return {
     ...portableRouteState,
-    points: Array.isArray(routeState.points) && routeState.points.length >= 2
-      ? routeState.points
-      : [{ id: "start", ...geometry[0] }, { id: "end", ...geometry.at(-1) }],
+    points,
     geometry,
     segmentSpans: (routeState.segmentSpans || []).map((span) => ({
       ...span,

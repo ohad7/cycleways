@@ -35,6 +35,11 @@ assert.equal(
   scenarios.length,
   "scenario names are unique",
 );
+assert.deepEqual(
+  getScenario("sovev-beit-hillel-ride")?.route,
+  { catalogSlug: "sovev-beit-hillel" },
+  "the visual catalog ride resolves from the installed route rather than a fixture",
+);
 
 const ARTIFACT_DIR = "test-results/nav-scenarios";
 let failedCount = 0;
