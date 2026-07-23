@@ -361,7 +361,11 @@
           }
         ],
         "splitFrom": 88,
-        "splitFromName": "שביל אופניים 918 דפנה"
+        "splitFromName": "שביל אופניים 918 דפנה",
+        "guidance": {
+          "role": "named-way",
+          "wayId": "road-918"
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -18590,6 +18594,10 @@
           "safety": 3,
           "comfort": 3,
           "scenery": 3
+        },
+        "guidance": {
+          "role": "named-way",
+          "wayId": "road-959"
         }
       },
       "geometry": {
@@ -19787,6 +19795,47 @@
       "type": "Feature",
       "properties": {
         "id": 53,
+        "name": "כביש 959 גונן [split archive 53]",
+        "status": "deprecated",
+        "roadType": "road",
+        "styleUrl": "#sty-35",
+        "stroke": "#8f2424",
+        "sourceStroke": "#8f2424",
+        "stroke-opacity": 1,
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        },
+        "originalName": "כביש 959 גונן",
+        "deprecated": true,
+        "routeAnchors": [
+          [
+            35.651484,
+            33.12311
+          ],
+          [
+            35.649119,
+            33.11939
+          ],
+          [
+            35.647742,
+            33.118469
+          ],
+          [
+            35.646578,
+            33.113769
+          ]
+        ]
+      },
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": 372,
         "name": "כביש 959 גונן",
         "status": "active",
         "roadType": "road",
@@ -19800,6 +19849,12 @@
           "safety": 3,
           "comfort": 3,
           "scenery": 3
+        },
+        "splitFrom": 53,
+        "splitFromName": "כביש 959 גונן",
+        "guidance": {
+          "role": "named-way",
+          "wayId": "road-959"
         }
       },
       "geometry": {
@@ -20111,8 +20166,44 @@
             130
           ],
           [
-            35.64834969606048,
-            33.12082100927401,
+            35.64836358433661,
+            33.120835400147584,
+            121
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": 373,
+        "name": "כביש 918 גונן",
+        "status": "active",
+        "roadType": "road",
+        "styleUrl": "#sty-35",
+        "stroke": "#8f2424",
+        "sourceStroke": "#8f2424",
+        "stroke-opacity": 1,
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        },
+        "splitFrom": 53,
+        "splitFromName": "כביש 959 גונן",
+        "guidance": {
+          "role": "named-way",
+          "wayId": "road-918"
+        }
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.64836358433661,
+            33.120835400147584,
             121
           ],
           [
@@ -20472,7 +20563,11 @@
           "scenery": 3
         },
         "splitFrom": 51,
-        "splitFromName": "כביש 918 גשר הפקק"
+        "splitFromName": "כביש 918 גשר הפקק",
+        "guidance": {
+          "role": "named-way",
+          "wayId": "road-918"
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -22201,7 +22296,11 @@
           "scenery": 3
         },
         "splitFrom": 285,
-        "splitFromName": "כביש 918 גשר הפקק - 2"
+        "splitFromName": "כביש 918 גשר הפקק - 2",
+        "guidance": {
+          "role": "named-way",
+          "wayId": "road-918"
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -24792,7 +24891,11 @@
           "scenery": 3
         },
         "splitFrom": 194,
-        "splitFromName": "כביש 918 גבעת האם"
+        "splitFromName": "כביש 918 גבעת האם",
+        "guidance": {
+          "role": "named-way",
+          "wayId": "road-918"
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -24839,7 +24942,11 @@
           "scenery": 3
         },
         "splitFrom": 194,
-        "splitFromName": "כביש 918 גבעת האם"
+        "splitFromName": "כביש 918 גבעת האם",
+        "guidance": {
+          "role": "named-way",
+          "wayId": "road-918"
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -24964,6 +25071,10 @@
           "safety": 3,
           "comfort": 3,
           "scenery": 3
+        },
+        "guidance": {
+          "role": "named-way",
+          "wayId": "road-918"
         }
       },
       "geometry": {
@@ -25357,6 +25468,10 @@
           "safety": 3,
           "comfort": 3,
           "scenery": 3
+        },
+        "guidance": {
+          "role": "named-way",
+          "wayId": "road-918"
         }
       },
       "geometry": {
@@ -25527,6 +25642,10 @@
           "safety": 3,
           "comfort": 3,
           "scenery": 3
+        },
+        "guidance": {
+          "role": "named-way",
+          "wayId": "road-918"
         }
       },
       "geometry": {
@@ -25589,6 +25708,10 @@
           "safety": 3,
           "comfort": 3,
           "scenery": 3
+        },
+        "guidance": {
+          "role": "named-way",
+          "wayId": "road-918"
         }
       },
       "geometry": {
@@ -38761,6 +38884,10 @@
           "safety": 3,
           "comfort": 3,
           "scenery": 3
+        },
+        "guidance": {
+          "role": "named-way",
+          "wayId": "cycleway-9779"
         }
       },
       "geometry": {
@@ -39470,7 +39597,11 @@
           "scenery": 3
         },
         "splitFrom": 91,
-        "splitFromName": "שביל אופניים 9779 קרית שמונה"
+        "splitFromName": "שביל אופניים 9779 קרית שמונה",
+        "guidance": {
+          "role": "named-way",
+          "wayId": "cycleway-9779"
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -39542,7 +39673,11 @@
           "scenery": 3
         },
         "splitFrom": 91,
-        "splitFromName": "שביל אופניים 9779 קרית שמונה"
+        "splitFromName": "שביל אופניים 9779 קרית שמונה",
+        "guidance": {
+          "role": "named-way",
+          "wayId": "cycleway-9779"
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -41983,6 +42118,10 @@
           "safety": 3,
           "comfort": 3,
           "scenery": 3
+        },
+        "guidance": {
+          "role": "named-way",
+          "wayId": "cycleway-99"
         }
       },
       "geometry": {
@@ -42755,7 +42894,11 @@
           "scenery": 3
         },
         "splitFrom": 98,
-        "splitFromName": "שביל אופניים 99 קיאקי הגושרים"
+        "splitFromName": "שביל אופניים 99 קיאקי הגושרים",
+        "guidance": {
+          "role": "named-way",
+          "wayId": "cycleway-99"
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -43006,7 +43149,11 @@
               }
             ]
           }
-        ]
+        ],
+        "guidance": {
+          "role": "named-way",
+          "wayId": "cycleway-99"
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -54497,7 +54644,11 @@
           "scenery": 3
         },
         "splitFrom": 291,
-        "splitFromName": "ירדן מזרח גשר הפקק - 2 - 2"
+        "splitFromName": "ירדן מזרח גשר הפקק - 2 - 2",
+        "guidance": {
+          "role": "named-way",
+          "wayId": "road-918"
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -54559,7 +54710,11 @@
           "scenery": 3
         },
         "splitFrom": 291,
-        "splitFromName": "ירדן מזרח גשר הפקק - 2 - 2"
+        "splitFromName": "ירדן מזרח גשר הפקק - 2 - 2",
+        "guidance": {
+          "role": "named-way",
+          "wayId": "road-918"
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -82376,6 +82531,10 @@
           "safety": 3,
           "comfort": 3,
           "scenery": 3
+        },
+        "guidance": {
+          "role": "named-way",
+          "wayId": "road-90"
         }
       },
       "geometry": {
@@ -83831,6 +83990,10 @@
           "safety": 3,
           "comfort": 3,
           "scenery": 3
+        },
+        "guidance": {
+          "role": "named-way",
+          "wayId": "road-90"
         }
       },
       "geometry": {
@@ -100164,7 +100327,11 @@
               }
             ]
           }
-        ]
+        ],
+        "guidance": {
+          "role": "named-way",
+          "wayId": "cycleway-99"
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -100199,6 +100366,10 @@
           "safety": 3,
           "comfort": 3,
           "scenery": 3
+        },
+        "guidance": {
+          "role": "named-way",
+          "wayId": "cycleway-99"
         }
       },
       "geometry": {
@@ -103283,6 +103454,10 @@
           "safety": 3,
           "comfort": 3,
           "scenery": 3
+        },
+        "guidance": {
+          "role": "named-way",
+          "wayId": "cycleway-99"
         }
       },
       "geometry": {
@@ -104872,6 +105047,10 @@
           "safety": 3,
           "comfort": 3,
           "scenery": 3
+        },
+        "guidance": {
+          "role": "named-way",
+          "wayId": "cycleway-99"
         }
       },
       "geometry": {

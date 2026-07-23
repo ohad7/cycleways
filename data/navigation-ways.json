@@ -39,7 +39,12 @@
       "kind": "road",
       "ref": "9974",
       "aliases": [],
-      "spokenName": "כביש תשעת אלפים תשע מאות שבעים וארבע"
+      "spokenName": "כביש תשעת אלפים תשע מאות שבעים וארבע",
+      "structureReview": {
+        "acknowledgedIssueFingerprints": [
+          "way-structure-multi-component|road-9974|components=175,62|memberEvidenceDigests=175:01068f26695718453b7d9e91a94ab689900893a433962aedbece02e56a60bd7a,62:74d48f87543312a699aa14034bcb74966f75e5358aab7a6decf1d0621d323825"
+        ]
+      }
     },
     "kfar-yuval-fields": {
       "name": "שדות כפר יובל",
@@ -53,6 +58,24 @@
       "ref": "99",
       "aliases": [],
       "spokenName": "שביל אופניים תשעים ותשע"
+    },
+    "road-918": {
+      "name": "כביש 918",
+      "kind": "road",
+      "aliases": [],
+      "spokenName": null
+    },
+    "road-959": {
+      "name": "כביש 959",
+      "kind": "road",
+      "aliases": [],
+      "spokenName": null
+    },
+    "cycleway-9779": {
+      "name": "שביל אופניים 9779",
+      "kind": "cycleway",
+      "aliases": [],
+      "spokenName": null
     }
   }
 }
