@@ -3,7 +3,7 @@
 **Date:** 2026-07-16
 **Last reviewed:** 2026-07-23
 **Status:** Forward-navigation foundation implemented; remaining work
-re-sequenced and ready for implementation
+re-sequenced after the 2026-07-23 second review and ready for implementation
 **Design:** `plans/navigation-way-names/design.md`
 
 ## 2026-07-23 re-review outcome
@@ -39,6 +39,40 @@ The remaining work extends:
 - V6 exact restore and historical-anchor current-policy replanning;
 - the editor's current render-domain/persistent-matcher architecture; and
 - manifest-last atomic Promote.
+
+## 2026-07-23 second review: plan corrections
+
+A second review checked the plan's invariants and sequencing against the real
+network and the implemented code. The design records the product-level
+corrections; the plan changes are:
+
+| Change | Reason |
+| --- | --- |
+| Component/degree checks become fingerprint-acknowledged warnings; a material parallel-facility risk requires resolution or exact approval | Five of 46 proposed multi-member ways fail a one-component degree-two rule, two of them on legitimate branching. A geometry-only prohibition would then over-correct by rejecting dual carriageways and two-sided cycleways |
+| Unreviewed spans take the class fallback; the route-level legacy demotion is removed | Legacy restores internal editorial speech for a whole route because of one connector, and makes every review batch worthless until the last one lands |
+| Reverse guidance moves to slice 1 and is resolved in both directions while the route manager has the guidance index | `reverseRouteAttestation` swaps `cwMembership`/`oppositeCwMembership`, but the later pure reverse transform cannot resolve asymmetric memberships from IDs alone |
+| Minimum authoring plus a reference corpus precedes web presentation; full classification continues after the web pilot | Per-span degradation exists specifically so partial data is useful. Requiring all 291 classifications before the itinerary would recreate an avoidable coverage cliff |
+| Route-only map labels leave the first release | Highest cost and lowest certainty in the planner work, on top of a base map that already labels major roads |
+| Featured snapshots store derived visual itinerary runs, not both span families | Featured pages intentionally avoid planner assets; navigation already starts from the catalog V6 token |
+| The long-run confirmation is preview-only | Several seconds of extra speech must not arrive as the rider executes the maneuver; no post-maneuver event contract exists today |
+| Fold and material-parallel detector thresholds become shared constants | Web/native row parity and JavaScript/Python validator parity require deterministic thresholds |
+
+Measured facts behind those changes:
+
+- promoted `public-data/segments.json` has 0 of 347 entries with a `guidance`
+  record, so the implemented navigation slice is currently dark in production;
+- `packages/core/route-manager.js` demotes a whole route to legacy on one
+  unreviewed member, and `packages/core/src/navigation/navigationCues.js` then
+  emits `enter-segment` cues carrying internal editorial names;
+- `packages/core/src/navigation/effectiveNavigationRoute.js` hard-codes reverse
+  routes to legacy, while `packages/core/src/routing/routeAttestation.js`
+  already carries reversed per-slice CycleWays membership; the resolved
+  opposite projection must be produced before the route reaches that pure
+  transform;
+- `packages/core/src/navigation/navigationVoice.js` appends the long-run
+  confirmation regardless of cue phase; and
+- the conflict branch in `route-manager.js` nulls `kind`, leaving a conflicting
+  span with no facility class to fall back to.
 
 ## Goal
 
@@ -102,56 +136,81 @@ promotion.
 Land the work in independently testable layers:
 
 ```text
-finish shared validators + coverage report
-    -> editor authoring + reference corpus
-        -> snapshot schema 2 + reverse guidance
-            -> route runs + web/native planning presentation
-                -> standalone/junction/crossing navigation completion
-                    -> full classification + required-mode promotion
+per-span degradation + reverse-ready guidance
+    -> validators + minimum suggestion-review path
+        -> reference-corpus classification
+            -> route runs + partial-coverage web pilot
+                -> navigation completion + remaining classification batches
+                    -> snapshot itinerary schema + native presentation
+                        -> required-mode promotion
 ```
 
-Keep the implemented route-local compatibility rule during migration: one
-computed route is either entirely `guidance-v1` or entirely legacy. Do not
-assemble a partial span list and do not fall back to an internal segment name
-inside a guidance route.
+Two ordering rules drive that shape:
+
+- **Representative data before presentation; full coverage before
+  enforcement.** Road 99, its separate cycleway, `דרך הפטרולים`, the bridge,
+  and representative unnamed spans are enough to evaluate the itinerary. The
+  web pilot then helps review later batches.
+- **Per-span degradation before anything else.** With it, each review batch
+  improves real routes on the next build, so the classification work can be
+  paced and verified incrementally instead of landing as one switch.
+
+Do not assemble a route-level naming decision. Every computed route resolves
+guidance per span; unreviewed spans present their facility class exactly like
+intentionally unnamed spans, and no mode ever falls back to an internal segment
+name.
 
 ### Recommended implementation slices
 
 Implement the remaining work in these reviewable pull requests:
 
-1. **Validator and publication contract** — Tasks 1–2. Extract strict shared
-   validation, add coverage/connectivity reporting and `manifest.guidance`, and
-   add the in-memory segment/way indexes. Do not touch planner UI yet.
-2. **Editor and reference corpus** — Task 3 plus the reference subset of Task
-   4. Generate a model-assisted suggestion artifact, add digest-checked atomic
-   review/authoring, classify Road 99, its cycleway, `דרך הפטרולים`, unnamed
-   examples, and `גשר עינות ירדן`, then prove Build reports the expected delta.
-3. **Snapshot and reverse compatibility** — Task 9. Ship featured snapshot
-   schema 2 with a schema-1 legacy loader, fix the route-catalog projection,
-   and recompute reverse guidance from opposite-direction traversal evidence.
-4. **Shared itinerary and planner surfaces** — Tasks 6–8. Land the pure route
-   run/map-label model first, then web and native renderers using identical
+1. **Runtime degradation and reverse guidance** — the runtime half of Task 5
+   plus the reverse work pulled forward from Task 9. Replace the route-level
+   legacy demotion with per-span class fallback, give conflict spans a usable
+   kind, add the shared class-fallback copy table, pass explicit manifest-bound
+   schema context into route construction, and resolve paired forward/opposite
+   exact and guidance projections while the route manager has the guidance
+   index and direction-scoped junction evidence. Pure model work, no UI, and it
+   makes every later data batch immediately visible.
+2. **Validator and publication contract** — Tasks 1–2. Extract strict shared
+   validation, add fingerprint-bound structure review and the material
+   parallel-facility detector, add coverage reporting and
+   `manifest.guidance`, and add the in-memory segment/way indexes.
+3. **Minimum authoring and reference corpus** — the build-now portion of Task 3
+   plus Task 4's reference corpus. Re-score the suggestion artifact through the
+   validator, reconsider IDs split only for topology, and classify the named,
+   standalone, and unnamed examples needed to judge the feature.
+4. **Shared itinerary and web pilot** — Tasks 6–7 without map labels. Land the
+   pure route-run model, the web renderer, and the exact-section hover fallback
+   against partial coverage. Continue reviewed classification batches after
+   this slice rather than hiding them until 100%.
+5. **Navigation semantics completion** — remaining Task 10 work. Add standalone
+   bridge copy, junction landmark decoration, the preview-only confirmation
+   fix, persistence provenance, reverse crossing preservation, and demo-studio
+   crossing/name proofs without changing maneuver authority. Complete the
+   remaining classification batches in parallel with product validation.
+6. **Snapshots and native planning** — Task 9's snapshot half plus Task 8. Ship
+   the featured snapshot itinerary schema with a schema-1 legacy loader, fix the
+   route-catalog projection, and land the native Build sheet against identical
    fixtures.
-5. **Navigation semantics completion** — remaining Task 10 work. Add
-   standalone bridge copy, junction landmark decoration, persistence
-   provenance, and demo-studio crossing/name proofs without changing maneuver
-   authority.
-6. **Full classification and activation** — finish Task 4, then Task 11.
-   Switch to `required`, strictly regenerate catalog/snapshots, run the release
-   matrix, and Promote once.
+7. **Enforcement and release** — Task 11. Switch to `required`, strictly
+   regenerate catalog/snapshots, run the release matrix, and Promote.
 
-Each slice must leave old manifests, unclassified routes, and schema-1
-snapshots safe. Do not postpone compatibility until the final activation PR.
+Slices 1 and 2 are independent and can land in either order. Slice 4 requires
+the reference corpus, not full coverage. Full coverage gates slice 7 only.
+
+Each slice must leave old manifests, partially classified routes, and schema-1
+snapshots safe. Do not postpone compatibility until the final PR.
 
 ## Rollout gates
 
 | Gate | Required state | Production behavior |
 | --- | --- | --- |
-| A — foundation | Existing forward navigation slice remains green | Resolved pilot routes may use `guidance-v1`; all other routes are legacy |
-| B — authoring/reference corpus | Validators, report, editor, Road 99, parallel cycleway, `דרך הפטרולים`, bridge, unnamed, split, overlap, crossing, and junction cases pass | Route-local migration behavior; planner itinerary behind one shared kill switch |
-| C — compatibility | Snapshot schema 2, reverse guidance, route runs, and old-data fallback pass | Planner can be exercised on staged data |
-| D — data complete | Every active segment has a valid role; topology, overlap, and junction checks pass | Registry changes to `required`; staged release only |
-| E — activation | One complete map/catalog/snapshot release bundle is promoted; web/native/navigation and demo-studio checks pass | Guidance names and itinerary enabled by default |
+| A — runtime safety | Per-span class fallback, reverse-ready exact/guidance, and safe class-only rollback pass against injected schema context | No production activation required; pure route/navigation behavior is ready |
+| B — pilot publication | Shared validators, fingerprint-bound structure review, material parallel-risk detector, coverage report, `manifest.guidance`, and a migration-mode pilot bundle pass | Classified spans are named; other spans read as their facility class |
+| C — reference corpus | Road 99/parallel cycleway, `דרך הפטרולים`, the bridge, and representative unnamed spans pass review | Navigation naming is evaluable on real routes |
+| D — web pilot | Route runs, exact hover fallback, web itinerary, and old-data fallback pass | Partial-coverage web itinerary behind the shared kill switch |
+| E — release | All active segments are classified; snapshot/native/navigation work and one promoted bundle pass; every structure issue is resolved or exactly acknowledged | Registry changes to `required`; itinerary enabled by default |
 | F — cleanup | New behavior is stable in production | Optional ID-first compatibility cleanup |
 
 The registry carries a version-controlled enforcement mode:
@@ -162,8 +221,9 @@ The registry carries a version-controlled enforcement mode:
   Promote.
 
 The build computes coverage; the enforcement field never asserts that coverage
-is complete. Gate C changes the registry to `required` only after the computed
-report is clean.
+is complete. Enforcement flips to `required` at Gate E after the report reaches
+100%. Enforcement is a regression guard, not the switch that turns naming on:
+naming is on from Gate B and improves as data lands.
 
 ## Global invariants
 
@@ -179,9 +239,22 @@ report is clean.
   is represented only by an absent `guidance` object during migration.
 - Named-way membership is explicit; no suffix stripping, fuzzy name matching,
   or OSM-text grouping is allowed.
-- Named-way members must form one connected non-branching logical chain or
-  ring using reviewed alignment terminals and published junction attachments;
-  membership does not imply bidirectional legality.
+- Named-way members should form one connected non-branching logical chain or
+  ring using reviewed alignment terminals and published junction attachments,
+  but neither connectivity nor degree is a blocking requirement. Multiple
+  components and degree above two are warnings acknowledged by exact validator
+  issue fingerprint. Membership does not imply bidirectional legality.
+- Materially parallel members raise `parallel-facility-risk` even when they
+  connect at one end. The issue blocks until the different facility is removed
+  or the exact fingerprint is approved as one facility; there is no broad
+  geometry-based `allowParallel` switch.
+- Authoritative source/routing evidence maps to broad facility classes.
+  `facility-class-conflict` is a non-waivable blocker when a member is
+  incompatible with the way kind; surface alone is not a class, and a bridge
+  may carry its enclosing road/cycleway/trail.
+- One real facility is one way ID. Never split a way to satisfy a structural
+  check: two IDs sharing a display name produce two itinerary rows, a spoken
+  destination name at the seam, and no voice suppression between them.
 - The road and a parallel cycleway are distinct guidance identities even when
   they share a corridor or road number.
 - Maneuver existence continues to come from route geometry, junction evidence,
@@ -196,9 +269,20 @@ report is clean.
 - Logical and physical map features resolve through stable segment ID.
   `alignmentKey` is not a rider-facing identity, and public junction footprints
   do not create segment selection.
-- Runtime naming is all-or-nothing per computed route during migration.
-  `guidanceMode` is frozen into the route/navigation plan so one route never
-  mixes legacy segment names and guidance names.
+- Runtime naming degrades per span, never per route. An unreviewed span is
+  presented exactly like an intentionally unnamed one; a conflicting span keeps
+  a usable facility class. No mode emits an internal segment name.
+- `guidanceMode` is still frozen into the route/navigation plan so an asset
+  refresh cannot change naming semantics mid-session. It records which guidance
+  schema resolved the route, not whether naming was enabled for it. Schema
+  support comes from manifest-bound route-manager context, not from whether one
+  route encountered a classified record.
+- The feature flag freezes a separate named-versus-class-only presentation
+  policy. Disabling it never restores internal segment speech.
+- Live routes resolve paired forward/opposite exact and guidance projections
+  while the route manager has the guidance index and direction-scoped junction
+  evidence. Reverse swaps/remaps the pairs and never falls back to legacy
+  naming.
 - Guidance metadata never enters V6/legacy route URLs, traversal attestation,
   or route-search weights. Exact and recovered routes derive it from the
   resulting current traversal.
@@ -291,6 +375,9 @@ role-field strictness, coverage, connectivity, and issue parity do not.
       text.
 - [ ] Validate each way's `name`, controlled `kind`, optional `ref`, aliases,
       and optional `spokenName`.
+- [ ] Validate optional `structureReview.acknowledgedIssueFingerprints` as
+      exact shared-validator outputs. Reject broad `allowBranching` or
+      `allowParallel` booleans.
 - [ ] Treat `name` as clean display text: reject pronunciation-only Hebrew
       punctuation/niqqud and control characters.
 - [ ] Validate `spokenName` as optional audible Unicode text, preserving
@@ -317,7 +404,10 @@ role-field strictness, coverage, connectivity, and issue parity do not.
       and optional standalone `guidance.spokenName`. A named-way member's
       segment-level value never overrides its way's audible form.
 - [ ] Define Hebrew class fallbacks and icons in one platform-neutral table.
-      `spokenName` is separate from the visual name.
+      `spokenName` is separate from the visual name. This table is a slice-1
+      dependency: unnamed, unreviewed, and conflicting spans all read from it,
+      so nothing may reach generic `המשך במסלול` merely because the table was
+      not populated for a kind or a route class.
 - [x] Resolve a segment by numeric ID into a neutral record containing role,
       stable guidance identity, visual name, spoken name, kind, way ID, section
       label, and resolution status.
@@ -325,23 +415,49 @@ role-field strictness, coverage, connectivity, and issue parity do not.
       features, and `null` for unnamed/junction/off-network/conflict cases.
 - [ ] Represent overlap ambiguity with `resolutionStatus: "conflict"`; do not
       invent a fourth source role or mislabel a conflict as reviewed unnamed.
+      A conflicting resolution still carries a usable `kind`: the shared kind
+      when the conflicting memberships agree on one, otherwise a kind derived
+      from route class.
+- [ ] Represent an absent record with `resolutionStatus: "unreviewed"` and give
+      it the same presentation treatment as `unnamed`. The distinction exists
+      for validation and coverage reporting, never for rider-facing copy.
 - [ ] Model junction context separately from segment guidance resolution. A
       public `junctionName` never resolves to a way or `standalone` identity.
 
-**Connectivity contract**
+**Structure contract**
 
 - [ ] Build the logical member-adjacency graph from accepted direction-scoped
       alignment terminals and published network-junction arm attachments/legal
       movements. Ignore detected, excluded, and stale junctions and never infer
       connectivity from a junction display footprint.
 - [ ] Project reviewed directional connections to an undirected identity graph
-      for chain/ring validation, while reporting expected-direction gaps
+      for structure validation, while reporting expected-direction gaps
       separately. Way membership must not grant or imply reverse traversal.
 - [ ] Use source endpoint equality only as a structured migration fallback for
       a legacy/unmatched member. Never order members by centroid, proximity, or
       visible name.
-- [ ] Validate one connected component and endpoint degree at most two, allowing
-      a chain or a ring.
+- [ ] Report component count and maximum member degree per way. More than one
+      component, or degree above two, is a **warning**, not an error.
+- [ ] Fingerprint each structure issue from its code, way ID, affected stable
+      member IDs, and relevant geometry/alignment/junction evidence digests.
+      Store exact acknowledgements in the registry; any material evidence
+      change produces a new fingerprint and re-raises review.
+- [ ] Add the material parallel-corridor detector. Use shared corridor-distance,
+      minimum-overlap, and heading-tolerance constants so brief proximity or a
+      crossing does not fire it. Evaluate parallel members even if they connect
+      at one end.
+- [ ] Define and fixture-test the conservative mapping from authoritative
+      source/routing evidence to broad facility classes. Emit non-waivable
+      `facility-class-conflict` for an incompatible member/way pairing; do not
+      confuse surface with facility class, and allow a bridge to carry the
+      enclosing facility.
+- [ ] Emit `parallel-facility-risk` as blocking in both enforcement modes until
+      the member is removed/reassigned or that exact issue fingerprint is
+      approved as one compatible facility. A facility-class conflict cannot be
+      approved. Geometry raises the review question; it does not make a road's
+      two carriageways invalid by definition.
+- [ ] Do not implement any rule whose remedy is splitting one facility into
+      several way IDs.
 - [ ] Treat a published junction between two members as adjacency without
       adding the junction to membership. A junction in the middle of one
       segment does not split or branch that member.
@@ -363,6 +479,16 @@ role-field strictness, coverage, connectivity, and issue parity do not.
       absent.
 - [ ] Assert direct-terminal, through-junction, mid-segment-junction, stale-
       junction, and direction-gap outcomes in both implementations.
+- [ ] Assert that a two-component way and a degree-four branching way both warn,
+      both pass once acknowledged, and both keep one guidance identity.
+- [ ] Assert that Road 99 plus its parallel cycleway raises a blocking
+      `parallel-facility-risk` plus a non-waivable facility-class conflict,
+      including when they connect at one end.
+- [ ] Assert that a dual-carriageway road can be approved as one facility by
+      exact fingerprint and remains one guidance identity.
+- [ ] Assert that an acknowledgement does not survive a member, geometry,
+      alignment, junction, component, branch, or suspicious-pair change covered
+      by its evidence.
 
 ## Task 2 — finish build validation, reporting, and publication
 
@@ -402,13 +528,21 @@ second runtime guidance asset.
 
 - [ ] Add `report.navigationWays` with schema/enforcement, active/reviewed/
       unreviewed counts, counts by role/kind, way/member counts,
-      `coverageComplete`, and bounded stable-ID examples.
-- [ ] Report disconnected, branching, empty, unknown-way, invalid-role,
-      invalid-field, overlap-conflict, ambiguous-junction, legacy-endpoint-only,
-      and expected-direction-gap issues with stable codes.
+      `coverageComplete`, per-way component count and maximum degree with their
+      issue fingerprints/acknowledgement state, parallel-risk findings, and
+      bounded stable-ID examples.
+- [ ] Make the per-batch coverage delta easy to read during Task 4: report the
+      reviewed count, the change since the previous build, and the remaining
+      unreviewed stable IDs.
+- [ ] Report unacknowledged-multi-component, unacknowledged-branching,
+      parallel-facility-risk, facility-class-conflict, empty, unknown-way,
+      invalid-role, invalid-field, overlap-conflict, ambiguous-junction,
+      legacy-endpoint-only, and expected-direction-gap issues with stable codes.
 - [ ] Treat missing active classifications as warnings in `migration` and
-      blockers in `required`. All invalid present records, connectivity errors,
-      and conflicting overlap errors block in both modes.
+      blockers in `required`. Invalid present records, unresolved
+      parallel-facility risks, and conflicting overlap errors block in both
+      modes. Multi-component and branching findings remain warnings, but
+      required-mode promotion requires their exact acknowledgement.
 - [ ] Exclude draft/deprecated/legacy segments from active coverage and
       connectivity while retaining diagnostic metadata.
 - [ ] Append guidance blockers to the existing Build/Promote blocker model.
@@ -428,6 +562,10 @@ second runtime guidance asset.
 - [ ] Add `manifest.guidance` as non-path diagnostics containing schema
       version, enforcement, counts, `coverageComplete`, and conflict count.
       `hashes.segments` remains the resolved-guidance integrity hash.
+- [ ] Pass the manifest-bound supported guidance schema into every route-manager
+      construction path. Do not infer `guidance-v1` by checking whether the
+      current route or loaded map happened to contain at least one resolved
+      guidance record.
 - [ ] Include the manifest summary in map-asset/build diagnostics and native
       bundled manifest projection. It requires no new offline file mapping.
 - [ ] Verify that changing only registry naming changes generated
@@ -443,10 +581,13 @@ second runtime guidance asset.
 **Compatibility**
 
 - [ ] An old manifest without `manifest.guidance` loads normally.
-- [ ] An old segments asset with no resolved guidance yields legacy route and
-      planner behavior without an extra fetch.
+- [ ] An old manifest/segments pair with no supported guidance schema yields
+      legacy planner behavior without an extra fetch. Newly generated
+      navigation cues still suppress internal `enter-segment` speech.
 - [ ] A migration build with 11/291 classified segments reports those exact
-      counts and publishes usable pilot metadata without asserting completion.
+      counts, publishes usable metadata without asserting completion, and
+      produces routes that name the 11 classified segments while presenting the
+      rest as facility classes.
 - [ ] A required build with one active unclassified segment fails before
       Promote.
 
@@ -459,12 +600,47 @@ second runtime guidance asset.
 - Promote remains atomic across the resolved segments asset, catalog, and
   featured snapshots.
 
-## Task 3 — add assisted editor authoring and bulk sequential assignment
+## Task 3 — add editor authoring for guidance classification
 
 **Status:** Not implemented. Integrate with the current monolithic editor,
 render-domain invalidation, versioned map-source adapter, persistent matcher,
 and background authoring coordinator. The general server-owned authoring
 operation from `editor-performance-ux` remains future work.
+
+**Scope for the first release**
+
+This task exists to make Task 4 possible and to support ongoing authoring
+afterwards. Most of its original scope optimizes a one-time pass over 291
+segments in a single-curator system, which is not where the effort belongs.
+
+Build now:
+
+- load/save and reconciliation, including the combined registry+source
+  transaction;
+- per-segment role editing in the selected-segment inspector;
+- named-way create/edit with member list, total length, and map preview;
+- structure findings surfaced per way with the acknowledgement control; and
+- an import view for the suggestion artifact with per-group accept, edit, or
+  reject.
+
+Defer until repeat need is demonstrated, and mark each below as deferred:
+
+- the ordered review queue with confidence bands, split, and defer states;
+- batch acceptance across groups;
+- contiguous bulk assignment by selecting chain endpoints; and
+- the connectivity/branch visualizer beyond a plain findings list.
+
+The deferred items are not deleted from this plan. If the suggestion import plus
+per-segment editing turns out to be too slow in practice during Task 4, stop and
+build the next one that removes the actual bottleneck rather than all of them.
+
+**Writing canonical data**
+
+`CLAUDE.md` requires every change to `data/map-source.geojson` to go through the
+editor. Classifying 291 segments by accepting reviewed suggestion groups is
+still an editor operation under that rule as long as the editor is what writes
+the file. A one-off script that writes source or the registry directly needs
+explicit permission for that specific change; do not assume it.
 
 **Primary files**
 
@@ -523,22 +699,31 @@ operation from `editor-performance-ux` remains future work.
       proposals for every unreviewed segment. This is an implementation/data
       preparation step, not an app runtime dependency.
 - [ ] Each proposal contains exact segment IDs, proposed role, existing/new way
-      ID, clean display name, optional section label, optional `spokenName`,
-      confidence, concise evidence, and alternatives when ambiguous.
+      ID, clean display name, optional section label, an optional audible
+      candidate, confidence, concise evidence, and alternatives when ambiguous.
+      The proposed canonical `spokenName` remains `null` until device evidence
+      is recorded.
 - [ ] Suggest audible punctuation only when it plausibly changes
-      pronunciation. Prefer `spokenName: null` when clean display text already
-      sounds correct.
-- [ ] Validate proposal member sets against the same connected/non-branching
-      topology rules before showing them. Invalid proposals remain visible as
-      low-confidence review items and cannot be batch accepted.
+      pronunciation. Present it as a listening candidate, not a pre-approved
+      field value.
+- [ ] Run every proposal member set through the shared structure validator
+      **before** a curator sees it, and show each group's verdict — components,
+      maximum degree, and any parallel-facility risk — next to the proposal.
+      Suggestion confidence and validator verdict are separate columns.
+- [ ] Never let a structure warning cause a proposed group to be split into
+      several ways. Present the warning and the acknowledgement control.
+- [ ] A parallel-facility risk requires reassignment or explicit review of its
+      exact fingerprint; do not offer a broad or silent acceptance.
 - [ ] Never infer acceptance from confidence. No suggestion mutates
       `map-source.geojson` or the registry until the editor transaction is
       explicitly approved.
-- [ ] Show a review queue ordered by high-confidence groups, then
-      standalone/unnamed proposals, then ambiguous cases. Support accept,
-      edit-and-accept, split, reject, and defer.
-- [ ] Batch acceptance is allowed only for topology-valid, non-conflicting
-      proposals and shows the exact source/registry diff first.
+- [ ] Show the proposals grouped by proposed way with accept, edit-and-accept,
+      and reject.
+- [ ] *(deferred)* Ordered review queue with confidence bands, split, and defer
+      states.
+- [ ] *(deferred)* Batch acceptance across groups, allowed only for
+      structure-valid, non-conflicting proposals and showing the exact
+      source/registry diff first.
 - [ ] A stale artifact is read-only until regenerated; previously accepted
       canonical classifications are never overwritten by regeneration.
 
@@ -568,10 +753,14 @@ operation from `editor-performance-ux` remains future work.
       optional audible (`spokenName`) form.
 - [ ] Show member count, total length, ordered members, section labels, and a
       whole-way map preview.
-- [ ] Visualize disconnected components, branch nodes, nearby duplicate names,
-      overlapping conflicting memberships, junction-mediated adjacency, and
-      legacy-endpoint-only links.
-- [ ] Implement contiguous bulk assignment as a proposal:
+- [ ] List structure findings per way — component count, branch nodes, nearby
+      duplicate names, overlapping conflicting memberships, junction-mediated
+      adjacency, legacy-endpoint-only links — with an acknowledgement control
+      for exact multi-component/branching issue fingerprints, and explicit
+      resolve-or-approve handling for a parallel-facility risk.
+- [ ] *(deferred)* Graphical visualization of components and branch nodes beyond
+      that list.
+- [ ] *(deferred)* Contiguous bulk assignment as a proposal:
   - [ ] choose or create a way;
   - [ ] select start and end segments on the map;
   - [ ] traverse the validated logical segment-adjacency graph built from
@@ -579,9 +768,9 @@ operation from `editor-performance-ux` remains future work.
   - [ ] auto-propose only when there is one unambiguous contiguous path;
   - [ ] preview every proposed member and assignment removal;
   - [ ] require confirmation before mutating source data.
-- [ ] When more than one path exists, require explicit intermediate selections
-      or individual assignment. Never choose the geographically nearest branch
-      automatically.
+- [ ] *(deferred)* When more than one path exists, require explicit intermediate
+      selections or individual assignment. Never choose the geographically
+      nearest branch automatically.
 
 **Split/archive behavior**
 
@@ -596,15 +785,16 @@ operation from `editor-performance-ux` remains future work.
 
 **Exit criteria**
 
-- An editor can classify the reference corpus without hand-editing JSON.
+- An editor can classify the whole network without hand-editing JSON.
 - A fresh source-digest-matched suggestion artifact gives every unreviewed
-  active segment a proposal or an explicit ambiguous/defer result.
-- High-confidence groups can be reviewed in batches, while every accepted
-  change remains human-approved and topology-valid.
+  active segment a proposal or an explicit ambiguous result, and every group
+  carries a validator verdict computed before review.
+- Every accepted change remains human-approved, and no accepted change
+  leaves an unresolved parallel-facility risk.
+- A curator can acknowledge a multi-component or branching way in one action and
+  see the warning clear without splitting the way.
 - Display/audible previews are distinct and pronunciation punctuation never
   leaks into visible UI.
-- Selecting the ends of an unambiguous road chain proposes the expected stable
-  segment IDs in sequence.
 - A parallel cycleway is visibly separate and cannot be absorbed by proximity.
 - Save, reload, Build, and Promote show the same issue set.
 - Background authoring reconciliation remains race-safe, and guidance-only
@@ -625,8 +815,24 @@ eight ways. `דרך הפטרולים`, intentionally unnamed examples, and the r
 
 **Reference corpus first**
 
-- [ ] Generate the source-digest-bound proposal set and review its suggested
-      grouping/display/audible forms before starting blank manual entry.
+- [ ] Re-score `plans/navigation-way-names/model-suggestions.md` through the
+      shared structure validator before reviewing any group. The existing
+      artifact was grouped on endpoint proximity, which disagrees with reviewed
+      topology in both directions: it splits `road-99-upper` into two components
+      that a published junction almost certainly joins, and it marks that split
+      group high confidence. Reviewing 176 groups twice is the expensive failure
+      mode here.
+- [ ] Use the prior 25 m endpoint audit only as a regression clue: it found five
+      of 46 multi-member proposals with component/degree findings, including
+      `שבילי אגמון החולה` at member degree four and the Banias trail group at
+      degree three. The reviewed-topology validator is authoritative and may
+      produce a different count. Review each finding as a facility decision;
+      do not pre-acknowledge or split it merely to clear the check.
+- [ ] Re-examine every provisional ID that exists only because connectivity was
+      unproved — `road-99-upper`/`road-99-east`, the three Road 918 components,
+      both Road 959 and Road 90 components, both `cycleway-99` components, and
+      the Jordan east/west pairs. Merge each set into one way unless the pieces
+      are genuinely different facilities.
 - [x] Create distinct named ways for the pilot Road 99 roadway and its
       parallel cycleway.
 - [ ] Assign every Road 99 member by stable segment ID and inspect the entire
@@ -634,9 +840,14 @@ eight ways. `דרך הפטרולים`, intentionally unnamed examples, and the r
       geometry.
 - [ ] Assign all `דרך הפטרולים` members and review chain continuity.
 - [ ] Classify `גשר עינות ירדן` as `standalone` with `kind: "bridge"`.
-- [ ] Curate clean display and iOS-tested audible forms for Road 99,
-      `דרך הפטרולים`, the Road 99 cycleway, and `גשר עינות ירדן`. Keep
-      `spokenName` null where punctuation does not improve pronunciation.
+- [ ] Curate clean display names for Road 99, `דרך הפטרולים`, the Road 99
+      cycleway, and `גשר עינות ירדן`.
+- [ ] Listen to the clean display form on a device **before** adding any
+      `spokenName`, and keep `null` unless the recording is wrong. The suggested
+      number expansions in particular — `כביש 9974` becoming a seven-word string
+      — replace whatever the speech engine does today with a fixed form that
+      cannot improve later and may not match how riders say the number. Record
+      which forms were tested and what was heard.
 - [ ] Confirm the bridge is a traversable standalone segment, not a network
       junction landmark. Keep the two schemas and presentation behaviors
       distinct.
@@ -653,12 +864,22 @@ eight ways. `דרך הפטרולים`, intentionally unnamed examples, and the r
 - [ ] Add section labels where they help distinguish warnings or route
       sections; do not manufacture labels solely to eliminate warnings.
 
+When this reference corpus and its fixtures pass, Task 6/7 web itinerary work
+may begin. The remaining classification batches continue against that visible
+review surface and must finish before Gate E.
+
 **Full coverage**
 
 - [ ] Work through suggestion groups and then the build's remaining stable-ID
       unreviewed queue until every active segment has a role.
-- [ ] Review each named way as a whole chain/ring, not as independent name
-      fields. Inspect direct alignment-terminal and junction-mediated links.
+- [ ] Rebuild after each batch and confirm the coverage delta and the resulting
+      route naming. Because unclassified spans now degrade to facility class,
+      each batch is independently verifiable on a real route instead of being
+      invisible until coverage completes.
+- [ ] Review each named way as a whole facility, not as independent name fields.
+      Inspect direct alignment-terminal and junction-mediated links, and treat a
+      structure warning as a question about the data rather than a reason to
+      create a second way ID.
 - [ ] Check nearby same-name IDs and every road/cycleway parallel corridor.
 - [ ] Review every standalone feature and unusually short/long unnamed run.
 - [ ] Require a second visual review for safety-sensitive road versus cycleway
@@ -667,22 +888,26 @@ eight ways. `דרך הפטרולים`, intentionally unnamed examples, and the r
 - [ ] Record suggestion acceptance/edit/reject counts by confidence so the
       bootstrap's usefulness is measurable without treating confidence as
       truth.
-- [ ] Change registry enforcement from `migration` to `required` only after the
-      full build report has zero active unreviewed segments, zero invalid ways,
-      and zero unresolved guidance conflicts.
+- [ ] Change registry enforcement from `migration` to `required` at Gate E, only
+      after the full build report has held at zero active unreviewed segments,
+      zero invalid ways, zero unresolved parallel-facility risks, zero
+      unacknowledged structure warnings, and zero unresolved guidance conflicts.
 
 **Exit criteria**
 
 - Coverage is 100% for active CycleWays segments.
 - The reference corpus has explicit expected identities in automated fixtures.
 - No classification was derived by parsing an internal segment name.
+- No way ID exists solely because a structural check would otherwise fail.
+- Every `spokenName` in the registry has a recorded device listening result.
 - A required-mode Build succeeds from a clean checkout.
 
 ## Task 5 — retain exact segment spans and derive guidance spans
 
 **Status:** Core forward path implemented. Exact membership sets,
-`guidanceSpans`, conservative route-level legacy fallback, route-state storage,
-and focused tests exist. Remaining work is strict conflict/validation
+`guidanceSpans`, route-state storage, and focused tests exist. The route-level
+legacy fallback implemented here is replaced by per-span degradation as the
+first slice of the remaining work; the rest is strict conflict/validation
 integration, mixed segment+junction context coverage, provenance, and reverse
 resolution.
 
@@ -719,6 +944,11 @@ resolution.
       state agree.
 - [ ] Preserve exact boundaries needed by warnings, POIs, quality, and editor
       diagnostics even when adjacent spans share a guidance identity.
+- [ ] Build `oppositeSegmentSpans` from the same edges using the opposite
+      direction's CycleWays segment and junction memberships. The current route
+      attestation carries opposite segment membership but not opposite
+      `cwJunctions`, so a later pure reverse cannot reconstruct this exact
+      projection safely.
 
 **Guidance spans**
 
@@ -733,9 +963,20 @@ resolution.
       agree.
 - [x] When all covering memberships resolve to one identity, retain all exact
       segment IDs on the span.
+- [ ] Replace the route-level legacy demotion in `buildRouteSpans` with per-span
+      degradation. An unreviewed span keeps `resolutionStatus: "unreviewed"`,
+      carries a facility class derived from route class, and presents exactly
+      like an `unnamed` span. `guidanceMode` stops encoding whether the route
+      opted in to naming; it comes from explicit manifest-bound schema context,
+      including when this route traverses zero classified segments.
+- [ ] Verify that no span type can reach navigation or the planner carrying an
+      internal segment name. The legacy `enter-segment` path is the only
+      producer of that copy and is retired with this change.
 - [ ] When memberships conflict, emit a null-name conservative span with
       `resolutionStatus: "conflict"`, add a structured routing-validation issue,
-      and use facility-class fallback presentation.
+      and use facility-class fallback presentation. Retain a usable `kind` on the
+      span — the shared kind when conflicting memberships agree, otherwise one
+      derived from route class — so the fallback has something to say.
 - [x] Keep `onCycleways` independent of whether a guidance name exists.
 - [x] Convert a direction-scoped junction-only traversal to
       `networkRole: "junction"`, `onCycleways: true`, null guidance identity,
@@ -753,6 +994,11 @@ resolution.
 - [x] Store `guidanceSpans` and `guidanceMode` in live route state and preserve
       them through snapshot,
       undo/redo, clear, proposal, and route restore paths.
+- [ ] Resolve and store `oppositeGuidanceSpans` alongside
+      `oppositeSegmentSpans` while the route manager still has
+      `segmentGuidanceById` and direction-scoped edge memberships. Preserve
+      these reverse-ready projections through the same live route-state
+      transforms; they are not part of public featured snapshots.
 
 **Tests**
 
@@ -769,15 +1015,22 @@ resolution.
       the same edges also carry junction context.
 - [ ] Forward and reverse traversals use only the memberships for their actual
       direction, including after a sharded-manager rebuild.
-- [ ] Old managers/assets with no guidance data produce no guidance spans and
-      preserve current behavior.
+- [ ] A route containing one unreviewed member still names every resolved way it
+      traverses, and the unreviewed span reads as its facility class.
+- [ ] A conflicting span exposes a non-null kind and never a null name with a
+      null class.
+- [ ] No fixture in the suite produces a cue or a planner row containing an
+      internal segment name.
+- [ ] Old manifest/segments pairs with no supported schema produce no guidance
+      spans and preserve legacy planner behavior, while newly generated
+      navigation cues still suppress internal `enter-segment` speech.
 - [ ] Route geometry, distance, elevation, attestation, and share encoding are
       byte-for-byte or tolerance-equivalent to the Task 0 baseline.
 
 ## Task 6 — build the shared route-run and map-presentation model
 
-**Status:** Not implemented. This is the next shared product-model slice after
-build validation and snapshot compatibility.
+**Status:** Not implemented. This follows validation plus the reference corpus;
+featured snapshot compatibility consumes its derived runs later.
 
 **Primary files**
 
@@ -804,9 +1057,14 @@ build validation and snapshot compatibility.
       junction to the following run's entry context and associated maneuver.
 - [ ] Handle routes that start or end inside a junction with neutral contextual
       presentation rather than inventing a way occurrence.
-- [ ] Fold a short unnamed connector only when it has no warning, POI, material
-      surface/condition change, or standalone landmark value.
-- [ ] Give material unnamed runs localized kind fallback names.
+- [ ] Fold a short unnamed or unreviewed connector only when it has no warning,
+      POI, material surface/condition change, or standalone landmark value.
+      “Short” is `ITINERARY_FOLD_MAX_M`, one shared constant used by web and
+      native and asserted by the parity fixtures — parity tests compare row
+      lists, so a per-surface judgement makes them untestable.
+- [ ] Give material unnamed and unreviewed runs localized kind fallback names
+      from the shared class table. Unreviewed runs are indistinguishable from
+      unnamed runs in the rendered itinerary.
 - [ ] Aggregate distance, kinds/surfaces, exact segment IDs, section labels,
       junction contexts, warning count, POI count, and mixed-surface state
       without losing child spans.
@@ -817,16 +1075,24 @@ build validation and snapshot compatibility.
 
 **Map helpers**
 
+Route-only guidance labels are deferred out of the first release. They are the
+costliest and least certain part of the planner work, the base map already
+labels significant roads, and the itinerary is the authoritative readable list.
+Deferring is structurally free because the label model consumes route runs,
+which this task produces regardless. Revisit once the itinerary has shipped and
+there is evidence riders miss labels.
+
 - [ ] Add a pure distance-range geometry slicer for highlighting one run or
       child section on the computed route.
-- [ ] Generate sparse route-only label features from run occurrences.
-- [ ] Prioritize standalone landmarks, suppress labels below platform-specific
-      length/spacing thresholds, and prevent repeated labels from crowding a
-      short area.
-- [ ] Do not emit junction landmark names as way-label candidates. Junction
-      naming belongs to landmark/maneuver context.
-- [ ] Keep density policy configurable so native can be stricter than web while
-      consuming the same candidate model.
+- [ ] *(deferred)* Generate sparse route-only label features from run
+      occurrences.
+- [ ] *(deferred)* Prioritize standalone landmarks, suppress labels below
+      platform-specific length/spacing thresholds, and prevent repeated labels
+      from crowding a short area.
+- [ ] *(deferred)* Do not emit junction landmark names as way-label candidates.
+      Junction naming belongs to landmark/maneuver context.
+- [ ] *(deferred)* Keep density policy configurable so native can be stricter
+      than web while consuming the same candidate model.
 - [ ] Generate a whole-way context filter from the in-memory
       `membersByWayId` index derived from `segmentsData`. Match both logical
       overview features and physical alignment
@@ -879,8 +1145,16 @@ counts/names and groups warnings by `segmentName`.
       rider-facing facility/section label.
 - [ ] Use resolved guidance name as the title. Show optional section label,
       exact distance/elevation/quality, and warnings for the selected segment.
+- [ ] Keep the card at least as informative as today's. `כביש 99 שאר ישוב`
+      currently distinguishes one hovered section from its neighbour; a title of
+      `כביש 99` with no subtitle does not. When a named-way member has no
+      curated `sectionLabel`, use an unambiguous named endpoint/junction/POI;
+      otherwise show facility class/surface, exact length, and warning count.
+      Never invent “position along the way” for a branched/multi-component way,
+      and never derive text by subtracting the way name from the internal name.
 - [ ] If guidance naming is disabled or the selected segment has no resolved
-      guidance, render the current card unchanged.
+      proper name, render the class-only title and the same rider-safe exact
+      subtitle. Do not restore the internal name as primary planner copy.
 - [ ] Add `הצגת כל הדרך` only for named-way members. It draws a lighter context
       highlight for logical and physical features of all active member IDs,
       excludes junction footprints, and does not change exact focus.
@@ -896,8 +1170,8 @@ counts/names and groups warnings by `segmentName`.
       parent names. Junction context never becomes an extra row.
 - [ ] Selecting a row highlights only that route occurrence using its distance
       range. Selecting a child highlights only that exact section range.
-- [ ] Render sparse route-only label features above the built route and below
-      critical POI/navigation overlays.
+- [ ] *(deferred)* Render sparse route-only label features above the built route
+      and below critical POI/navigation overlays.
 - [ ] Update route summary, download modal, warning labels, and data-marker
       context to use guidance names with optional section labels.
 - [ ] Preserve keyboard focus, RTL order, hover behavior, and mobile-web sheet
@@ -906,7 +1180,8 @@ counts/names and groups warnings by `segmentName`.
 **Web acceptance**
 
 - [ ] Hovering two Road 99 segments shows the same title but distinct section
-      detail and exact highlight.
+      detail and exact highlight, including when neither has a curated section
+      label.
 - [ ] Hovering a segment's logical overview and physical alignment opens the
       same ID-backed card; hovering a junction footprint opens none.
 - [ ] Whole-way context never changes the route or selects every member.
@@ -915,8 +1190,9 @@ counts/names and groups warnings by `segmentName`.
 - [ ] `גשר עינות ירדן` remains visible as its own short row and label.
 - [ ] A named network junction can appear as maneuver/context detail but never
       as a bridge/road itinerary row.
-- [ ] Unnamed sections never display their internal editor name.
-- [ ] Labels remain sparse at representative desktop and mobile-web zooms.
+- [ ] Unnamed and unreviewed sections never display their internal editor name.
+- [ ] An unreviewed section is indistinguishable from an intentionally unnamed
+      one in rider-facing copy.
 
 ## Task 8 — implement native planning presentation
 
@@ -946,9 +1222,10 @@ runs.
       Guidance labels are a separate route-only layer and must not alter
       physical direction arrows, junction hit testing, or preferred-segment
       route-point snapping.
-- [ ] Render sparse route-only native `SymbolLayer` labels from the shared
-      candidate model with stricter density than web.
-- [ ] Prioritize standalone landmarks and suppress internal section labels.
+- [ ] *(deferred)* Render sparse route-only native `SymbolLayer` labels from the
+      shared candidate model with stricter density than web.
+- [ ] *(deferred)* Prioritize standalone landmarks and suppress internal section
+      labels.
 - [ ] Render selected run/section geometry as a distinct route overlay without
       replacing the main route.
 
@@ -974,8 +1251,8 @@ runs.
 - [ ] Route building taps, point dragging/removal, undo/redo, sharing, and GPX
       export are unchanged.
 - [ ] Web and native produce identical route-run IDs and semantic row content
-      from the same fixture.
-- [ ] Native may show fewer map labels, but never different names or grouping.
+      from the same fixture, including identical folding at
+      `ITINERARY_FOLD_MAX_M`.
 - [ ] Same-way and different-way junction fixtures match web semantics, and a
       junction footprint remains non-segment-interactive.
 - [ ] Starting a ride carries the exact `guidanceMode`, map version, segments
@@ -988,6 +1265,11 @@ rotation preserve guidance. Reverse deliberately returns legacy. Public
 featured snapshot schema 1 and `catalogDecodedRouteFromState` drop guidance
 spans; the private demo snapshot keeps the route-state object and adds current
 junction/crossing evidence.
+
+**This task is split across two slices.** The reverse work moves to slice 1
+because the evidence already exists and out-and-back rides are the common case;
+the snapshot work stays late, after route runs exist, because snapshots now
+store the derived itinerary rather than the span model.
 
 **Primary files**
 
@@ -1011,10 +1293,29 @@ junction/crossing evidence.
       frame alongside exact segment spans.
 - [x] Apply the same clip and loop-rotation distance remapping to both span
       families, including split spans at a loop seam.
-- [ ] For reverse navigation, resolve exact/guidance membership from the
-      reversed attestation's actual opposite-direction evidence (or a fresh
-      directed route). Do not merely reverse the source route's names or
-      forward-direction membership arrays.
+- [ ] **(slice 1)** For reverse navigation, resolve exact/guidance membership
+      from the reversed attestation's actual opposite-direction evidence. Do not
+      merely reverse the source route's names or forward-direction membership
+      arrays, and do not fall back to legacy: a ride whose outbound leg says
+      `כביש 99` and whose return leg says `כביש 99 שאר ישוב` is worse than
+      either behavior applied consistently.
+- [ ] **(slice 1)** Build `oppositeSegmentSpans` and
+      `oppositeGuidanceSpans` in `packages/core/route-manager.js` from the same
+      per-edge reverse memberships used during route construction, while
+      `segmentGuidanceById` and opposite `cwJunctions` are available. A stable
+      segment-ID symmetry check may reuse forward guidance resolutions as an
+      optimization; asymmetric evidence must be resolved there, not deferred to
+      the pure effective-route transform.
+- [ ] **(slice 1)** Make reverse swap/remap the forward/opposite exact and
+      guidance pairs; clip/loop operations transform all four lists, and double
+      reverse restores the originals. Unresolved opposite guidance remains
+      class fallback.
+- [ ] **(slice 1)** Remove the hard-coded `guidanceMode: "legacy"` for reverse
+      routes in `packages/core/src/navigation/effectiveNavigationRoute.js`.
+- [ ] Do not silently set `crossings: null` on reverse. Recompute or safely
+      transform direction-sensitive reviewed crossing evidence; if required
+      evidence cannot be made valid, make that reverse navigation plan
+      unavailable rather than dropping a safety instruction.
 - [ ] Keep approach and rejoin connectors as separately attested route legs;
       give them off-network/class fallback context unless their own traversals
       carry current segment/junction membership.
@@ -1023,6 +1324,8 @@ junction/crossing evidence.
 - [ ] Add transform tests for boundaries at zero/end, wrapped loop spans, reverse
       direction with different physical memberships, clipped standalone bridge,
       junction spans, and re-entry into the same way.
+- [ ] Add an out-and-back test asserting that the outbound and return legs name
+      the same ways, and that neither leg is legacy.
 
 **Snapshots and compatibility**
 
@@ -1038,22 +1341,30 @@ junction/crossing evidence.
       path plus current guidance data. Preserve `requiresReview` for historical-
       anchor replans. If rebuilding is impossible, discard the stale active
       session safely and keep the planned route available.
-- [ ] Bump featured snapshot schema to 2 and store exact spans, guidance spans,
-      `guidanceMode`, junction context, and route-local reviewed crossings when
-      navigation can consume the snapshot directly. Extend both snapshot
-      projections and `snapshotToRouteState`; schema 1 currently drops spans.
+- [ ] Bump featured snapshot schema to 2 and store the derived **itinerary
+      runs** plus `guidanceMode` — not both span families. A featured snapshot is
+      a presentation projection: featured pages need the ordered rider-facing
+      list without loading planner assets. Navigation started from a featured
+      route passes the catalog V6 token into Build and derives current guidance,
+      attestation, and crossings there.
+- [ ] Keep public featured snapshots presentation-only. Do not add a
+      conditional direct-navigation payload or crossings list to schema 2; an
+      offline navigable snapshot would require a separate full-attestation
+      design.
+- [ ] Extend both snapshot projections and `snapshotToRouteState` accordingly;
+      schema 1 stores no run or span data at all.
 - [ ] Preserve backward loading of schema 1 as a legacy route state.
 - [ ] Keep `source.mapVersion` and existing `source.assetHashes.segments` as
       guidance provenance. Do not add `assetHashes.navigationWays`, and do not
       put the final `releaseBundleDigest` inside the snapshot because snapshot
       hashes are inputs to that digest.
-- [ ] Update `catalogDecodedRouteFromState` to retain `guidanceSpans`,
-      `guidanceMode`, and exact span fields needed by the new snapshot/projected
-      itinerary; it currently returns only `segmentSpans`.
-- [ ] Add a regression test based on the demo-studio crossing omission: any
-      snapshot intended for navigation must preserve the reviewed `crossings`
-      list so name decoration cannot silently turn a crossing-plus-turn into a
-      generic turn.
+- [ ] Update `catalogDecodedRouteFromState` to retain `guidanceMode` and the
+      fields the projected itinerary needs; it currently returns only
+      `segmentSpans`.
+- [ ] Keep the crossing-preservation regression in the private demo-studio/full
+      route-state snapshot tests. Public featured snapshot tests instead assert
+      that navigation launches with the catalog V6 token and never treats
+      itinerary runs as navigation evidence.
 - [ ] Make strict snapshot generation/checking fail missing or stale guidance
       evidence. Promotion already rebuilds the catalog and all snapshots; keep
       that work inside the same Promote preparation rather than a separate
@@ -1084,7 +1395,9 @@ resolution, persistence provenance, and full scenario/demo coverage.
       using the shared 300 m horizon.
 - [x] Voice duplicate suppression keys on guidance identity rather than visible
       name.
-- [x] Old/unreviewed routes keep legacy behavior through `guidanceMode`.
+- [x] The implemented foundation keeps old/unreviewed routes on legacy
+      behavior through `guidanceMode`; slice 1 deliberately supersedes this
+      route-wide fallback.
 
 **Primary files**
 
@@ -1134,8 +1447,15 @@ resolution, persistence provenance, and full scenario/demo coverage.
       without inventing a name-change maneuver.
 - [ ] For a straight identity change without a decision, update current context
       silently.
-- [ ] Remove generic `enter-segment` production cues once guidance mode is
-      active. The internal segment name is never a fallback.
+- [ ] Remove generic `enter-segment` production cues. With per-span degradation
+      there is no remaining mode that should emit them, so this retires with
+      slice 1 rather than waiting for full coverage. The internal segment name is
+      never a fallback.
+- [ ] Pick the *nearest* maneuver when decorating a guidance transition.
+      `applyGuidanceSemantics` in
+      `packages/core/src/navigation/navigationCues.js` currently uses `.find`
+      over a list that is not sorted by distance until later, so a crossing and a
+      turn within tolerance of the same span start resolve by generation order.
 - [x] Add the guidance-aware `continue-on-way` confirmation defined by the
       design. Generate it only for route start/join or as wording attached to a
       real maneuver entering a different identity; never generate it from an
@@ -1148,6 +1468,20 @@ resolution, persistence provenance, and full scenario/demo coverage.
       distance rounding (50 m below 1 km, 0.1 km at or above 1 km).
 - [x] Append a long-run confirmation to a maneuver that already names the
       destination way instead of scheduling a competing second utterance.
+- [ ] Move that appended confirmation off the final-phase call.
+      `continueOnWayText` in
+      `packages/core/src/navigation/navigationVoice.js` is currently appended
+      regardless of `event.phase`, so the imminent instruction becomes
+      `פנה ימינה אל שביל תל חי, והמשיכו עליו 1.5 קילומטר` — several extra
+      seconds of speech arriving while the rider is executing the turn, roughly
+      30 m of travel at 25 km/h. Allow it only in the preview utterance for the
+      first release. When no preview was emitted, omit the distance; do not add
+      a post-maneuver event without a separate one-shot/dedupe contract. Keep
+      the final call to the maneuver plus destination way.
+- [ ] Apply the same rule to reviewed crossings and roundabouts, whose
+      final-phase copy is already the longest in the system.
+- [ ] Assert phase placement in the voice fixtures rather than only asserting
+      that the text appears somewhere.
 - [ ] Name the resolved current way on route start and mid-route join when the
       next choice is not imminent. Reacquisition may name the way but does not
       repeat distance unless the effective route/horizon changed.
@@ -1183,6 +1517,10 @@ resolution, persistence provenance, and full scenario/demo coverage.
 
 - [ ] Apply the design fallback order: reviewed name, future reviewed base-road
       name, facility class, then generic continue.
+- [ ] Unnamed, unreviewed, and conflicting spans all resolve at the facility
+      class step, using the shared class table. No span reaches generic continue
+      merely because a controlled kind or route class was omitted from that
+      table.
 - [ ] In this release, unaligned base edges start at facility class because OSM
       road names are deferred.
 - [ ] Use visual `name` in UI and optional `spokenName` only in TTS.
@@ -1207,13 +1545,22 @@ resolution, persistence provenance, and full scenario/demo coverage.
 - [ ] Decision while staying on Road 99: keep/stay wording as appropriate.
 - [ ] Start or join on a resolved way with at least 300 m to the next route
       choice: name the way and speak the rounded distance once.
-- [ ] Turn onto `שביל תל חי` with a 1.5 km quiet horizon: name it in the turn and
-      append the distance; do not emit a second boundary cue.
+- [ ] Turn onto `שביל תל חי` with a 1.5 km quiet horizon: name it in the turn,
+      carry the distance in the preview rather than the final call, and do not
+      emit a second boundary cue.
 - [ ] The same start/join with a route choice under 300 m omits the long-run
       confirmation.
 - [ ] Reacquisition on the same route occurrence names the way without
       replaying the distance confirmation.
+- [ ] The long-run confirmation appears in the preview utterance only, never in
+      the final-phase call, for turns, roundabouts, and reviewed crossings; a
+      no-preview maneuver omits it.
+- [ ] A partially classified route: resolved ways are named, unreviewed spans
+      read as their facility class, and no cue carries an internal segment name.
 - [ ] Road 99 roadway versus parallel cycleway: correct distinct name.
+- [ ] A two-component or branching acknowledged way keeps one identity end to
+      end and produces no transition cue at a component boundary the rider
+      traverses continuously.
 - [ ] Same-way travel through a named junction: one continuous current way and
       no boundary cue.
 - [ ] Different-way travel through a named junction: one topology cue naming
@@ -1229,6 +1576,10 @@ resolution, persistence provenance, and full scenario/demo coverage.
 - [ ] Guidance conflict: conservative fallback and no unsafe guessed name.
 - [ ] Reverse route with different direction-scoped memberships: visual and
       spoken way come from reversed evidence, not reversed forward text.
+- [ ] Out-and-back ride: both legs name the same ways, and neither is legacy.
+- [ ] A reverse route preserves or recomputes its reviewed crossing evidence;
+      it never becomes navigable after silently replacing that evidence with
+      `null`.
 - [ ] Exact V6 restore and historical-anchor replan: both use current guidance;
       the latter remains review-required.
 - [ ] Old persisted session: regenerate or discard safely.
@@ -1259,27 +1610,33 @@ snapshots.
 
 **Activation guard**
 
-- [ ] Add one shared boolean feature flag, `guidanceWayNames`, defaulting true
-      so the implemented resolved-route navigation slice does not regress.
-      Planner activation still requires complete manifest coverage. Keep core
-      route/cue tests independent of browser storage flags.
-- [ ] Enable the planner itinerary by default only when the flag is true,
-      `manifest.guidance.schemaVersion` is supported, coverage is complete, and
-      the loaded segments asset belongs to that manifest.
-- [ ] During migration, retain the existing route-local decision:
-      `guidance-v1` only when every on-network segment membership resolves;
-      otherwise the whole route is legacy. Never choose per span.
+- [ ] Add one shared boolean feature flag, `guidanceWayNames`, defaulting true.
+      Keep core route/cue tests independent of browser storage flags.
+- [ ] Enable the planner itinerary when the flag is true,
+      `manifest.guidance.schemaVersion` is supported, and the loaded segments
+      asset belongs to that manifest. Do not gate it on complete coverage:
+      partial coverage now produces honest class-fallback rows, and gating would
+      hide the itinerary during exactly the period when coverage feedback is
+      most useful.
+- [ ] Resolve guidance per span, never per route. There is no route-level
+      naming decision to make.
 - [ ] Freeze the guard result, `guidanceMode`, map version, and segments hash
       into a planned/effective route so a storage flag or asset refresh cannot
       switch naming semantics midway through one navigation session.
-- [ ] Keep the flag as a rollback kill switch after default activation.
+- [ ] Keep the flag as a rollback kill switch after default activation. Its
+      disabled policy is class-only v1 presentation, not legacy
+      `enter-segment` speech; freeze that presentation policy separately from
+      `guidanceMode`.
 
 **Diagnostics**
 
 - [ ] Include guidance schema version, segments hash, coverage state, role counts,
       and conflict count in map-asset/build summaries.
 - [ ] Log one bounded startup diagnostic when planner activation is requested
-      but the manifest summary is absent, incomplete, or unsupported.
+      but the manifest summary is absent or unsupported.
+- [ ] Count class-fallback spans by reason (unnamed, unreviewed, conflict,
+      off-network) per computed route, so coverage progress and conflict
+      regressions are visible without emitting rider names as analytics keys.
 - [ ] Include segments hash and fallback/conflict counters in route and
       navigation diagnostics without emitting rider names as analytics keys.
 - [ ] Include manifest map version, `releaseBundleDigest`, segments hash,
@@ -1305,12 +1662,15 @@ snapshots.
 
 **Manual editor validation**
 
-- [ ] Generate suggestions from the current source, review a high-confidence
+- [ ] Generate suggestions from the current source, review a validator-scored
       group, edit an audible form, reject an ambiguous group, and confirm stale
       digests prevent acceptance.
 - [ ] Create, rename, and delete a test way; undo any test data before release.
-- [ ] Bulk-assign an unambiguous chain and inspect the preview.
-- [ ] Confirm an ambiguous branch refuses automatic assignment.
+- [ ] Acknowledge a multi-component way and a branching way, then change their
+      membership and confirm the warning re-raises.
+- [ ] Confirm that assigning a materially parallel member raises an exact
+      `parallel-facility-risk`; resolve the Road 99 cycleway by separation and
+      approve a dual-carriageway fixture without splitting it.
 - [ ] Split named-way, standalone, and unnamed test cases and inspect outcomes.
 - [ ] Build and Promote in required mode from a clean source state; verify the
       segments hash changes with resolved guidance and is present in the map
@@ -1325,43 +1685,50 @@ snapshots.
       physical zoom handoff; confirm junction footprints remain non-segment
       interactive.
 - [ ] Build forward, reverse, loop, leave/re-enter, bridge, and unnamed routes.
-- [ ] Verify run and section highlight behavior, sparse labels, warnings/POIs,
-      keyboard navigation, and RTL copy.
+- [ ] Verify run and section highlight behavior, warnings/POIs, keyboard
+      navigation, and RTL copy.
 - [ ] Open legacy, exact-current V6, historical-anchor V6, and promoted featured
       routes; confirm review-required restore states remain intact.
 
 **Manual native/navigation validation**
 
 - [ ] Repeat the planner routes on iPhone simulator and one physical device.
-- [ ] Verify sheet/highlight behavior, VoiceOver, Dynamic Type, and route-label
-      density.
-- [ ] Simulate the required navigation scenarios in both directions.
-- [ ] Listen to visual name versus `spokenName`, road-number pronunciation, the
-      standalone bridge cue, and compound maneuver timing.
-- [ ] Test representative suggested audible forms on an iOS simulator and one
-      physical device; remove punctuation that does not materially improve
-      pronunciation.
+- [ ] Verify sheet/highlight behavior, VoiceOver, and Dynamic Type.
+- [ ] Simulate the required navigation scenarios in both directions, and confirm
+      an out-and-back ride names its ways identically on both legs.
+- [ ] Listen to the standalone bridge cue and compound maneuver timing, and
+      confirm the long-run confirmation never lands on the final-phase call.
+- [ ] Listen to every clean display name that a suggestion wanted to override,
+      on an iOS simulator and one physical device. Add `spokenName` only where
+      the recording is wrong, and record what was heard either way.
 - [ ] Test foreground, background, crash-resume, stale-session, and flag-off
       rollback behavior.
 
 **Activation sequence**
 
-1. Release web/native code that safely understands resolved segment guidance,
-   the optional manifest summary, and snapshot schema 2. The flag remains on
-   for resolved navigation routes, while incomplete manifest coverage keeps
-   the planner itinerary off.
-2. Build a required-mode, complete staged map and let Promote strictly prepare
-   the route catalog and every featured snapshot against it.
-3. Promote once: resolved segments and all other map assets, catalog, and
+1. Land the per-span/reverse-ready runtime and the validator/publication
+   contract in either code order.
+2. Build and Promote a migration-mode bundle containing the existing pilot
+   classifications and `manifest.guidance`. Naming improves where data exists
+   and reads as facility class everywhere else.
+3. Land the minimum editor suggestion-import path, re-score the digest-bound
+   artifact, and classify the reference corpus.
+4. Release the shared/web itinerary pilot in migration mode. Continue reviewed
+   classification batches using its visible output as feedback.
+5. Release navigation completion, schema-2 presentation snapshots, and native
+   itinerary support while old manifests and schema-1 snapshots remain safe.
+6. After coverage reaches 100%, build a required-mode staged map and let Promote
+   strictly prepare the route catalog and every featured snapshot against it.
+7. Promote once: resolved segments and all other map assets, catalog, and
    snapshots are copied as one target set; verify the release index/digest and
    switch the manifest last.
-4. Verify web and native load the promoted map/segments hash and that flag-off
-   route, V6 restore, and navigation flows remain unchanged.
-5. Enable planner presentation through the complete promoted manifest summary;
-   release web/native support together as closely as practical.
-6. Monitor startup guard failures, conflict/fallback counters, release-bundle
-   mismatches, navigation session failures, and user-reported wording issues.
-7. Roll back by disabling the flag if necessary; do not revert classifications
+8. Verify web and native load the promoted map/segments hash and that flag-off
+   uses class-only presentation while V6 restore/navigation geometry remain
+   unchanged.
+9. Monitor startup guard failures, class-fallback counters by reason,
+   release-bundle mismatches, navigation session failures, and user-reported
+   wording issues.
+10. Roll back by disabling the flag if necessary; do not revert classifications
    or route data.
 
 ## Task 12 — post-activation compatibility cleanup
@@ -1378,11 +1745,19 @@ This task is deliberately separate from the first release.
       current uniqueness in this project.
 - [ ] Remove legacy segment-name navigation aliases only after supported old
       snapshots and app versions no longer require them.
-- [ ] Measure whether full-network way labels are useful before designing them;
-      route-only labels remain the default.
+- [ ] Measure whether riders miss route-only map labels once the itinerary has
+      shipped, before building them. Measure full-network labels only after
+      that.
 
 ## Explicitly deferred work
 
+- Route-only guidance map labels on web and native. The candidate model is
+  designed and consumes route runs, so building it later costs nothing
+  structurally.
+- Rich review-queue ordering, batch acceptance, contiguous bulk assignment, and
+  the graphical structure visualizer. The first release still includes the
+  minimal per-group suggestion import/review list. Build whichever richer tool
+  removes a real bottleneck observed during Task 4.
 - OSM `name`/`ref` publication for unaligned base-routing edges.
 - A new base-routing shard schema for off-CycleWays named-road continuity.
 - Multilingual visual naming beyond the initial Hebrew canonical name.
@@ -1400,14 +1775,22 @@ grouping by equal OSM text.
 ## Definition of done
 
 - [ ] Registry enforcement is `required` and the clean build reports 100%
-      active classification with no unresolved blockers.
-- [ ] Exact direction-scoped segment/junction spans and guidance spans coexist
-      throughout route state and all transforms.
-- [ ] Shared itinerary fixtures are semantically identical on web and native.
+      active classification, no unresolved blockers, and no unacknowledged
+      structure warnings.
+- [ ] No way ID exists solely to satisfy a structural check.
+- [ ] Paired forward/opposite direction-scoped segment/junction and guidance
+      projections coexist throughout live route state and transforms.
+- [ ] No code path emits an internal segment name as rider-facing copy, and the
+      generic `enter-segment` cue is gone.
+- [ ] Forward and reverse routes name their ways identically on an out-and-back.
+- [ ] Reverse navigation never silently drops reviewed crossing evidence.
+- [ ] Shared itinerary fixtures are semantically identical on web and native,
+      including folding at `ITINERARY_FOLD_MAX_M`.
 - [ ] Rider-facing planner surfaces no longer use internal segment names as
       primary copy when guidance mode is active.
 - [ ] Clean display names and optional audible names are validated separately;
-      iOS uses pronunciation punctuation without leaking it into visual UI.
+      iOS uses pronunciation punctuation without leaking it into visual UI, and
+      every `spokenName` that shipped has a recorded listening result behind it.
 - [ ] Every active segment received a digest-bound model proposal or explicit
       ambiguity result, and all canonical classifications were human-approved.
 - [ ] Internal named-way boundaries produce no navigation cue.
@@ -1419,8 +1802,12 @@ grouping by equal OSM text.
 - [ ] The final manifest's release index binds the resolved segments, route
       catalog, and promoted snapshot hashes, and web/native use the same
       segments hash.
+- [ ] Featured snapshot schema 2 round-trips visual itinerary runs only;
+      starting navigation restores the catalog V6 token rather than treating
+      those runs as routing evidence.
 - [ ] Full tests, production build, offline asset sync, snapshot check, and smoke
       tests pass.
-- [ ] Rollback has been exercised with `guidanceWayNames` disabled.
+- [ ] Rollback has been exercised with `guidanceWayNames` disabled and produces
+      class-only guidance without restoring internal segment speech.
 - [ ] The implementation plan is updated with completion state, actual commands,
       deviations, and any remaining manual gates.

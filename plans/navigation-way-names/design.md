@@ -2,8 +2,12 @@
 
 **Date:** 2026-07-15
 **Last reviewed:** 2026-07-23
-**Status:** Forward-navigation vertical slice implemented; data, planner,
-editor, snapshot, and reverse-route rollout ready for implementation
+**Status:** Forward-navigation vertical slice implemented; second review
+(2026-07-23) relaxed the named-way structure invariant, replaced route-level
+legacy fallback with per-span degradation, required reverse-ready guidance,
+moved the long-run confirmation off the final-phase call, and deferred
+route-only map labels. Data, planner, editor, and snapshot rollout ready for
+implementation
 **Related designs:** `bicycle-traversal-policy`, `network-editor-workflow`,
 `network-junctions`, `route-sharing-v4`, `waypoint-routing`,
 `segment-name-display`, `front-page-overhaul`, `rn-mobile-native-ui`,
@@ -35,10 +39,12 @@ one of:
 3. an **intentionally unnamed** connector or section.
 
 Missing classification means “not reviewed yet” during migration; it is not a
-fourth production role. Named-way membership is therefore optional. During
-migration, one computed route uses guidance naming only when all of its
-on-network segment memberships resolve; after full rollout, required-mode
-validation makes classification mandatory for every active segment.
+fourth production role. Named-way membership is therefore optional. An
+unreviewed span degrades exactly like an intentionally unnamed one: facility
+class fallback, and never the internal segment name. Guidance naming therefore
+improves route by route as classification progresses instead of waiting for a
+whole-network switch. After full rollout, required-mode validation makes
+classification mandatory for every active segment.
 
 The route keeps two parallel views of the same traversal:
 
@@ -72,7 +78,8 @@ forward-navigation vertical slice, not only supporting infrastructure:
 That slice is intentionally conservative. A route containing any unreviewed
 CycleWays segment receives `guidanceMode: "legacy"` and no partial guidance
 span list. Reverse effective routes also fall back to legacy because their
-opposite-direction memberships have not yet been freshly resolved.
+opposite-direction memberships have not yet been freshly resolved. The
+2026-07-23 second review below replaces both of those fallbacks.
 
 The current public `segments.json` has not been rebuilt/promoted with the pilot
 classifications, featured-route snapshot schema 1 still drops exact and
@@ -121,6 +128,55 @@ Build additionally publishes a small guidance summary in the build report and
 manifest—schema version, enforcement mode, coverage counts, and
 `coverageComplete`—but no second naming file. Consumers derive in-memory
 segment-ID and way-ID indexes from the loaded segment records.
+
+### 2026-07-23 second review: corrections carried into this revision
+
+A second review checked the design's invariants against the real network and
+the implemented navigation code. Seven corrections follow; each is applied in
+the relevant decision below.
+
+1. **The named-way connectivity invariant was too strict.** Requiring one
+   connected component with member degree at most two is a topological rule
+   applied to a naming concept. Checked against the 46 multi-member way groups
+   proposed for the real network, five fail it, and two of those fail on
+   branching that no junction evidence can repair: `שבילי אגמון החולה`
+   (member degree 4) and the Banias trail group (degree 3). Those are exactly
+   the recognizable facilities the feature exists to name. Multiple components
+   and branching become acknowledged warnings. A separate, review-required
+   facility-separation check targets the real hazard: a way absorbing a
+   different parallel facility in the same corridor. It is not an unconditional
+   geometry ban, because dual carriageways and two-sided cycleways can
+   legitimately be one rider-recognizable facility.
+2. **Route-level all-or-nothing naming was the wrong fallback.** Falling back
+   to legacy makes one unreviewed connector restore internal editorial speech
+   for a whole route, which is the behavior this design exists to remove.
+   Unreviewed spans now degrade to facility class exactly like intentionally
+   unnamed spans.
+3. **Reverse routes should not fall back to legacy.** The reversed route
+   attestation already carries per-slice opposite-direction CycleWays
+   membership, so reverse guidance is derivable at route construction time.
+   The live route must retain a reverse-ready resolved projection; the current
+   pure reverse transform does not have the segment-guidance index needed to
+   resolve an asymmetric return leg later. Out-and-back is the most common ride
+   shape, and a forward leg named by way with a return leg named by internal
+   segment is worse than either alone.
+4. **A long-run confirmation must not be appended to an imminent maneuver.**
+   The initial release places the distance confirmation in the preview
+   utterance only, never in the final-phase call.
+5. **Route-only map labels are deferred out of the first release.** They are
+   the costliest and least certain part of the planner work, the base map
+   already labels major roads, and the itinerary is the authoritative readable
+   list.
+6. **Featured snapshots store the derived itinerary, not both span families.**
+   Featured pages intentionally load without the heavy routing/segments assets,
+   and navigation already starts by restoring the catalog's V6 route token.
+   Their public snapshot is therefore a version-bound presentation cache, not
+   an alternative navigation route model.
+7. **Presentation and risk-detector constants must be shared and
+   fixture-tested.** The confirmation horizon was already a named constant;
+   connector folding and the material-parallel-corridor detector must also be
+   deterministic because web/native parity and editor/build validator parity
+   depend on them.
 
 ## Goals
 
@@ -175,18 +231,19 @@ available as the editor label and compatibility key.
 
 ### Named way
 
-A continuous rider-recognizable facility composed of one or more CycleWays
-segments, for example:
+A rider-recognizable facility composed of one or more CycleWays segments, for
+example:
 
 - `כביש 99`;
 - `דרך הפטרולים`;
 - `שביל האופניים לאורך כביש 99`;
 - `טיילת עמי`.
 
-A named way has a stable identity independent of its display name. Member
-segments form one connected, non-branching logical chain or ring. A route may
-traverse only the directions allowed by current routing policy; way membership
-does not imply bidirectional access.
+A named way has a stable identity independent of its display name. Its mapped
+members commonly form a chain or ring, but may contain reviewed gaps, parallel
+directional alignments, or branches when riders still recognize them as one
+facility. A route may traverse only the directions allowed by current routing
+policy; way membership does not imply connectivity or bidirectional access.
 
 ### Standalone named feature
 
@@ -256,8 +313,8 @@ selected segments.
 
 One contiguous occurrence of a guidance identity in a particular route. A
 route that leaves and later rejoins Road 99 has two Road 99 runs. Runs drive
-route summaries and route-only map labels; they are never globally grouped by
-visible name.
+route summaries, featured-snapshot itineraries, and — when they are eventually
+built — route-only map labels. They are never globally grouped by visible name.
 
 ## Decision 1: Keep segment identity and guidance identity separate
 
@@ -298,7 +355,10 @@ Conceptual registry shape:
       "kind": "road",
       "ref": "99",
       "aliases": [],
-      "spokenName": null
+      "spokenName": null,
+      "structureReview": {
+        "acknowledgedIssueFingerprints": []
+      }
     },
     "patrol-road": {
       "name": "דרך הפטרולים",
@@ -312,6 +372,12 @@ Conceptual registry shape:
 
 The registry does not duplicate segment membership. Each active source
 GeoJSON feature owns its classification in `properties.guidance`.
+
+`structureReview` is optional. It never contains a broad `allowBranching` or
+`allowParallel` switch. Each fingerprint is produced by the shared validator
+from the issue code, affected stable member IDs, and the relevant
+geometry/topology evidence digests. A changed member, alignment, junction, or
+geometry therefore produces a new issue fingerprint and requires fresh review.
 
 Named-way member:
 
@@ -369,9 +435,38 @@ the fallback deterministic and makes migration completeness measurable.
 - Every referenced way ID exists in the registry.
 - Every active segment has at most one guidance role and one named-way
   membership.
-- Active members of a named way form one connected logical component.
-- That component is non-branching: member degree is at most two, allowing a
-  chain or a ring. Directional legality is validated separately.
+- Active members of a named way should form one connected logical component,
+  and that component should be a non-branching chain or ring. Neither is a
+  blocking requirement. A real facility is often mapped as several disjoint
+  pieces, and a named trail network, promenade, or perimeter road legitimately
+  branches. Multiple components and member degree above two are reported as
+  warnings that a curator acknowledges once per way; the acknowledgement is
+  recorded by exact issue fingerprint so a later unintended change re-raises
+  the warning.
+- Materially parallel members of one way trigger a
+  `parallel-facility-risk` review issue even when they meet at one end. The
+  shared detector uses a corridor distance, minimum overlap, and heading
+  tolerance; it does not fire merely because two lines cross or briefly run
+  close. This directly catches the risk of `כביש 99` absorbing
+  `שביל אופניים 99`.
+- Independently, authoritative source/routing evidence is mapped to broad
+  facility classes such as roadway, protected cycleway, and trail/path.
+  `facility-class-conflict` is a non-waivable blocker when a member is
+  incompatible with the way kind. Surface alone (`paved` versus `dirt`) is not
+  a facility class, and a bridge may carry the enclosing facility.
+- An unresolved `parallel-facility-risk` is a blocker in both migration and
+  required modes. The curator resolves it by removing/reassigning the different
+  facility, or by acknowledging the exact issue fingerprint with evidence that
+  the compatible members are one rider-recognizable facility, such as two
+  carriageways of the same road. A `facility-class-conflict` cannot be
+  acknowledged. Geometry raises the review question but cannot decide facility
+  identity.
+- Directional legality is validated separately.
+- Splitting one real facility into several way IDs solely to satisfy a
+  structural check is a defect, not a workaround. Two way IDs with the same
+  display name are two facilities to every downstream consumer: they produce
+  two itinerary rows, a spoken destination name at the seam, and no voice
+  duplicate suppression between them.
 - Member adjacency comes from reviewed topology: accepted direction-scoped
   alignment terminals and, where applicable, published network-junction arm
   attachments and legal movements. Source endpoint equality is a migration
@@ -402,6 +497,12 @@ the fallback deterministic and makes migration completeness measurable.
 - Legacy/exact-segment speech may use a segment-level `spokenName`; this field
   does not create a guidance identity and is never shown in the planner.
 - Voice falls back to `name` when the audible form is absent.
+- `spokenName` is added only after the clean display form has been heard on a
+  device and found wrong. Speech engines already read Hebrew digits, and a
+  hand-written expansion such as
+  `כביש תשעת אלפים תשע מאות שבעים וארבע` replaces engine behavior with a long
+  fixed string that cannot improve later. Prefer `null`; the default assumption
+  is that the display form is correct until a recording proves otherwise.
 - Validators reject pronunciation-only marks in display names and reject an
   empty or control-character-containing audible form.
 - Web/native visual tests assert that `spokenName` never leaks into labels,
@@ -524,6 +625,51 @@ must inspect every membership for the actual traversal direction:
 - until corrected, runtime uses a conservative facility-class fallback and
   does not speak either conflicting name.
 
+A conflicting span still carries a usable `kind`. When the conflicting
+memberships agree on a facility kind, that kind is retained; otherwise the kind
+is derived from the traversal's route class. A conflict span with a null name
+and a null kind has nothing to fall back to, which turns a data problem into
+silent navigation.
+
+### Unreviewed spans degrade; routes do not
+
+An unreviewed span is presented exactly like an intentionally unnamed one: no
+proper name, facility-class fallback, no cue at its boundaries, and never the
+internal segment name. It is distinguished from `unnamed` only by
+`resolutionStatus`, which feeds validation and coverage reporting rather than
+rider-facing copy.
+
+A route is therefore never demoted as a whole because one member is unreviewed.
+This replaces the earlier route-local atomicity rule. The concern that motivated
+that rule — one route mixing two naming systems — is addressed more directly by
+never emitting an internal segment name in any mode: a partially classified
+route mixes named spans with class-fallback spans, which is the same mixture a
+fully classified route already contains wherever it crosses an intentionally
+unnamed connector.
+
+The practical consequence is that classification pays off incrementally. Every
+reviewed group improves the routes that traverse it on the next build, instead
+of every route waiting for whole-network coverage.
+
+`guidanceMode` remains frozen into a computed route and its navigation plan, so
+an asset refresh mid-session cannot change naming semantics. It now records
+which guidance schema the route was resolved against, not whether naming was
+switched on for that route.
+
+Schema support is explicit input to route construction, taken from the
+manifest-bound guidance context. It is never inferred from whether this
+particular route happened to contain a classified segment. Thus a route built
+from a v1 migration asset is `guidance-v1` even when every traversed segment is
+still unreviewed, while an old manifest/segments pair with no guidance schema is
+`legacy`.
+
+The feature switch is a separate, frozen presentation policy. Disabling named
+ways on a new client produces class-only guidance from the same v1 spans; it
+does not restore internal segment speech. `legacy` exists only as an
+old-data/old-state compatibility marker. Newly generated navigation cues retire
+generic `enter-segment` wording in every mode, and incompatible persisted cues
+are regenerated or discarded.
+
 Legacy undirected `cwSegmentIds` may be read only through the existing
 compatibility path. New guidance logic must not turn that fallback into the
 authority for a current V3 route.
@@ -570,11 +716,38 @@ CycleWays span.
 ### Route transformations and restoration
 
 Clip-to-start and rotate-loop transforms apply the same distance remapping to
-exact and guidance spans. A reverse route reverses distance ranges but resolves
-their contents from the reversed attestation's opposite-direction memberships
-or from a fresh directed route; it must not reverse forward names/membership
-arrays. Approach and rejoin legs derive their own context from their own
-traversals. No transform rebuilds identity from visible names.
+exact and guidance spans. Approach and rejoin legs derive their own context from
+their own traversals. No transform rebuilds identity from visible names.
+
+A reverse route reverses distance ranges but resolves their contents from the
+opposite-direction memberships, never by reversing forward names or assuming
+that the physical memberships are symmetric. Falling back to legacy naming for
+the return leg is not acceptable: out-and-back is the most common ride shape,
+and a ride whose outbound leg says `כביש 99` while its return leg says
+`כביש 99 שאר ישוב` is worse than either behavior applied consistently.
+
+Reverse attestation already carries opposite segment membership, but the
+current pure effective-route transform does not carry the segment-guidance
+index, and the attestation does not carry opposite direction-scoped
+`cwJunctions`. Route construction therefore resolves and stores two paired live
+projections while it still has the edge evidence:
+
+- `segmentSpans` plus `guidanceSpans` for the traversed direction; and
+- `oppositeSegmentSpans` plus `oppositeGuidanceSpans` from the reverse
+  direction's segment and junction memberships.
+
+When the per-slice stable segment-ID sets are symmetric, the implementation may
+derive the second projection by remapping the first. When any slice is
+asymmetric, it resolves the opposite pair while the route manager still has the
+guidance index and direction-scoped junction data. Reversing swaps the pairs and
+remaps their distance ranges, so reversing twice is lossless. Clip and loop
+transforms apply the same operation to all four span lists.
+
+An unresolved opposite membership becomes a class-fallback span, never an
+internal name. Direction-sensitive reviewed crossings are a separate safety
+projection: reverse navigation must recompute or safely transform them from
+reviewed evidence, and must not silently erase them by assigning
+`crossings: null`.
 
 Guidance metadata is not added to V6 route URLs or traversal attestation.
 Exact current-graph replay and historical-anchor recovery continue to use
@@ -602,7 +775,7 @@ must turn, keep, cross, or continue. Guidance identity supplies the wording.
 | Exit a standalone bridge | Speak only if the exit contains a real decision |
 | Pass through a junction and remain on the same way | Keep the same current way; use junction context only when a real decision needs it |
 | Pass through a junction onto a different way | The maneuver names the destination way and may identify the junction as a landmark |
-| Enter an intentionally unnamed span | Use a kind/class fallback only when useful; never speak the internal name |
+| Enter an intentionally unnamed or unreviewed span | Use a kind/class fallback only when useful; never speak the internal name. The two are indistinguishable to the rider |
 | Surface/safety change inside one named way | Separate condition cue; never model it as a road-name transition |
 
 The current generic `enter-segment` cue is replaced by guidance-aware events.
@@ -647,6 +820,20 @@ that utterance (`פנו … אל שביל תל חי, והמשיכו עליו 1.5
 confirmation cue competes with it. At start/acquisition the independent wording
 is `המשיכו על <name> במשך <distance>`.
 
+The appended distance belongs to the **preview** utterance, not to the
+final-phase call. A rider hearing the imminent instruction is executing the
+maneuver; the final call must stay short. At a realistic 25 km/h, the appended
+clause adds several seconds of speech that would still be playing well past the
+turn. The initial implementation attaches it only to the preview announcement
+(`בעוד 200 מטר, פנו … אל שביל תל חי, והמשיכו עליו 1.5 קילומטר`). If no preview
+was emitted, omit the distance rather than inventing a post-maneuver event.
+
+A future dedicated, one-shot post-maneuver confirmation may replace that
+omission, but it requires its own event/dedupe contract. The final-phase call
+always carries the maneuver and destination way only. This applies to every
+maneuver type that can carry a destination way, including reviewed crossings
+and roundabouts, whose final-phase copy is already the longest in the system.
+
 The cue carries `guidanceIdentity`, visual `name`, optional `spokenName`,
 `horizonMeters`, and a reason (`route-start`, `join-route`, or
 `entered-by-maneuver`). Voice duplicate suppression keys by identity plus the
@@ -670,10 +857,15 @@ Guidance decorates those cues with the before/after way and optional
 
 1. Reviewed named-way or standalone visual/spoken name.
 2. Future reviewed OSM road name or road reference.
-3. Facility class such as `דרך עפר`, `שביל`, `כביש`, or `גשר`.
+3. Facility class such as `דרך עפר`, `שביל`, `כביש`, or `גשר`. Intentionally
+   unnamed, unreviewed, and conflicting spans all land here; a conflicting span
+   derives its class from route class when its memberships disagree on kind.
 4. Generic `המשך במסלול`.
 
-The internal segment name is not a fallback once guidance naming is enabled.
+The class fallback copy and its icons are one platform-neutral table shared by
+web, native, and voice. Nothing may reach step 4 because step 3 had no data.
+
+The internal segment name is not a fallback in any mode.
 A junction landmark name is optional maneuver/location context and is not
 inserted into this current-road fallback chain.
 
@@ -725,10 +917,13 @@ Itinerary rules:
   contextual children: they can bridge one same-way occurrence, or attach as
   entry context to the following run and decorate the associated maneuver when
   the before/after identities differ.
-- Short unnamed connectors without warnings or meaningful condition changes
-  may be visually folded between neighboring rows.
-- A material unnamed run, or any unnamed run with warnings/POIs, receives a
-  fallback row such as `מקטע מקשר` or `דרך עפר`.
+- Short unnamed connectors without warnings or meaningful condition changes are
+  visually folded between neighboring rows. “Short” is one shared,
+  fixture-tested constant, `ITINERARY_FOLD_MAX_M`, not a per-surface judgement:
+  web and native parity tests compare row lists, so an undefined threshold makes
+  parity untestable. The same applies to unreviewed runs.
+- A material unnamed or unreviewed run, or any such run with warnings/POIs,
+  receives a fallback row such as `מקטע מקשר` or `דרך עפר`.
 - Expanding a run shows exact sections, their distances, quality/conditions,
   and warnings.
 - Expansion never exposes archived parents.
@@ -788,6 +983,24 @@ Intentionally unnamed section:
 <exact section metrics / warnings>
 ```
 
+The card must not lose information relative to today. A curated internal name
+such as `כביש 99 שאר ישוב` currently distinguishes one hovered section from its
+neighbour; a card titled `כביש 99` with no subtitle does not. Whenever a
+named-way member has no `sectionLabel`, the card derives a subtitle from exact
+data rather than showing the way name alone:
+
+1. an unambiguous named endpoint, junction, or section POI when available;
+2. otherwise facility class/surface plus exact section length and warning
+   count.
+
+“Position along the way” is not a valid general fallback because branched and
+multi-component ways have no canonical start. Deriving a subtitle by
+subtracting the way name from the internal name remains forbidden; this is a
+presentation fallback, not curated data. `sectionLabel` remains optional.
+Validation may recommend it for a particular ambiguous or safety-relevant
+section, but does not create a blanket chore for every member of a multi-member
+way.
+
 Hovering either the logical overview or one physical alignment opens the same
 logical segment card. A published junction footprint does not fabricate a
 segment card. The exact segment remains strongly highlighted in the currently
@@ -805,7 +1018,21 @@ the implementation. The existing internal-name callback/filter can remain only
 as a compatibility adapter; neither repeated guidance names nor junction names
 may be used as exact Mapbox equality keys.
 
-### Built-route labels on the map
+### Built-route labels on the map — deferred past the first release
+
+This layer is designed but not built in the first release. It is the costliest
+and least certain part of the planner work: line-following placement, collision
+handling, and per-platform density policy, delivered on top of a base map that
+already labels `כביש 99` and every other significant road. The itinerary is the
+authoritative readable list, and the design already concedes that mobile web may
+hide the layer entirely.
+
+The discipline applied to full-network labels applies here too: measure whether
+riders miss route labels once the itinerary ships, then build them. Deferring
+costs nothing structurally, because the label model consumes route runs, which
+the itinerary produces anyway.
+
+The intended design, when it is built:
 
 Once a route exists, the map renders sparse **route-only** guidance labels:
 
@@ -882,9 +1109,10 @@ The sheet peek remains compact; it does not enumerate all roads. When useful it
 may show a short synopsis such as the first named way plus `+N דרכים`, but
 distance/elevation remain the primary peek information.
 
-Route-only map labels follow the same run model as web but use a stricter
-density threshold on the phone. Standalone landmarks such as a named bridge
-have higher label priority than repeated long-road labels.
+Route-only map labels are deferred on native for the same reason as on web. When
+they are built they follow the same run model but use a stricter density
+threshold on the phone, and standalone landmarks such as a named bridge have
+higher label priority than repeated long-road labels.
 
 ### Transition into active navigation
 
@@ -948,8 +1176,10 @@ A language model reviews that evidence and proposes:
 - role (`named-way`, `standalone`, or `unnamed`);
 - a new or existing way ID;
 - clean display name and optional section label;
-- optional `spokenName`, including suggested Hebrew pronunciation punctuation;
-- the exact contiguous member IDs;
+- an optional **audible candidate**, including suggested Hebrew pronunciation
+  punctuation, while the proposed canonical `spokenName` remains `null` until a
+  device recording demonstrates a problem;
+- the exact member IDs, which need not form one component;
 - confidence (`high`, `medium`, or `low`), concise evidence, and alternatives
   when ambiguous.
 
@@ -957,20 +1187,24 @@ The model is a bootstrap assistant, not a source of authority. Suggestions are
 source-digest-bound, never write canonical data automatically, and cannot
 override topology validation. Equal-looking names, proximity, or model
 confidence cannot merge a road with a parallel cycleway. Stale suggestions are
-regenerated or shown as stale.
+regenerated or shown as stale. Every group is scored by the shared structural
+validator before review; model confidence and validator findings are distinct.
 
-The editor presents a review queue:
+The first release presents a digest-checked per-group import/review list:
 
-- high-confidence contiguous groups first, then standalone/unnamed and
-  ambiguous cases;
+- filter/sort by confidence, role, validator status, and stable segment ID;
 - map preview of every proposed member and neighboring alternatives;
 - side-by-side display and audible text, plus platform speech preview when
   available; iOS simulator/device remains the pronunciation authority;
 - accept, edit-and-accept, reject, split group, or defer;
-- batch acceptance only for proposals that are topology-valid and have no
-  conflicting accepted membership; and
 - progress showing reviewed/remaining segments and estimated groups rather
   than forcing 291 independent form submissions.
+
+Rich priority queueing, batch acceptance, endpoint-to-endpoint bulk assignment,
+and a graphical structure visualizer are deferred until the initial review pass
+shows which one removes a real bottleneck. If batch acceptance is added, it is
+limited to proposals with no unresolved validator finding or conflicting
+accepted membership and must preview the exact canonical diff.
 
 Accepting a proposal uses the same atomic registry/source transaction as manual
 editing. The accepted result becomes ordinary canonical data; the suggestion
@@ -1002,8 +1236,9 @@ Blocking after activation:
 - active segment has no guidance role;
 - unknown named-way ID;
 - invalid role-specific fields;
-- disconnected or branching named-way membership;
 - one segment assigned to multiple ways;
+- non-waivable `facility-class-conflict`;
+- unresolved `parallel-facility-risk`;
 - conflicting guidance identities on overlapping accepted traversal
   memberships;
 - ambiguous multiple junction memberships used as one route span;
@@ -1011,7 +1246,10 @@ Blocking after activation:
 
 Warnings:
 
-- named-way member lacks a section label;
+- disconnected named-way membership;
+- branching named-way membership;
+- a particular member lacks enough rider-safe exact context for a useful hover
+  subtitle;
 - copied split-child section labels have not been reviewed;
 - standalone name duplicates an adjacent named way and may be misclassified;
 - visual and spoken names differ;
@@ -1022,6 +1260,11 @@ Warnings:
 - same visible name is used by multiple nearby way IDs;
 - a named-way adjacency that has only legacy source-endpoint evidence or lacks
   a legal direction expected by the curator.
+
+Structure warnings and an approved `parallel-facility-risk` remain visible with
+their exact evidence fingerprints. Required-mode promotion blocks an
+unacknowledged structure warning or unresolved risk; acknowledgement confirms a
+reviewed facility decision, not that the topology magically became connected.
 
 ## Generated and runtime data
 
@@ -1079,14 +1322,34 @@ This is release diagnostics and an activation assertion, not a second source
 of names. `hashes.segments` remains the data-integrity authority. Old manifests
 without the summary are supported and produce legacy planner behavior unless
 the route itself already carries an explicitly supported `guidanceMode`.
+Current route construction receives this manifest-bound schema context
+explicitly; it must not guess schema support from the number of resolved records
+encountered on one route.
 
 ### Route/catalog snapshots
 
-Live route state and featured-route snapshots retain exact spans and guidance
-spans plus `guidanceMode`. Snapshot projection and loading must actually
-round-trip those fields; retaining them in an in-memory route manager is
-insufficient. Featured snapshot schema 1 currently drops both span families,
-so this requires a coordinated schema bump with a backward-compatible loader.
+Live route state retains exact spans and guidance spans plus `guidanceMode`.
+Snapshot projection and loading must actually round-trip what each consumer
+needs; retaining spans in an in-memory route manager is insufficient.
+
+A featured-route snapshot is a presentation projection, not a copy of the route
+model. It stores the derived **visual itinerary runs** plus `guidanceMode`, not
+both span families. Featured pages need that ordered list while intentionally
+avoiding the heavy routing and segments assets. Starting navigation already
+passes the route-catalog V6 token into Build, which restores/replans against
+current data and derives guidance and reviewed crossings there; it does not
+navigate the presentation snapshot.
+
+The snapshot is a version-bound cache. Strict generation rebuilds its runs when
+the manifest's segments hash changes, and Promote publishes the matching
+segments, catalog, and snapshots atomically. Schema 2 does not add a conditional
+“directly navigable snapshot” mode. If offline navigation from a snapshot is
+ever required, it needs a separate contract containing full routing attestation
+and direction-sensitive crossing evidence, not just geometry plus a crossings
+array.
+
+Schema 1 stores no span or run data, so this is still a coordinated schema bump
+with a backward-compatible loader — but a smaller one.
 A snapshot already records its map version and `assetHashes.segments`; that
 hash is the guidance provenance. The release manifest binds the route-catalog
 digest and every featured-snapshot digest into the release bundle, so a
@@ -1142,13 +1405,19 @@ Introduce the registry, per-segment role, validation report, and editor UI
 without forcing whole-network planner activation. Missing classification is
 reported as unreviewed but remains allowed during this period.
 
-The existing navigation vertical slice may continue to use
-`guidanceMode: "guidance-v1"` for an entirely resolved route. One route never
-mixes legacy internal names with guidance names: encountering an unreviewed
-on-network member makes the whole computed route legacy. This route-local
-atomicity is the smooth migration mechanism requested by the product design.
-It also lets the reported-ride corpus continue exercising the implementation
-before whole-network coverage is complete.
+Every computed route uses `guidanceMode: "guidance-v1"`; unreviewed spans take
+the class fallback described above. The migration mechanism is graceful
+degradation per span, not a per-route switch. `Legacy` remains an old-data
+compatibility marker, but newly generated navigation copy still suppresses
+internal segment names. The rollback switch disables proper-name presentation
+and uses class-only v1 guidance; it does not reactivate `enter-segment`.
+
+The order of work follows from that. Validators and a minimum suggestion-review
+path come first, followed by a representative classified corpus. The shared
+itinerary and web planner then ship as a partial-coverage pilot and become a
+second review surface while classification continues in batches. Full coverage
+gates required-mode promotion, not the first useful presentation. This uses the
+per-span migration benefit instead of recreating a 100% coverage cliff.
 
 ### Reference corpus
 
@@ -1173,14 +1442,26 @@ Before manual classification, generate suggestions for every unreviewed active
 segment. The reference corpus is used to calibrate grouping confidence and
 audible punctuation; accepted canonical data still requires editor review.
 
+Suggested groups are run through the structural validator **before** a curator
+sees them, and each group carries its validator verdict. A suggestion pass built
+on endpoint proximity disagrees with reviewed topology in both directions: it
+splits ways that a published junction connects, and it joins members that no
+reviewed adjacency joins. Reviewing 176 groups twice because the first pass was
+scored on the wrong evidence is the expensive failure mode here.
+
 ### Activation gate
 
-Do not partially switch one route from segment names to guidance names.
-Enable the planner itinerary by default, remove migration caveats, and change
-enforcement to `required` only when:
+Guidance naming itself needs no activation gate: it degrades per span and is on
+from the first build that resolves any guidance. The gate below governs
+enforcement and the removal of migration caveats. Change enforcement to
+`required` only when:
 
 - every active CycleWays segment has an explicit valid role;
-- topology-backed named-way connectivity validation passes;
+- named-way structural validation passes, with every multi-component or
+  branching way explicitly acknowledged rather than merely unreported;
+- no `facility-class-conflict` remains;
+- every `parallel-facility-risk` is either resolved by reassignment or approved
+  for the exact evidence fingerprint as one facility;
 - accepted overlap conflicts are resolved or carry an explicit reviewed
   resolution that remains deterministic at runtime; a generic suppression does
   not authorize guessed speech;
@@ -1195,10 +1476,11 @@ may remain unreviewed.
 Rollback does not require reverting registry/source classifications. Supported
 old clients ignore the additive `guidance` records, and new clients retain a
 single runtime/configuration kill switch for planner/navigation presentation.
-It defaults on so the implemented resolved-route navigation slice remains
-active; incomplete coverage still keeps the planner itinerary off. Disabling
-the switch makes newly computed routes use legacy presentation for the session;
-it never changes route search, geometry, or share identity.
+It defaults on. Disabling the switch uses class-only v1 presentation for the
+session; it never changes route search, geometry, share identity, or restores
+internal segment voice. The planner itinerary follows the same switch and does
+not need a coverage precondition, because partial coverage produces honest
+class-fallback rows.
 
 ### Compatibility cleanup
 
@@ -1215,7 +1497,17 @@ internal labels.
 ### Data/model tests
 
 - Registry IDs are unique and every reference resolves.
-- Active named-way members form one chain or ring.
+- A way whose active members form several components, or whose member degree
+  exceeds two, validates with a warning and is blocked only until the curator
+  acknowledges it; it is never a hard failure.
+- A material parallel overlap raises `parallel-facility-risk` even when the
+  members meet at one end; it blocks until the members are separated or its
+  exact fingerprint is approved as one facility.
+- A legitimate dual-carriageway fixture can be approved without splitting the
+  road, while the Road 99 roadway/cycleway fixture cannot be approved as one
+  facility.
+- A branching named trail network and a two-component numbered road both survive
+  validation once acknowledged, and both keep one guidance identity end to end.
 - Missing, invalid, and multiply assigned roles fail validation.
 - Split children inherit way membership and require section-label review.
 - Same visible name on different IDs never causes grouping.
@@ -1236,14 +1528,27 @@ internal labels.
 - Leaving and re-entering Road 99 yields two runs.
 - Exact segment spans and warnings survive run grouping.
 - Reverse, clip, and loop transforms preserve guidance distance ranges.
+- A reverse route with symmetric memberships names the same ways as its forward
+  route; a reverse route with asymmetric memberships resolves from reversed
+  evidence. Neither falls back to legacy naming.
+- Paired forward/opposite exact and guidance projections survive clip, loop
+  rotation, and double reverse; direction-sensitive reviewed crossings are
+  transformed or recomputed rather than silently dropped.
 - Standalone bridges remain separate runs.
-- Unnamed spans never inherit an internal segment name.
+- Unnamed and unreviewed spans never inherit an internal segment name, and both
+  present the same class fallback.
+- A route containing one unreviewed member still names every resolved way it
+  traverses.
+- A conflicting span exposes a usable facility class rather than a null name and
+  a null kind.
 - Surface/class changes update local context without changing way continuity.
 - Same-way travel through a junction remains one route run with retained
   junction context; different-way travel produces two runs and no junction row.
 - A junction in the middle of one segment does not split its guidance identity.
-- Featured snapshot build and load round-trip exact spans, guidance spans, and
-  `guidanceMode` under the snapshot's map version and segments hash.
+- Featured snapshot build and load round-trip the derived itinerary runs and
+  `guidanceMode` under the snapshot's map version and segments hash. Starting
+  navigation restores the catalog route token and does not consume those runs
+  as a navigation route.
 - Exact V6 restore and historical-anchor current-policy replan both derive
   guidance from the resulting direction-scoped traversal.
 
@@ -1256,7 +1561,10 @@ internal labels.
 - Entering `גשר עינות ירדן` produces one bridge-appropriate cue when useful;
   exiting it is silent without a decision.
 - The Road 99 cycleway is spoken as the cycleway, never the road.
-- Unnamed connector guidance uses class/generic fallback.
+- Unnamed and unreviewed connector guidance uses class/generic fallback.
+- A long-run distance confirmation appears in the preview utterance only,
+  never in the final-phase call, for turns, roundabouts, and reviewed crossings
+  alike. It is omitted when no preview was emitted.
 - Safety/surface transitions remain available inside one named way.
 - A roundabout/crossing through a named junction remains one topology cue,
   names the destination way when available, and may add the junction landmark
@@ -1272,6 +1580,8 @@ internal labels.
   ID-backed card; a junction footprint opens no segment card.
 - The card title is the guidance name; section label and metrics describe the
   exact segment.
+- Two adjacent members of one way never produce two identical cards: without a
+  curated section label, the derived subtitle still distinguishes them.
 - Whole-way context is opt-in.
 - Whole-way context covers logical and physical member features but does not
   absorb connecting junction footprints.
@@ -1279,7 +1589,8 @@ internal labels.
 - Selecting a run highlights only that route occurrence.
 - Route summary, warnings, and POIs no longer expose raw internal names as
   primary copy.
-- Sparse route-only labels never render every internal section name.
+- Short unnamed/unreviewed connectors fold at exactly `ITINERARY_FOLD_MAX_M`,
+  identically on web and native.
 
 ### Native planning acceptance
 
@@ -1290,7 +1601,6 @@ internal labels.
 - The mobile summary groups runs and preserves exact warnings.
 - Published junction spans remain on-network context without becoming planner
   rows or segment interactions.
-- Route-only labels remain sparse, with standalone landmarks prioritized.
 - Starting navigation preserves the itinerary's resolved guidance names.
 
 ## Risks and mitigations
@@ -1299,7 +1609,22 @@ internal labels.
 
 Calling a parallel cycleway `כביש 99` can give unsafe instructions. Ambiguous
 overlaps fall back to facility class and appear in validation rather than
-guessing.
+guessing. The `parallel-facility-risk` detector targets this case directly
+instead of relying on a member-degree limit, which both over-fires on legitimate
+branching facilities and does not catch a parallel member attached at one end.
+It raises a mandatory review question rather than declaring that all parallel
+geometry must be separate; legitimate carriageways remain expressible through a
+fingerprint-bound approval.
+
+### Over-strict structure fragments real facilities
+
+A structural rule that forces one facility into several way IDs manufactures the
+false transitions this design exists to remove: two `כביש 99` itinerary rows, a
+spoken destination name where the rider is simply continuing, and no voice
+suppression between the two identities. Checked against the real network, a
+strict one-component degree-two rule would fragment roughly one in nine proposed
+multi-member ways, including a named trail network of four-way degree. Structure
+warnings therefore inform the curator; they do not force ID splits.
 
 ### Internal detail can disappear behind a clean itinerary
 
@@ -1308,8 +1633,10 @@ Every collapsed run is expandable, and warnings promote the relevant section.
 
 ### Map labels can compete with the basemap
 
-Only the built route receives sparse CycleWays labels. Full-network names stay
-on demand. Mobile uses stricter density and landmark priority.
+Route-only labels are deferred out of the first release for this reason among
+others. When built, only the built route receives sparse CycleWays labels,
+full-network names stay on demand, and mobile uses stricter density and landmark
+priority.
 
 ### Name and identity drift
 
@@ -1318,16 +1645,25 @@ changes from altering continuity. Display-name equality is never identity.
 
 ### Partial migration can produce inconsistent guidance
 
-Route-local activation allows the resolved pilot corpus to exercise navigation
-without mixing semantics: any unreviewed on-network member makes that complete
-route legacy. Planner-wide activation still waits for complete coverage.
+Partial coverage produces named spans next to class-fallback spans, which is the
+same mixture a fully classified route already contains wherever it crosses an
+unnamed connector. What it never produces is an internal editorial name, in any
+mode. The alternative — demoting a whole route because one connector is
+unreviewed — restores exactly the speech this design removes, and makes every
+review group worthless until the last one lands.
 
 ### TTS may pronounce road numbers or local names poorly
 
-An optional `spokenName` is available for ways and named segments. Suggestions
-include a Hebrew audible form where punctuation or niqqud is likely to help.
-The value is used only by voice, preserved byte-for-byte by Build, and tested
-separately from clean visual copy on iOS.
+An optional `spokenName` is available for ways and named segments. The value is
+used only by voice, preserved byte-for-byte by Build, and tested separately from
+clean visual copy on iOS.
+
+The mitigation is only applied where a recording shows a real problem. Adding an
+audible form speculatively is itself a risk: a hand-written expansion such as
+`כביש תשעת אלפים תשע מאות שבעים וארבע` permanently replaces whatever the speech
+engine does with `כביש 9974`, including future improvements, and is wrong if
+riders read the number differently. Suggestions may propose an audible form, but
+the default outcome of review is `null`.
 
 ### Model suggestions may look more certain than they are
 
@@ -1345,15 +1681,19 @@ adapters and are a later cleanup.
 
 The resolved segments asset, route catalog, and featured snapshots are prepared
 in one promotion transaction. Their hashes are bound by the release index and
-the manifest switches last. Activation rejects an incomplete/unsupported
-guidance summary for planner-wide rollout, while route-local `guidanceMode`
-prevents mixed naming during migration.
+the manifest switches last. Snapshots store the derived itinerary rather than a
+copy of the span model, so there is less promoted state that can disagree with
+the segments asset it was built from.
 
 ## Final product principles
 
 - Segments are internal ownership units, not the rider's primary mental model.
 - Guidance names describe continuous navigable facilities.
+- One real facility is one way ID. Structure checks inform that judgement; they
+  never force it to be split.
 - Named-way membership is optional; explicit guidance classification is not.
+- Missing classification degrades one span to its facility class. It never
+  demotes a route, and it never restores an internal name.
 - A name is presentation, never identity.
 - Display and audible names are separate presentation forms; neither is
   identity.

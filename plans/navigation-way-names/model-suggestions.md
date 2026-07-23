@@ -1,8 +1,16 @@
 # Digest-Bound Navigation-Way Model Suggestions
 
 **Date:** 2026-07-23  
-**Status:** Review proposal only; not canonical data  
+**Status:** Review proposal only; not validator-scored or canonical data
 **Related design:** `plans/navigation-way-names/design.md`
+
+> **Second-review status (2026-07-23):** The bound inputs and coverage below
+> remain current, but this artifact predates the revised structure contract.
+> Do not import or accept groups until the shared validator re-scores them.
+> Provisional IDs split only because connectivity was unproved must be
+> reconsidered as one facility. Every audible string is a listening candidate,
+> not a proposed canonical `spokenName`; canonical review starts at `null` and
+> adds an override only after an iOS recording demonstrates a problem.
 
 ## Binding and scope
 
@@ -65,10 +73,12 @@ Confidence means:
 - **L** — plausible interpretation only; review individually and prefer
   `unnamed` if the term is merely an internal location description.
 
-Provisional IDs are not canonical. Separate IDs with the same display name are
-intentional where the current network does not prove one connected member
-component. `spokenName` values are pronunciation proposals, not linguistic
-authority; test them on iOS and keep `null` when they do not help.
+Provisional IDs are not canonical. Separate rows with the same display name
+record the evidence components reviewed by this pass; they are not a
+recommendation to split one rider-recognizable facility. Audible candidates are
+pronunciation hypotheses, not linguistic authority or field values; test the
+clean display form first and keep canonical `spokenName: null` unless a
+recording proves an override helps.
 
 ## Existing classifications retained
 
@@ -88,7 +98,7 @@ authority; test them on iOS and keep `null` when they do not help.
 
 ### Numbered and security roads
 
-| Provisional way ID | Proposed member IDs | Display `name` | Proposed `spokenName` | Kind | C | Review note |
+| Provisional way ID | Proposed member IDs | Display `name` | Audible candidate | Kind | C | Review note |
 | --- | --- | --- | --- | --- | :---: | --- |
 | `road-886` | 47 | כביש 886 | כביש שמונה מאות שמונים ושש | road | H | One explicit numbered-road segment. |
 | `road-90-agmon` | 48 | כביש 90 | כביש תשעים | road | M | Separate mapped component; do not include dirt segment 49. |
@@ -113,7 +123,7 @@ authority; test them on iOS and keep `null` when they do not help.
 
 ### Cycleways and marked trails
 
-| Provisional way ID | Proposed member IDs | Display `name` | Proposed `spokenName` | Kind | C | Review note |
+| Provisional way ID | Proposed member IDs | Display `name` | Audible candidate | Kind | C | Review note |
 | --- | --- | --- | --- | --- | :---: | --- |
 | `cycleway-9779-north` | 89, 296, 297 | שביל אופניים 9779 | שביל אופניים תשעת אלפים שבע מאות שבעים ותשע | cycleway | H | Connected northern component. |
 | `cycleway-9779-south` | 90, 92, 93 | שביל אופניים 9779 | שביל אופניים תשעת אלפים שבע מאות שבעים ותשע | cycleway | H | Connected southern component. |
@@ -134,7 +144,7 @@ authority; test them on iOS and keep `null` when they do not help.
 
 ### Scenic, river, and natural corridors
 
-| Provisional way ID | Proposed member IDs | Display `name` | Proposed `spokenName` | Kind | C | Review note |
+| Provisional way ID | Proposed member IDs | Display `name` | Audible candidate | Kind | C | Review note |
 | --- | --- | --- | --- | --- | :---: | --- |
 | `agmon-hahula` | 2, 147, 149, 265, 266 | שבילי אגמון החולה | — | promenade | M | Connected facility, but possible loop/branch requires degree validation. |
 | `banias-trail` | 4, 5, 6, 7 | שביל הבניאס | — | trail | L | Internal labels may describe several facilities; inspect individually. |
@@ -183,7 +193,7 @@ authority; test them on iOS and keep `null` when they do not help.
 
 ### Local roads, streets, fields, parks, and climbs
 
-| Provisional way ID | Proposed member IDs | Display `name` | Proposed `spokenName` | Kind | C | Review note |
+| Provisional way ID | Proposed member IDs | Display `name` | Audible candidate | Kind | C | Review note |
 | --- | --- | --- | --- | --- | :---: | --- |
 | `givat-haem` | 9 | דרך גבעת האם | גִּבְעַת הָאֵם | dirt-road | M | Likely recognizable locally; audible form is provisional. |
 | `system-road-kiryat-shmona` | 69 | כביש המערכת קריית שמונה | — | dirt-road | M | Confirm this is one public guidance identity. |
@@ -223,7 +233,7 @@ authority; test them on iOS and keep `null` when they do not help.
 
 ## Standalone named-feature proposals
 
-| Segment ID | Internal name | Display `name` | Proposed `spokenName` | Kind | C | Review note |
+| Segment ID | Internal name | Display `name` | Audible candidate | Kind | C | Review note |
 | ---: | --- | --- | --- | --- | :---: | --- |
 | 12 | גשר חולתה | גשר חולתה | גֶּשֶׁר חוּלָתָה | bridge | H | Named bridge between route corridors. |
 | 13 | גשר חיל ההנדסה ירדן | גשר חיל ההנדסה בירדן | גֶּשֶׁר חֵיל הַהַנְדָּסָה, בַּיַּרְדֵּן | bridge | M | Display wording needs curator confirmation. |
@@ -304,18 +314,20 @@ Review these batches first:
 1. `patrol-road`;
 2. `cycleway-99` additions and the decision that bridge segment 280 carries
    the cycleway rather than becoming standalone;
-3. `road-99-upper`, existing `road-99`, and `road-99-east` as three current
-   topology components with one display name;
+3. the `road-99-upper`, existing `road-99`, and `road-99-east` evidence rows,
+   with the default hypothesis that they are one Road 99 facility unless review
+   proves otherwise;
 4. `road-90` additions plus the explicit unnamed dirt facilities 49, 132, and
    152;
 5. standalone bridges 12, 13, 14, 26, 245, and 348;
-6. Road 918's three current components;
+6. Road 918's three evidence components, reviewed as one facility by default;
 7. the Jordan east/west corridor proposals;
 8. the high-confidence numbered roads, cycleways, streets, and marked trails;
 9. medium/low natural and local names; and
 10. the unnamed queue.
 
-The first iOS audible-name check should include:
+The first iOS audible-name listening check should compare each clean display
+form with this candidate:
 
 - `כביש 99` → `כביש תשעים ותשע`;
 - `דרך הפטרולים` → `דֶּרֶךְ הַפַּטְרוֹלִים`;
