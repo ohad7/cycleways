@@ -1,7 +1,8 @@
 # Ways Workspace UX Redesign
 
 **Date:** 2026-07-23
-**Status:** Proposal — two competing designs, pick one
+**Status:** Design A implemented 2026-07-23 (all three phases). Design B kept as
+the recorded alternative; its chain proposal remains the natural next step.
 **Related designs:** `navigation-way-names` (the data model and the CRUD
 contract this UI must honor), `network-editor-workflow`, `editor-performance-ux`
 
@@ -283,8 +284,27 @@ there), which is B's leverage without B's cost.
 
 ## Open questions
 
-- Do curators want the library sorted by name (today) or by "needs attention"?
-  A phase-1 sort toggle is cheap and answers it with usage.
+- **Library ordering** — resolved as built: the list stays sorted by name, and
+  the `⚠`/`⛔` counters act as filters instead of a competing sort. Both counters
+  exclude `segment-unreviewed`, which the coverage counter already owns.
 - Should the review queue be ordered geographically (walk the network) rather
   than by confidence? Geographic order keeps the map still and makes consecutive
-  decisions share context.
+  decisions share context. Not built: the queue currently runs suggestion groups
+  first, then unreviewed segments by id.
+- The editor has no routing evidence, so a facility-class conflict can only be
+  refused client-side for the `roadType: road` case; everything else is caught by
+  the server on the round trip. That gap predates this work.
+
+## As built
+
+- `editor/lib/ways-workspace.mjs` owns the derivation (ordering, gaps,
+  candidates, health/summary copy, unified search, merged queue) and is covered
+  by `tests/test-ways-workspace.mjs`.
+- Map layers: `ways-highlight-casing`, `ways-taken-layer`, `ways-candidate-layer`,
+  `ways-member-layer`, `ways-preview-layer`, all fed by one `ways-context` source
+  tagged per selection. The white casing exists because the accent alone reads as
+  one more basemap road on the outdoors style.
+- Keyboard: `/` search, `Enter` accept, `Backspace` reject, `←`/`→` move the
+  queue, `Esc` back to the library — all inert while a field has focus.
+- Clicking an unclassified segment on the map opens the review queue positioned
+  at that segment, so no map click is a dead end.

@@ -246,7 +246,9 @@ export function wayCandidates(memberIds, index, { limit = DEFAULT_CANDIDATE_LIMI
   }
   return [...found.values()]
     .sort((left, right) =>
-      left.distanceMeters - right.distanceMeters || left.segmentId - right.segmentId)
+      Number(Boolean(left.occupiedByWayId)) - Number(Boolean(right.occupiedByWayId))
+      || left.distanceMeters - right.distanceMeters
+      || left.segmentId - right.segmentId)
     .slice(0, limit);
 }
 
@@ -258,20 +260,39 @@ function componentPhrase(componentCount) {
   return `${word} חלקים מנותקים`;
 }
 
-/** A way's traffic-light state, phrased for a human rather than by code. */
+function healthChipLabel(entry) {
+  switch (entry?.code) {
+    case "way-structure-multi-component":
+      return componentPhrase(entry.componentCount ?? 2);
+    case "way-structure-branching":
+      return "הסתעפות";
+    case "parallel-facility-risk":
+      return "מקטעים מקבילים";
+    case "facility-class-conflict":
+      return "סוג מתקן לא תואם";
+    case "structure-acknowledgement-unmatched":
+      return "אישור מבנה ישן";
+    default:
+      return entry?.severity === "error" ? "חסימה" : "אזהרה";
+  }
+}
+
+/**
+ * A way's traffic-light state. `label` is short enough for a card chip;
+ * `detail` carries the full sentence for the tooltip and the issue list.
+ */
 export function wayHealth(wayReport, issues = []) {
   const relevant = (issues || []).filter(
     (entry) => entry.wayId === wayReport?.wayId && !entry.acknowledged,
   );
-  const blocking = relevant.filter((entry) => entry.severity === "error");
-  if (blocking.length > 0) {
-    return { level: "blocked", label: wayIssueSentence(blocking[0]) };
-  }
-  const warnings = relevant.filter((entry) => entry.severity === "warning");
-  if (warnings.length > 0) {
-    return { level: "warning", label: wayIssueSentence(warnings[0]) };
-  }
-  return { level: "ok", label: "תקין" };
+  const worst = relevant.find((entry) => entry.severity === "error")
+    || relevant.find((entry) => entry.severity === "warning");
+  if (!worst) return { level: "ok", label: "תקין", detail: "אין ממצאי אימות לדרך" };
+  return {
+    level: worst.severity === "error" ? "blocked" : "warning",
+    label: healthChipLabel(worst),
+    detail: wayIssueSentence(worst),
+  };
 }
 
 /** `640 מ׳` / `8.4 ק״מ` — one unit switch, no false precision. */
@@ -286,7 +307,14 @@ export function waySummary(way, wayReport) {
   const parts = [];
   if (way?.ref) parts.push(String(way.ref));
   parts.push(guidanceClassLabel(way?.kind));
-  parts.push(`${wayReport?.memberCount ?? 0} מקטעים`);
+  const memberCount = wayReport?.memberCount ?? 0;
+  parts.push(
+    memberCount === 1
+      ? "מקטע אחד"
+      : memberCount === 2
+        ? "שני מקטעים"
+        : `${memberCount} מקטעים`,
+  );
   parts.push(formatLengthMeters(wayReport?.totalLengthMeters ?? 0));
   parts.push(componentPhrase(wayReport?.componentCount ?? 0));
   return parts.join(" · ");

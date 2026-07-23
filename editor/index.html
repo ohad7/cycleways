@@ -103,101 +103,141 @@
 
       <aside class="details">
         <div class="details-scroll">
+          <!-- Ways workspace. One mode is on screen at a time: the review
+               inbox burns down the classification gap, the library curates the
+               registry. The map is the assignment surface, so there is no
+               segment-assignment form here.
+               See plans/ways-workspace-ux/design.md. -->
           <section id="ways-panel" class="panel workspace-panel ways-panel" hidden dir="rtl">
-            <header class="panel-header">
-              <div>
-                <h2>דרכים ושמות ניווט</h2>
-                <p class="ways-panel-intro">בחרו דרך כדי לערוך אותה, או בחרו מקטע במפה/בחיפוש כדי לשייך אותו.</p>
+            <header class="ways-header">
+              <div class="ways-modes" role="group" aria-label="מצב עבודה">
+                <button id="ways-mode-review" class="ways-mode" type="button" aria-pressed="false">
+                  סקירה <span id="ways-mode-review-count" class="ways-mode-count"></span>
+                </button>
+                <button id="ways-mode-library" class="ways-mode" type="button" aria-pressed="true">
+                  דרכים <span id="ways-mode-library-count" class="ways-mode-count"></span>
+                </button>
               </div>
-              <span id="ways-coverage"></span>
+
+              <div class="ways-search-wrap">
+                <input
+                  id="ways-search"
+                  class="text-input"
+                  type="search"
+                  autocomplete="off"
+                  placeholder="חיפוש דרך או מקטע"
+                  aria-label="חיפוש דרך או מקטע"
+                >
+                <div id="ways-search-results" class="ways-search-results" hidden></div>
+              </div>
+
+              <div class="ways-progress">
+                <div class="ways-bar"><i id="ways-progress-fill"></i></div>
+                <div class="ways-progress-legend">
+                  <button id="ways-coverage" class="ways-chip" type="button"></button>
+                  <span class="ways-progress-filters">
+                    <button id="ways-warning-filter" class="ways-chip" type="button">
+                      <i class="ways-dot is-warning"></i><span id="ways-warning-count">0</span> אזהרות
+                    </button>
+                    <button id="ways-blocker-filter" class="ways-chip" type="button">
+                      <i class="ways-dot is-blocked"></i><span id="ways-blocker-count">0</span> חסימות
+                    </button>
+                  </span>
+                </div>
+              </div>
+
+              <div id="ways-undo" class="ways-undo" hidden>
+                <span id="ways-undo-text"></span>
+                <button id="ways-undo-button" class="mini-button" type="button">ביטול הפעולה</button>
+              </div>
             </header>
 
-            <div class="ways-toolbar">
-              <input id="ways-search" class="text-input" type="search" placeholder="חיפוש דרך לפי שם, מספר או מזהה">
-              <button id="ways-create" class="primary-button" type="button">דרך חדשה</button>
-            </div>
-
-            <div id="ways-list" class="ways-list" aria-label="רשימת דרכים"></div>
-
-            <section class="way-segment-assignment" aria-labelledby="way-segment-assignment-title">
-              <h3 id="way-segment-assignment-title">שיוך מקטע</h3>
-              <input id="ways-segment-search" class="text-input" type="search" placeholder="חיפוש מקטע לפי שם או מספר">
-              <div id="ways-segment-results" class="ways-segment-results"></div>
-              <div id="ways-selected-segment" class="ways-selected-segment"></div>
-              <label class="field-label" for="ways-segment-way">דרך לשיוך</label>
-              <select id="ways-segment-way" class="text-input"></select>
-              <div class="action-row">
-                <button id="ways-segment-assign" class="primary-button" type="button">שיוך / העברה לדרך</button>
-                <button id="ways-segment-unassign" class="secondary-button danger" type="button">הסרת שיוך</button>
-              </div>
+            <section id="ways-library" class="ways-screen" aria-label="ספריית הדרכים">
+              <div id="ways-list" class="ways-list" aria-label="רשימת דרכים"></div>
+              <button id="ways-create" class="secondary-button ways-create" type="button">
+                ＋ דרך חדשה מהמקטע הנבחר
+              </button>
             </section>
 
-            <section id="way-editor" class="way-editor" hidden>
-              <div class="way-editor-heading">
-                <div>
-                  <strong id="way-editor-title"></strong>
-                  <input id="way-editor-id" class="text-input way-editor-id" type="text" dir="ltr" aria-label="מזהה דרך">
+            <section id="ways-detail" class="ways-screen" hidden aria-label="פרטי הדרך">
+              <div class="way-detail-top">
+                <button id="way-detail-back" class="mini-button" type="button">← כל הדרכים</button>
+                <div class="way-detail-menu-wrap">
+                  <button
+                    id="way-detail-menu"
+                    class="mini-button"
+                    type="button"
+                    aria-haspopup="true"
+                    aria-expanded="false"
+                    aria-label="פעולות נוספות"
+                  >···</button>
+                  <div id="way-detail-menu-list" class="way-menu" hidden>
+                    <button id="way-editor-fit" class="way-menu-item" type="button">הצגה במפה</button>
+                    <button id="way-editor-delete" class="way-menu-item danger" type="button">מחיקת הדרך</button>
+                  </div>
                 </div>
-                <button id="way-editor-fit" class="mini-button" type="button">הצגה במפה</button>
               </div>
 
-              <label class="field-label" for="way-editor-name">שם תצוגה</label>
-              <input id="way-editor-name" class="text-input" type="text">
+              <div class="way-detail-heading">
+                <input
+                  id="way-editor-name"
+                  class="way-title-input"
+                  type="text"
+                  aria-label="שם הדרך"
+                  placeholder="שם הדרך"
+                >
+                <span id="way-detail-health" class="way-health"></span>
+              </div>
+              <div id="way-detail-stats" class="way-detail-stats"></div>
 
-              <label class="field-label" for="way-editor-kind">סוג הדרך</label>
-              <select id="way-editor-kind" class="text-input"></select>
+              <details id="way-details-fields" class="way-details-fields">
+                <summary>פרטים</summary>
+                <div class="way-details-body">
+                  <label class="field-label" for="way-editor-id">מזהה יציב</label>
+                  <input id="way-editor-id" class="text-input way-editor-id" type="text" dir="ltr">
 
-              <label class="field-label" for="way-editor-ref">מספר/סימוכין</label>
-              <input id="way-editor-ref" class="text-input" type="text">
+                  <label class="field-label" for="way-editor-kind">סוג הדרך</label>
+                  <select id="way-editor-kind" class="text-input"></select>
 
-              <label class="field-label" for="way-editor-spoken-name">שם להקראה (רשות)</label>
-              <input id="way-editor-spoken-name" class="text-input" type="text">
-              <label class="checkbox-row way-audible-verification" for="way-editor-audible-verified">
-                <input id="way-editor-audible-verified" type="checkbox">
-                בדקתי שינוי זה ב־iOS
-              </label>
+                  <label class="field-label" for="way-editor-ref">מספר/סימוכין</label>
+                  <input id="way-editor-ref" class="text-input" type="text">
 
-              <div class="action-row">
-                <button id="way-editor-save" class="primary-button" type="button">שמירה</button>
+                  <button id="way-spoken-add" class="mini-button" type="button">הוספת שם להקראה</button>
+                  <div id="way-spoken-field" class="way-spoken-field" hidden>
+                    <label class="field-label" for="way-editor-spoken-name">שם להקראה</label>
+                    <input id="way-editor-spoken-name" class="text-input" type="text">
+                    <label class="checkbox-row way-audible-verification" for="way-editor-audible-verified">
+                      <input id="way-editor-audible-verified" type="checkbox">
+                      בדקתי שינוי זה ב־iOS
+                    </label>
+                  </div>
+                </div>
+              </details>
+
+              <div id="way-editor-actions" class="action-row way-editor-actions" hidden>
+                <button id="way-editor-save" class="primary-button" type="button">שמירת שינויים</button>
                 <button id="way-editor-cancel" class="secondary-button" type="button">ביטול</button>
-                <button id="way-editor-delete" class="secondary-button danger" type="button">מחיקת הדרך</button>
               </div>
 
-              <h3>מקטעים משויכים</h3>
-              <div id="way-editor-members" class="way-editor-members"></div>
               <div id="way-editor-issues" class="guidance-issues" aria-live="polite"></div>
+
+              <h3 class="ways-section-title">מקטעים לפי הסדר</h3>
+              <div id="way-editor-members" class="way-editor-members"></div>
+
+              <h3 class="ways-section-title">
+                מועמדים בקצוות <span id="way-candidate-count" class="ways-count"></span>
+              </h3>
+              <p class="ways-hint">לחצו על מקטע מקווקו במפה כדי לצרף אותו לדרך</p>
+              <div id="way-candidates" class="way-candidates"></div>
             </section>
 
-            <details id="guidance-review-panel" class="guidance-review-panel" open>
-              <summary class="guidance-review-summary">
-                <span>הצעות לסיווג ושיוך</span>
-                <span id="guidance-review-badge" class="guidance-review-badge">טוען…</span>
-              </summary>
-              <div class="guidance-review-body" dir="rtl">
-                <p class="guidance-review-help">
-                  ההצעות שנוצרו כבר נמצאות כאן. בחירה אינה משנה נתונים עד ללחיצה על
-                  “אישור ושמירה”.
-                </p>
-                <div id="guidance-suggestion-binding" class="guidance-suggestion-binding"></div>
-                <div class="guidance-review-toolbar">
-                  <input
-                    id="guidance-suggestion-search"
-                    class="text-input"
-                    type="search"
-                    placeholder="חיפוש לפי שם, מזהה דרך או מספר מקטע"
-                  >
-                  <select id="guidance-suggestion-filter" class="text-input compact-select">
-                    <option value="pending">ממתינות לבדיקה</option>
-                    <option value="warning">דורשות תשומת לב</option>
-                    <option value="accepted">אושרו</option>
-                    <option value="rejected">נדחו</option>
-                    <option value="all">הכול</option>
-                  </select>
-                  <button id="guidance-suggestion-refresh" class="mini-button" type="button">רענון</button>
-                </div>
-                <div id="guidance-suggestion-list" class="guidance-suggestion-list"></div>
-              </div>
-            </details>
+            <section id="ways-review" class="ways-screen" hidden aria-label="סקירת סיווגים">
+              <div id="ways-queue-filters" class="ways-queue-filters" role="group" aria-label="סינון תור"></div>
+              <div id="guidance-suggestion-binding" class="guidance-suggestion-binding"></div>
+              <div id="guidance-suggestion-list" class="ways-queue" aria-live="polite"></div>
+              <div id="ways-queue-next" class="ways-queue-next"></div>
+              <button id="ways-queue-refresh" class="mini-button" type="button">רענון ההצעות</button>
+            </section>
           </section>
 
           <section id="network-selection-panel" class="panel">

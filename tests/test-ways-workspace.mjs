@@ -138,6 +138,11 @@ const member = (wayId, sectionLabel) => ({
   assert.ok(!ids.includes(4), "a distant segment is never a candidate");
   assert.ok(!ids.includes(1), "members are not their own candidates");
 
+  assert.ok(
+    ids.indexOf(2) < ids.indexOf(3),
+    "extending the way outranks stealing another way's segment",
+  );
+
   const east = candidates.find((entry) => entry.segmentId === 2);
   assert.equal(east.anchorSegmentId, 1, "a candidate names the member it continues from");
   assert.equal(east.occupiedByWayId, null);
@@ -163,12 +168,15 @@ const member = (wayId, sectionLabel) => ({
     { wayId: "w", severity: "warning", code: "way-structure-multi-component", componentCount: 2 },
   ]);
   assert.equal(warned.level, "warning");
-  assert.match(warned.label, /שני חלקים|2 חלקים/);
+  assert.equal(warned.label, "שני חלקים מנותקים", "the chip label stays short");
+  assert.match(warned.detail, /תקין אם זו אותה דרך/, "the full sentence stays available");
 
   const blocked = wayHealth({ wayId: "w", memberCount: 2, componentCount: 1 }, [
     { wayId: "w", severity: "error", code: "parallel-facility-risk", segmentIds: [1, 2] },
+    { wayId: "w", severity: "warning", code: "way-structure-branching", maxDegree: 3 },
   ]);
-  assert.equal(blocked.level, "blocked");
+  assert.equal(blocked.level, "blocked", "a blocker outranks a warning");
+  assert.equal(blocked.label, "מקטעים מקבילים");
 
   assert.equal(
     wayHealth({ wayId: "w", memberCount: 3, componentCount: 2 }, [
@@ -194,6 +202,14 @@ const member = (wayId, sectionLabel) => ({
       { memberCount: 6, componentCount: 1, totalLengthMeters: 8412 },
     ),
     "99 · כביש · 6 מקטעים · 8.4 ק״מ · רצף אחד",
+  );
+  assert.equal(
+    waySummary(
+      { name: "גשר", kind: "bridge" },
+      { memberCount: 1, componentCount: 1, totalLengthMeters: 137 },
+    ),
+    "גשר · מקטע אחד · 137 מ׳ · רצף אחד",
+    "Hebrew counts one and two by word",
   );
   assert.equal(
     waySummary(

@@ -1,6 +1,6 @@
 # Ways Workspace UX Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Rebuild the editor's Ways workspace as Option A from `design.md` — two modes
 (review inbox / way library) with one search, a clickable progress bar, way cards carrying
@@ -17,6 +17,11 @@ a single derived model. Markup and CSS are replaced in place.
 
 **Tech Stack:** Vanilla ES modules, Mapbox GL JS, node:assert test scripts run directly by
 `npm test`.
+
+**Status:** Implemented 2026-07-23. Verified by `tests/test-ways-workspace.mjs`,
+`tests/test-navigation-way-editor-wiring.mjs`, and a headless Playwright pass over
+the real editor (attach a candidate, edit a section label, undo, keyboard triage,
+create a way, workspace round-trips) with no console errors.
 
 ## Global Constraints
 
@@ -76,17 +81,17 @@ buildWorkQueue({ suggestions, index, registry, filter }) → [{
   kind: "suggestion"|"segment", key, segmentIds, group?, segmentId? }]
 ```
 
-- [ ] **Step 1: Write the failing test** covering: ordering a 3-member chain end to end;
+- [x] **Step 1: Write the failing test** covering: ordering a 3-member chain end to end;
       a two-component way reporting one gap with its distance; candidates limited to
       segments touching a member endpoint within tolerance and reporting the anchor;
       health levels from a report + issue list; `formatLengthMeters` unit switch at 1 km;
       search matching both a way name and a segment id; queue merging suggestion groups
       with unreviewed segments and honoring the `no-suggestion` filter.
-- [ ] **Step 2:** `node tests/test-ways-workspace.mjs` → FAIL (module not found).
-- [ ] **Step 3:** Implement the module. Reuse the 25 m endpoint tolerance and the
+- [x] **Step 2:** `node tests/test-ways-workspace.mjs` → FAIL (module not found).
+- [x] **Step 3:** Implement the module. Reuse the 25 m endpoint tolerance and the
       metre-per-degree constants already used by `navigation-ways.mjs`.
-- [ ] **Step 4:** `node tests/test-ways-workspace.mjs` → PASS.
-- [ ] **Step 5:** Add the test to `package.json`'s `test` chain, ahead of
+- [x] **Step 4:** `node tests/test-ways-workspace.mjs` → PASS.
+- [x] **Step 5:** Add the test to `package.json`'s `test` chain, ahead of
       `test-navigation-way-editor.mjs`. Commit.
 
 ### Task 2: Panel markup
@@ -106,17 +111,17 @@ screens — `#ways-library` (`#ways-list`, `#ways-create`), `#ways-detail`
 (`#ways-queue-filters`, `#guidance-suggestion-binding`, `#guidance-suggestion-list`,
 `#ways-queue-next`, `#ways-queue-refresh`).
 
-- [ ] Replace the markup; delete `#ways-segment-*`, `#ways-selected-segment`,
+- [x] Replace the markup; delete `#ways-segment-*`, `#ways-selected-segment`,
       `#guidance-suggestion-search`, `#guidance-suggestion-filter`,
       `#guidance-suggestion-refresh`, `#guidance-review-badge`.
-- [ ] Keep `#ways-panel`, `#ways-search`, `#ways-list`, `#ways-create`, `#ways-coverage`
+- [x] Keep `#ways-panel`, `#ways-search`, `#ways-list`, `#ways-create`, `#ways-coverage`
       and every `way-editor-*` id so unchanged wiring keeps working.
 
 ### Task 3: Panel styles
 
 **Files:** Modify `editor/styles.css`
 
-- [ ] Add `.ways-header`, `.ways-modes`, `.ways-mode`, `.ways-progress`, `.ways-bar`,
+- [x] Add `.ways-header`, `.ways-modes`, `.ways-mode`, `.ways-progress`, `.ways-bar`,
       `.ways-chip`, `.ways-undo`, `.ways-search-results`, `.way-card`, `.way-health`,
       `.way-detail-*`, `.way-member-row` (grid: id / label / length / remove),
       `.way-gap-row`, `.way-candidate-row`, `.ways-queue-card`, `.ways-queue-filters`,
@@ -126,14 +131,14 @@ screens — `#ways-library` (`#ways-list`, `#ways-create`), `#ways-detail`
 
 **Files:** Modify `editor/editor.js`
 
-- [ ] Extend `state.guidance` with `panelMode` (`"library"|"detail"|"review"`), `search`,
+- [x] Extend `state.guidance` with `panelMode` (`"library"|"detail"|"review"`), `search`,
       `queueIndex`, `queueFilter`, `undo`, `identityDirty`, `geometryIndex`,
       `geometryIndexSource`.
-- [ ] Add `waysWorkspaceModel()` deriving index, ways with reports/health, ordered members,
+- [x] Add `waysWorkspaceModel()` deriving index, ways with reports/health, ordered members,
       candidates, queue, and coverage once per render.
-- [ ] Replace `renderWaysManager()` with an orchestrator calling `renderWaysHeader`,
+- [x] Replace `renderWaysManager()` with an orchestrator calling `renderWaysHeader`,
       `renderWaysLibrary`, `renderWayDetail`, `renderWaysReview`, `renderWaysSearchResults`.
-- [ ] Delete `renderWaysSegmentAssignment`, `populateWaysSegmentWayOptions`, and their
+- [x] Delete `renderWaysSegmentAssignment`, `populateWaysSegmentWayOptions`, and their
       element-map entries; keep `assignSelectedSegmentToGuidanceWay` (retargeted to take a
       segment id + way id), `unassignSelectedSegmentGuidance`, `removeSegmentFromGuidanceWay`,
       `deleteSelectedGuidanceWay`, `beginCreateGuidanceWay`.
@@ -142,23 +147,23 @@ screens — `#ways-library` (`#ways-list`, `#ways-create`), `#ways-detail`
 
 **Files:** Modify `editor/editor.js`
 
-- [ ] Add `ways-context` source + `ways-taken-layer`, `ways-candidate-layer` (dashed),
+- [x] Add `ways-context` source + `ways-taken-layer`, `ways-candidate-layer` (dashed),
       `ways-member-layer`; show them only in ways mode from
       `updateWorkspaceLayerVisibility()`.
-- [ ] `waysContextFeatureCollection()` tags every active feature `member` / `candidate` /
+- [x] `waysContextFeatureCollection()` tags every active feature `member` / `candidate` /
       `taken` / `other`.
-- [ ] Ways-mode branch of the `segments-layer` click: candidate → attach (confirm only when
+- [x] Ways-mode branch of the `segments-layer` click: candidate → attach (confirm only when
       taken elsewhere), member → select + offer remove, otherwise focus its way.
-- [ ] Record `state.guidance.undo` on every membership write and wire `#ways-undo`.
+- [x] Record `state.guidance.undo` on every membership write and wire `#ways-undo`.
 
 ### Task 6: Keyboard triage and wiring test
 
 **Files:** Modify `editor/editor.js`, `tests/test-navigation-way-editor-wiring.mjs`
 
-- [ ] `/` focuses search, `Enter` accepts, `Backspace` rejects, `ArrowRight`/`ArrowLeft`
+- [x] `/` focuses search, `Enter` accepts, `Backspace` rejects, `ArrowRight`/`ArrowLeft`
       moves the queue, `Escape` returns to the library — all ignored while a field has focus.
-- [ ] Re-point the wiring test at the new ids/selectors, keeping every transaction,
+- [x] Re-point the wiring test at the new ids/selectors, keeping every transaction,
       digest, 409, atomicity, last-member, audible-verification and server assertion.
-- [ ] Run `node tests/test-navigation-way-editor-wiring.mjs`, `node tests/test-ways-workspace.mjs`,
+- [x] Run `node tests/test-navigation-way-editor-wiring.mjs`, `node tests/test-ways-workspace.mjs`,
       `node tests/test-navigation-way-editor.mjs`, `node tests/test-navigation-ways.mjs`,
       then the full `npm test`. Commit.

@@ -29,27 +29,53 @@ for (const id of [
   "guidance-coverage",
   "workspace-ways",
   "ways-panel",
+  // One mode at a time, one search, one progress bar.
+  "ways-mode-review",
+  "ways-mode-library",
   "ways-search",
+  "ways-search-results",
+  "ways-progress-fill",
+  "ways-coverage",
+  "ways-warning-filter",
+  "ways-blocker-filter",
+  "ways-undo",
+  "ways-undo-button",
+  "ways-library",
+  "ways-detail",
+  "ways-review",
   "ways-list",
-  "ways-segment-search",
-  "ways-segment-results",
-  "ways-selected-segment",
-  "ways-segment-way",
-  "ways-segment-assign",
-  "ways-segment-unassign",
-  "way-editor",
+  "way-detail-back",
+  "way-detail-menu",
   "way-editor-id",
   "way-editor-name",
   "way-editor-spoken-name",
   "way-editor-audible-verified",
   "way-editor-members",
+  "way-candidates",
   "way-editor-save",
   "way-editor-cancel",
   "way-editor-delete",
-  "guidance-review-panel",
+  "ways-queue-filters",
   "guidance-suggestion-list",
 ]) {
   assert.ok(html.includes(`id="${id}"`), `index.html is missing #${id}`);
+}
+
+// The panel no longer carries a second segment-assignment form or a second and
+// third search field: the map assigns, and one search covers ways and segments.
+for (const removed of [
+  "ways-segment-search",
+  "ways-segment-way",
+  "ways-segment-assign",
+  "ways-selected-segment",
+  "guidance-suggestion-search",
+  "guidance-suggestion-filter",
+]) {
+  assert.equal(
+    html.includes(`id="${removed}"`),
+    false,
+    `#${removed} belongs to the superseded assignment form`,
+  );
 }
 
 // The three production roles, and nothing else, are offered.
@@ -69,13 +95,13 @@ assert.ok(
 // workspace, rather than contaminating the Network sidebar.
 const waysStart = html.indexOf('id="ways-panel"');
 const waysEnd = html.indexOf('id="network-selection-panel"');
-const suggestionsAt = html.indexOf('id="guidance-review-panel"');
-const wayEditorAt = html.indexOf('id="way-editor"');
+const suggestionsAt = html.indexOf('id="ways-review"');
+const wayEditorAt = html.indexOf('id="ways-detail"');
 assert.ok(
   waysStart < wayEditorAt
   && wayEditorAt < suggestionsAt
   && suggestionsAt < waysEnd,
-  "the Ways workspace must own way details and suggestions",
+  "the Ways workspace must own way details and the review queue",
 );
 assert.equal(
   html.includes('id="guidance-way-spoken-name"'),
@@ -94,9 +120,11 @@ for (const key of [
   "workspaceWays:",
   "waysPanel:",
   "waysList:",
-  "waysSegmentSearch:",
-  "waysSegmentAssign:",
-  "waysSegmentUnassign:",
+  "waysModeReview:",
+  "waysModeLibrary:",
+  "waysSearchResults:",
+  "waysUndoButton:",
+  "wayCandidates:",
   "wayEditorSpokenName:",
   "wayEditorDelete:",
 ]) {
@@ -128,10 +156,12 @@ assert.ok(
 );
 for (const operation of [
   "beginCreateGuidanceWay",
-  "assignSelectedSegmentToGuidanceWay",
+  "attachSegmentToGuidanceWay",
   "unassignSelectedSegmentGuidance",
   "removeSegmentFromGuidanceWay",
   "deleteSelectedGuidanceWay",
+  "saveMemberSectionLabel",
+  "undoLastGuidanceChange",
 ]) {
   assert.ok(editor.includes(`function ${operation}`) || editor.includes(`async function ${operation}`),
     `Ways CRUD operation ${operation} is missing`);
@@ -185,6 +215,49 @@ assert.ok(
   "created ways must start with a null spokenName",
 );
 
+// The map is the assignment surface: one source, four role layers, and a click
+// path that attaches a candidate rather than opening a form.
+for (const layerId of [
+  "ways-highlight-casing",
+  "ways-taken-layer",
+  "ways-candidate-layer",
+  "ways-member-layer",
+  "ways-preview-layer",
+]) {
+  assert.ok(editor.includes(`id: "${layerId}"`), `map layer ${layerId} is missing`);
+}
+assert.ok(
+  editor.includes('map.addSource("ways-context"'),
+  "the ways context source is missing",
+);
+assert.ok(
+  editor.includes('if (state.workspaceMode === "ways") handleWaysMapSegmentClick(feature);'),
+  "a segment click in Ways must run the assignment gesture",
+);
+assert.ok(
+  editor.includes("attachSegmentToGuidanceWay(segmentId, selected.wayId)"),
+  "clicking a candidate must attach it to the selected way",
+);
+assert.ok(
+  editor.includes("const conflict = assignmentFacilityConflict("),
+  "attaching must refuse a facility-class conflict before the write",
+);
+assert.ok(
+  editor.includes("setGuidanceUndo(before,"),
+  "membership writes must be undoable",
+);
+assert.ok(
+  editor.includes("document.addEventListener(\"keydown\", handleWaysKeydown)"),
+  "queue triage must be keyboard-first",
+);
+// Derivation lives in the pure module, so the panel stays a projection of
+// tested logic rather than growing its own copy.
+assert.match(
+  editor,
+  /import \{[^}]*buildWorkQueue,[^}]*\} from "\.\/lib\/ways-workspace\.mjs";/s,
+  "the editor must consume the tested workspace module",
+);
+
 // --- server contract ------------------------------------------------------
 assert.ok(
   server.includes('url.pathname === "/api/navigation-ways"'),
@@ -236,12 +309,25 @@ for (const selector of [
   ".guidance-coverage",
   ".guidance-suggestion-card",
   ".ways-panel",
-  ".way-list-item",
-  ".way-editor",
-  ".way-segment-assignment",
-  ".way-segment-result",
+  ".ways-header",
+  ".ways-mode",
+  ".ways-bar",
+  ".way-card",
+  ".way-health",
+  ".way-member-row",
+  ".way-gap-row",
+  ".way-candidate-row",
+  ".ways-queue-filters",
 ]) {
   assert.ok(styles.includes(selector), `styles are missing ${selector}`);
 }
+
+// `display: grid/flex` on a component would otherwise beat the user agent's
+// [hidden] rule and leave hidden rows on screen.
+assert.match(
+  styles,
+  /\.ways-panel \[hidden\] \{\s*display: none;/,
+  "the panel must state hidden precedence for its own components",
+);
 
 console.log("test-navigation-way-editor-wiring: OK");
