@@ -61,6 +61,15 @@
     ],
     "splitFrom": 88,
     "splitFromName": "שביל אופניים 918 דפנה",
+    "guidance": {
+      "role": "named-way",
+      "wayId": "road-918",
+      "guidanceIdentity": "way:road-918",
+      "name": "כביש 918",
+      "spokenName": null,
+      "kind": "road",
+      "resolutionStatus": "resolved"
+    },
     "middle": {
       "longitude": 35.641163,
       "latitude": 33.217692,
@@ -1030,6 +1039,15 @@
       "comfort": 3,
       "scenery": 3
     },
+    "guidance": {
+      "role": "named-way",
+      "wayId": "road-959",
+      "guidanceIdentity": "way:road-959",
+      "name": "כביש 959",
+      "spokenName": null,
+      "kind": "road",
+      "resolutionStatus": "resolved"
+    },
     "middle": {
       "longitude": 35.668026,
       "latitude": 33.135859,
@@ -1040,7 +1058,7 @@
     "net_elevation_change_m": -300.0
   },
   "כביש 959 גונן": {
-    "id": 53,
+    "id": 372,
     "status": "active",
     "quality": {
       "overall": 3,
@@ -1048,14 +1066,54 @@
       "comfort": 3,
       "scenery": 3
     },
+    "splitFrom": 53,
+    "splitFromName": "כביש 959 גונן",
+    "guidance": {
+      "role": "named-way",
+      "wayId": "road-959",
+      "guidanceIdentity": "way:road-959",
+      "name": "כביש 959",
+      "spokenName": null,
+      "kind": "road",
+      "resolutionStatus": "resolved"
+    },
     "middle": {
-      "longitude": 35.648837,
-      "latitude": 33.119612,
-      "elevation": 133.0
+      "longitude": 35.651915,
+      "latitude": 33.121356,
+      "elevation": 194.0
     },
     "elevation_gain_m": 9.2,
-    "elevation_loss_m": 121.6,
-    "net_elevation_change_m": -112.4
+    "elevation_loss_m": 87.6,
+    "net_elevation_change_m": -78.4
+  },
+  "כביש 918 גונן": {
+    "id": 373,
+    "status": "active",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "splitFrom": 53,
+    "splitFromName": "כביש 959 גונן",
+    "guidance": {
+      "role": "named-way",
+      "wayId": "road-918",
+      "guidanceIdentity": "way:road-918",
+      "name": "כביש 918",
+      "spokenName": null,
+      "kind": "road",
+      "resolutionStatus": "resolved"
+    },
+    "middle": {
+      "longitude": 35.647647,
+      "latitude": 33.115932,
+      "elevation": 91.0
+    },
+    "elevation_gain_m": 0.0,
+    "elevation_loss_m": 26.0,
+    "net_elevation_change_m": -26.0
   },
   "כביש 918 דרדרה": {
     "id": 284,
@@ -1068,6 +1126,15 @@
     },
     "splitFrom": 51,
     "splitFromName": "כביש 918 גשר הפקק",
+    "guidance": {
+      "role": "named-way",
+      "wayId": "road-918",
+      "guidanceIdentity": "way:road-918",
+      "name": "כביש 918",
+      "spokenName": null,
+      "kind": "road",
+      "resolutionStatus": "resolved"
+    },
     "middle": {
       "longitude": 35.636083,
       "latitude": 33.078793,
@@ -1108,6 +1175,15 @@
     },
     "splitFrom": 285,
     "splitFromName": "כביש 918 גשר הפקק - 2",
+    "guidance": {
+      "role": "named-way",
+      "wayId": "road-918",
+      "guidanceIdentity": "way:road-918",
+      "name": "כביש 918",
+      "spokenName": null,
+      "kind": "road",
+      "resolutionStatus": "resolved"
+    },
     "middle": {
       "longitude": 35.630166,
       "latitude": 33.041701,
@@ -1241,6 +1317,15 @@
         ]
       }
     ],
+    "guidance": {
+      "role": "named-way",
+      "wayId": "cycleway-banias",
+      "guidanceIdentity": "way:cycleway-banias",
+      "name": "שביל אופניים בניאס",
+      "spokenName": null,
+      "kind": "dirt-road",
+      "resolutionStatus": "resolved"
+    },
     "middle": {
       "longitude": 35.642743,
       "latitude": 33.21059,
@@ -1278,6 +1363,15 @@
         ]
       }
     ],
+    "guidance": {
+      "role": "named-way",
+      "wayId": "cycleway-banias",
+      "guidanceIdentity": "way:cycleway-banias",
+      "name": "שביל אופניים בניאס",
+      "spokenName": null,
+      "kind": "dirt-road",
+      "resolutionStatus": "resolved"
+    },
     "middle": {
       "longitude": 35.633899,
       "latitude": 33.201474,
@@ -1296,6 +1390,15 @@
       "comfort": 3,
       "scenery": 3
     },
+    "guidance": {
+      "role": "named-way",
+      "wayId": "cycleway-banias",
+      "guidanceIdentity": "way:cycleway-banias",
+      "name": "שביל אופניים בניאס",
+      "spokenName": null,
+      "kind": "dirt-road",
+      "resolutionStatus": "resolved"
+    },
     "middle": {
       "longitude": 35.622796,
       "latitude": 33.192807,
@@ -1313,6 +1416,15 @@
       "safety": 3,
       "comfort": 3,
       "scenery": 3
+    },
+    "guidance": {
+      "role": "named-way",
+      "wayId": "cycleway-banias",
+      "guidanceIdentity": "way:cycleway-banias",
+      "name": "שביל אופניים בניאס",
+      "spokenName": null,
+      "kind": "dirt-road",
+      "resolutionStatus": "resolved"
     },
     "middle": {
       "longitude": 35.619509,
@@ -1334,6 +1446,15 @@
     },
     "splitFrom": 194,
     "splitFromName": "כביש 918 גבעת האם",
+    "guidance": {
+      "role": "named-way",
+      "wayId": "road-918",
+      "guidanceIdentity": "way:road-918",
+      "name": "כביש 918",
+      "spokenName": null,
+      "kind": "road",
+      "resolutionStatus": "resolved"
+    },
     "middle": {
       "longitude": 35.649611,
       "latitude": 33.206406,
@@ -1354,6 +1475,15 @@
     },
     "splitFrom": 194,
     "splitFromName": "כביש 918 גבעת האם",
+    "guidance": {
+      "role": "named-way",
+      "wayId": "road-918",
+      "guidanceIdentity": "way:road-918",
+      "name": "כביש 918",
+      "spokenName": null,
+      "kind": "road",
+      "resolutionStatus": "resolved"
+    },
     "middle": {
       "longitude": 35.648946,
       "latitude": 33.20858,
@@ -1372,6 +1502,15 @@
       "comfort": 3,
       "scenery": 3
     },
+    "guidance": {
+      "role": "named-way",
+      "wayId": "road-918",
+      "guidanceIdentity": "way:road-918",
+      "name": "כביש 918",
+      "spokenName": null,
+      "kind": "road",
+      "resolutionStatus": "resolved"
+    },
     "middle": {
       "longitude": 35.645367,
       "latitude": 33.213591,
@@ -1389,6 +1528,15 @@
       "safety": 3,
       "comfort": 3,
       "scenery": 3
+    },
+    "guidance": {
+      "role": "named-way",
+      "wayId": "cycleway-tel-anafa",
+      "guidanceIdentity": "way:cycleway-tel-anafa",
+      "name": "שביל אופניים שדה נחמיה כפר סאלד",
+      "spokenName": null,
+      "kind": "dirt-road",
+      "resolutionStatus": "resolved"
     },
     "middle": {
       "longitude": 35.620909,
@@ -1410,6 +1558,15 @@
       "comfort": 3,
       "scenery": 3
     },
+    "guidance": {
+      "role": "named-way",
+      "wayId": "road-918",
+      "guidanceIdentity": "way:road-918",
+      "name": "כביש 918",
+      "spokenName": null,
+      "kind": "road",
+      "resolutionStatus": "resolved"
+    },
     "middle": {
       "longitude": 35.652509,
       "latitude": 33.195453,
@@ -1429,6 +1586,15 @@
       "safety": 3,
       "comfort": 3,
       "scenery": 3
+    },
+    "guidance": {
+      "role": "named-way",
+      "wayId": "road-918",
+      "guidanceIdentity": "way:road-918",
+      "name": "כביש 918",
+      "spokenName": null,
+      "kind": "road",
+      "resolutionStatus": "resolved"
     },
     "middle": {
       "longitude": 35.651767,
@@ -1450,6 +1616,15 @@
       "comfort": 3,
       "scenery": 3
     },
+    "guidance": {
+      "role": "named-way",
+      "wayId": "road-918",
+      "guidanceIdentity": "way:road-918",
+      "name": "כביש 918",
+      "spokenName": null,
+      "kind": "road",
+      "resolutionStatus": "resolved"
+    },
     "middle": {
       "longitude": 35.650578,
       "latitude": 33.202728,
@@ -1468,6 +1643,15 @@
       "comfort": 3,
       "scenery": 3
     },
+    "guidance": {
+      "role": "named-way",
+      "wayId": "cycleway-tel-anafa",
+      "guidanceIdentity": "way:cycleway-tel-anafa",
+      "name": "שביל אופניים שדה נחמיה כפר סאלד",
+      "spokenName": null,
+      "kind": "dirt-road",
+      "resolutionStatus": "resolved"
+    },
     "middle": {
       "longitude": 35.628693,
       "latitude": 33.178597,
@@ -1485,6 +1669,15 @@
       "safety": 3,
       "comfort": 3,
       "scenery": 3
+    },
+    "guidance": {
+      "role": "named-way",
+      "wayId": "cycleway-tel-anafa",
+      "guidanceIdentity": "way:cycleway-tel-anafa",
+      "name": "שביל אופניים שדה נחמיה כפר סאלד",
+      "spokenName": null,
+      "kind": "dirt-road",
+      "resolutionStatus": "resolved"
     },
     "middle": {
       "longitude": 35.642533,
@@ -1506,6 +1699,15 @@
     },
     "splitFrom": 215,
     "splitFromName": "שביל שדות כפר סאלד נחל רחום",
+    "guidance": {
+      "role": "named-way",
+      "wayId": "cycleway-tel-anafa",
+      "guidanceIdentity": "way:cycleway-tel-anafa",
+      "name": "שביל אופניים שדה נחמיה כפר סאלד",
+      "spokenName": null,
+      "kind": "dirt-road",
+      "resolutionStatus": "resolved"
+    },
     "middle": {
       "longitude": 35.649094,
       "latitude": 33.187234,
@@ -2152,6 +2354,15 @@
       "comfort": 3,
       "scenery": 3
     },
+    "guidance": {
+      "role": "named-way",
+      "wayId": "cycleway-9779",
+      "guidanceIdentity": "way:cycleway-9779",
+      "name": "שביל אופניים 9779",
+      "spokenName": null,
+      "kind": "cycleway",
+      "resolutionStatus": "resolved"
+    },
     "middle": {
       "longitude": 35.609142,
       "latitude": 33.188375,
@@ -2172,6 +2383,15 @@
     },
     "splitFrom": 91,
     "splitFromName": "שביל אופניים 9779 קרית שמונה",
+    "guidance": {
+      "role": "named-way",
+      "wayId": "cycleway-9779",
+      "guidanceIdentity": "way:cycleway-9779",
+      "name": "שביל אופניים 9779",
+      "spokenName": null,
+      "kind": "cycleway",
+      "resolutionStatus": "resolved"
+    },
     "middle": {
       "longitude": 35.598553,
       "latitude": 33.193751,
@@ -2192,6 +2412,15 @@
     },
     "splitFrom": 91,
     "splitFromName": "שביל אופניים 9779 קרית שמונה",
+    "guidance": {
+      "role": "named-way",
+      "wayId": "cycleway-9779",
+      "guidanceIdentity": "way:cycleway-9779",
+      "name": "שביל אופניים 9779",
+      "spokenName": null,
+      "kind": "cycleway",
+      "resolutionStatus": "resolved"
+    },
     "middle": {
       "longitude": 35.58922,
       "latitude": 33.196777,
@@ -2332,6 +2561,15 @@
       "comfort": 3,
       "scenery": 3
     },
+    "guidance": {
+      "role": "named-way",
+      "wayId": "cycleway-99",
+      "guidanceIdentity": "way:cycleway-99",
+      "name": "שביל אופניים 99",
+      "spokenName": "שביל אופניים תשעים ותשע",
+      "kind": "cycleway",
+      "resolutionStatus": "resolved"
+    },
     "middle": {
       "longitude": 35.625713,
       "latitude": 33.224289,
@@ -2400,6 +2638,15 @@
     },
     "splitFrom": 98,
     "splitFromName": "שביל אופניים 99 קיאקי הגושרים",
+    "guidance": {
+      "role": "named-way",
+      "wayId": "cycleway-99",
+      "guidanceIdentity": "way:cycleway-99",
+      "name": "שביל אופניים 99",
+      "spokenName": "שביל אופניים תשעים ותשע",
+      "kind": "cycleway",
+      "resolutionStatus": "resolved"
+    },
     "middle": {
       "longitude": 35.613986,
       "latitude": 33.224792,
@@ -2497,6 +2744,15 @@
         ]
       }
     ],
+    "guidance": {
+      "role": "named-way",
+      "wayId": "cycleway-99",
+      "guidanceIdentity": "way:cycleway-99",
+      "name": "שביל אופניים 99",
+      "spokenName": "שביל אופניים תשעים ותשע",
+      "kind": "cycleway",
+      "resolutionStatus": "resolved"
+    },
     "middle": {
       "longitude": 35.620547,
       "latitude": 33.224286,
@@ -3240,6 +3496,15 @@
     },
     "splitFrom": 291,
     "splitFromName": "ירדן מזרח גשר הפקק - 2 - 2",
+    "guidance": {
+      "role": "named-way",
+      "wayId": "road-918",
+      "guidanceIdentity": "way:road-918",
+      "name": "כביש 918",
+      "spokenName": null,
+      "kind": "road",
+      "resolutionStatus": "resolved"
+    },
     "middle": {
       "longitude": 35.629361,
       "latitude": 33.040364,
@@ -3260,6 +3525,15 @@
     },
     "splitFrom": 291,
     "splitFromName": "ירדן מזרח גשר הפקק - 2 - 2",
+    "guidance": {
+      "role": "named-way",
+      "wayId": "road-918",
+      "guidanceIdentity": "way:road-918",
+      "name": "כביש 918",
+      "spokenName": null,
+      "kind": "road",
+      "resolutionStatus": "resolved"
+    },
     "middle": {
       "longitude": 35.628607,
       "latitude": 33.040362,
@@ -3920,6 +4194,15 @@
       "comfort": 3,
       "scenery": 3
     },
+    "guidance": {
+      "role": "named-way",
+      "wayId": "cycleway-9779",
+      "guidanceIdentity": "way:cycleway-9779",
+      "name": "שביל אופניים 9779",
+      "spokenName": null,
+      "kind": "cycleway",
+      "resolutionStatus": "resolved"
+    },
     "middle": {
       "longitude": 35.578425,
       "latitude": 33.199175,
@@ -3940,6 +4223,15 @@
     },
     "splitFrom": 146,
     "splitFromName": "רחוב הנרייטה סאלד",
+    "guidance": {
+      "role": "named-way",
+      "wayId": "cycleway-9779",
+      "guidanceIdentity": "way:cycleway-9779",
+      "name": "שביל אופניים 9779",
+      "spokenName": null,
+      "kind": "cycleway",
+      "resolutionStatus": "resolved"
+    },
     "middle": {
       "longitude": 35.573092,
       "latitude": 33.199543,
@@ -4855,6 +5147,15 @@
       "comfort": 3,
       "scenery": 3
     },
+    "guidance": {
+      "role": "named-way",
+      "wayId": "road-90",
+      "guidanceIdentity": "way:road-90",
+      "name": "כביש 90",
+      "spokenName": "כביש תשעים",
+      "kind": "road",
+      "resolutionStatus": "resolved"
+    },
     "middle": {
       "longitude": 35.573283,
       "latitude": 33.248788,
@@ -4918,6 +5219,15 @@
       "safety": 3,
       "comfort": 3,
       "scenery": 3
+    },
+    "guidance": {
+      "role": "named-way",
+      "wayId": "road-90",
+      "guidanceIdentity": "way:road-90",
+      "name": "כביש 90",
+      "spokenName": "כביש תשעים",
+      "kind": "road",
+      "resolutionStatus": "resolved"
     },
     "middle": {
       "longitude": 35.575674,
@@ -5925,6 +6235,15 @@
         ]
       }
     ],
+    "guidance": {
+      "role": "named-way",
+      "wayId": "cycleway-99",
+      "guidanceIdentity": "way:cycleway-99",
+      "name": "שביל אופניים 99",
+      "spokenName": "שביל אופניים תשעים ותשע",
+      "kind": "cycleway",
+      "resolutionStatus": "resolved"
+    },
     "middle": {
       "longitude": 35.614773,
       "latitude": 33.224558,
@@ -5942,6 +6261,15 @@
       "safety": 3,
       "comfort": 3,
       "scenery": 3
+    },
+    "guidance": {
+      "role": "named-way",
+      "wayId": "cycleway-99",
+      "guidanceIdentity": "way:cycleway-99",
+      "name": "שביל אופניים 99",
+      "spokenName": "שביל אופניים תשעים ותשע",
+      "kind": "cycleway",
+      "resolutionStatus": "resolved"
     },
     "middle": {
       "longitude": 35.615403,
@@ -6418,6 +6746,15 @@
       "comfort": 3,
       "scenery": 3
     },
+    "guidance": {
+      "role": "named-way",
+      "wayId": "cycleway-99",
+      "guidanceIdentity": "way:cycleway-99",
+      "name": "שביל אופניים 99",
+      "spokenName": "שביל אופניים תשעים ותשע",
+      "kind": "cycleway",
+      "resolutionStatus": "resolved"
+    },
     "middle": {
       "longitude": 35.635792,
       "latitude": 33.225813,
@@ -6628,6 +6965,15 @@
       "comfort": 3,
       "scenery": 3
     },
+    "guidance": {
+      "role": "named-way",
+      "wayId": "cycleway-99",
+      "guidanceIdentity": "way:cycleway-99",
+      "name": "שביל אופניים 99",
+      "spokenName": "שביל אופניים תשעים ותשע",
+      "kind": "cycleway",
+      "resolutionStatus": "resolved"
+    },
     "middle": {
       "longitude": 35.631196,
       "latitude": 33.224132,
@@ -6786,6 +7132,36 @@
       [
         35.684616,
         33.238329
+      ]
+    ]
+  },
+  "כביש 959 גונן [split archive 53]": {
+    "id": 53,
+    "status": "deprecated",
+    "quality": {
+      "overall": 3,
+      "safety": 3,
+      "comfort": 3,
+      "scenery": 3
+    },
+    "originalName": "כביש 959 גונן",
+    "deprecated": true,
+    "routeAnchors": [
+      [
+        35.651484,
+        33.12311
+      ],
+      [
+        35.649119,
+        33.11939
+      ],
+      [
+        35.647742,
+        33.118469
+      ],
+      [
+        35.646578,
+        33.113769
       ]
     ]
   },

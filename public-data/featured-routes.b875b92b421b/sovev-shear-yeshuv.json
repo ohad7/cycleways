@@ -1,16 +1,16 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "slug": "sovev-shear-yeshuv",
-  "generatedAt": "2026-07-23T08:44:23.292Z",
+  "generatedAt": "2026-07-23T19:18:16.348Z",
   "source": {
-    "routeTokenHash": "sha256:13c927b81df0566f643874823872008c1ad1add2bcc2e3ac9b606aa7f05066c2",
+    "routeTokenHash": "sha256:b4426119713eb4c6ce56503ace1722b3209867a79d6f5b06d91b41179a739412",
     "routeFormat": "base_route_v4",
-    "mapVersion": "c99ac7f21a80",
+    "mapVersion": "81d7a15db3e3",
     "assetHashes": {
-      "bikeRoads": "d7ff624f3c80034bc87c5307df7eedbd7aec6764f10d70a145137fcbbf88b6ca",
-      "segments": "fc73dcfa9c1a863b58768b535d4b64632890038786195f7b7de17a3a0ead5d5d",
-      "cwBaseIndex": "8bd30442bb74fac71856262b98e3d20ed83bdccd1b6a3fad9ced7a1bccf78357",
-      "baseRoutingShards": "f95117b13702e6f9fde2b5939b27d7969445b8fc8b0d0fbc82808123c8a771ac"
+      "bikeRoads": "8a69522a11a0c62b49f6338b4fa4cd369e3ac0a2cc77f46a671515119ec7d675",
+      "segments": "9a6693441c63f4bb9a63e64838622561a3930e1a60bdc2e7ef89ae0035fd32a0",
+      "cwBaseIndex": "53bab956ab9e8259f7aa644f1a67b080615a749cbad7db5aa13d808c4b70e1f9",
+      "baseRoutingShards": "74fb1ef659b702b68ddaaf195cd425e29329815c24a577fc07ad5404cce2ceb5"
     }
   },
   "route": {
@@ -687,6 +687,64 @@
       "הגשר על הבניאס",
       "עלייה קטנה לשאר ישוב",
       "שאר ישוב היקפי צפון"
+    ],
+    "guidanceMode": "guidance-v1",
+    "itinerary": [
+      {
+        "id": "class:1:0-5796",
+        "guidanceIdentity": null,
+        "role": null,
+        "resolutionStatus": "unreviewed",
+        "name": "כביש",
+        "spokenName": "כביש",
+        "kind": "road",
+        "icon": "road",
+        "isFallback": true,
+        "startMeters": 0,
+        "endMeters": 5795.543956664377,
+        "distanceMeters": 5795.543956664377,
+        "segmentIds": [
+          26,
+          238,
+          239,
+          240,
+          241
+        ],
+        "sectionLabels": [],
+        "junctionContexts": [],
+        "children": [
+          {
+            "startMeters": 0,
+            "endMeters": 5795.543956664377,
+            "networkRole": "segment",
+            "resolutionStatus": "unreviewed",
+            "guidanceIdentity": null,
+            "name": null,
+            "spokenName": null,
+            "role": null,
+            "kind": "road",
+            "wayId": null,
+            "segmentIds": [
+              26,
+              238,
+              239,
+              240,
+              241
+            ],
+            "sectionLabels": [],
+            "junctionId": null,
+            "junctionName": null,
+            "onCycleways": true,
+            "routeClass": "local_road"
+          }
+        ],
+        "warningCount": 2,
+        "poiCount": 2,
+        "dataPointIds": [
+          "poi-3af86b92",
+          "poi-b0a7c0c7"
+        ]
+      }
     ]
   },
   "pois": {

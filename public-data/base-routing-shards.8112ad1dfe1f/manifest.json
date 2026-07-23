@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "shardSchemaVersion": 1,
-  "generatedAt": "2026-07-23T08:42:43.631736Z",
+  "generatedAt": "2026-07-23T19:17:55.528524Z",
   "sourceRoutingSchemaVersion": 3,
   "defaultFormat": "compact",
   "routeShare": {
@@ -20,9 +20,9 @@
     "representedEdges": 48895,
     "edgeReferences": 51100,
     "duplicatedSourceEdges": 2031,
-    "compactShardBytes": 67467910,
-    "messagePackShardBytes": 55984489,
-    "compactBinaryShardBytes": 5518262
+    "compactShardBytes": 67467920,
+    "messagePackShardBytes": 55984509,
+    "compactBinaryShardBytes": 5518405
   },
   "shards": [
     {
@@ -998,8 +998,8 @@
       "formats": {
         "compact": {
           "path": "shards/g712_662.cwb",
-          "bytes": 40417,
-          "sha256": "53b99e678ca91a3b25e1471bf6ba34f1972e4ea7677c8329a3af990986524f7b"
+          "bytes": 40558,
+          "sha256": "cad1a2b020fa136a234ceac4bbeea6981589d7e228a06f45d7156b806ee00b97"
         }
       },
       "bounds": [
@@ -1010,9 +1010,9 @@
       ],
       "nodes": 300,
       "edges": 380,
-      "compactBytes": 498321,
-      "messagePackBytes": 415110,
-      "compactBinaryBytes": 40417
+      "compactBytes": 498329,
+      "messagePackBytes": 415126,
+      "compactBinaryBytes": 40558
     },
     {
       "id": "g712_663",
@@ -1251,8 +1251,8 @@
       "formats": {
         "compact": {
           "path": "shards/g713_662.cwb",
-          "bytes": 39463,
-          "sha256": "58ad8aa83f35427e94123fc49bd144dea58e3fb36d2a4e07283415f76f87dadd"
+          "bytes": 39465,
+          "sha256": "b01cbb081bc89a86f4d325d2b801e226575e1625b6b5c70a6bb863ccd6717b43"
         }
       },
       "bounds": [
@@ -1263,9 +1263,9 @@
       ],
       "nodes": 258,
       "edges": 343,
-      "compactBytes": 474236,
-      "messagePackBytes": 395005,
-      "compactBinaryBytes": 39463
+      "compactBytes": 474238,
+      "messagePackBytes": 395009,
+      "compactBinaryBytes": 39465
     },
     {
       "id": "g713_663",
@@ -2671,7 +2671,7 @@
       "compactBinaryBytes": 1572
     }
   ],
-  "graphVersion": "5c3103e5484482574ae44243a5a2327504e430fc75bda23c3de2be04a5a3674b",
+  "graphVersion": "d860951e651c1662ff546919d1a4d22974ee5df6bb9d2d4447e20e9673775b17",
   "policyId": "il-bicycle-v1",
   "policyDigest": "9a8bbb7bdf928deb390f9446260665ac01ac56f208305e3ee2e664aa30bd0a2c",
   "routingContract": {
@@ -2679,7 +2679,7 @@
     "baseRoutingSchemaVersion": 3,
     "policyId": "il-bicycle-v1",
     "policyDigest": "9a8bbb7bdf928deb390f9446260665ac01ac56f208305e3ee2e664aa30bd0a2c",
-    "routingContextDigest": "5c3103e5484482574ae44243a5a2327504e430fc75bda23c3de2be04a5a3674b",
+    "routingContextDigest": "d860951e651c1662ff546919d1a4d22974ee5df6bb9d2d4447e20e9673775b17",
     "strictTraversalPolicy": true,
     "baseEdgeShareRegistryDigest": "a6a7d71dab4a6f1f3d675cfca05d831dcf5b63e9c277782aa57be878bc5a3a92",
     "legacyCompatibilityRegistryDigest": "cdf1b8c4afe8db6d759c2d9b6a5ecf2df230c9e9e463e2a55d0892e933e4150d",

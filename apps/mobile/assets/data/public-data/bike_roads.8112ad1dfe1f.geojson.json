@@ -3702,7 +3702,7 @@
       [35.654355,33.125595,230.0],
       [35.65412,33.125489,218.0]
   ]}},
-  {"type":"Feature","properties":{"name":"כביש 959 גונן","id":53,"status":"active","roadType":"road","stroke":"#8f2424","stroke-opacity":1,"stroke-width":5},"geometry":{"type":"LineString","coordinates":[
+  {"type":"Feature","properties":{"name":"כביש 959 גונן","id":372,"status":"active","roadType":"road","stroke":"#8f2424","stroke-opacity":1,"stroke-width":5},"geometry":{"type":"LineString","coordinates":[
       [35.654054,33.125445,218.0],
       [35.653852,33.125281,218.0],
       [35.653622,33.125098,218.0],
@@ -3763,8 +3763,11 @@
       [35.648927,33.120437,130.0],
       [35.64885,33.120633,130.0],
       [35.648599,33.120734,130.0],
-      [35.64835,33.120821,130.0],
-      [35.648316,33.120755,120.0],
+      [35.648364,33.120835,130.0]
+  ]}},
+  {"type":"Feature","properties":{"name":"כביש 918 גונן","id":373,"status":"active","roadType":"road","stroke":"#8f2424","stroke-opacity":1,"stroke-width":5},"geometry":{"type":"LineString","coordinates":[
+      [35.648364,33.120835,130.0],
+      [35.648323,33.120763,120.0],
       [35.648241,33.120583,120.0],
       [35.648135,33.120383,120.0],
       [35.64805,33.120152,120.0],
