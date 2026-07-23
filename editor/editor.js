@@ -348,6 +348,8 @@ const state = {
     geometryIndex: null,
     geometryIndexSource: null,
     model: null,
+    hoverSegmentId: null,
+    hoverRevealTimer: null,
     queueFocusKey: null,
     queueAccept: null,
     queueReject: null,
@@ -2946,6 +2948,7 @@ function updateWorkspaceLayerVisibility() {
     "ways-candidate-layer",
     "ways-member-layer",
     "ways-preview-layer",
+    "ways-hover-layer",
   ]) {
     setLayerVisibility(layerId, state.workspaceMode === "ways");
   }
@@ -12088,6 +12091,69 @@ function renderWaysLibrary(model) {
 
 // --- detail ---------------------------------------------------------------
 
+/**
+ * Bring a hovered segment into view when highlighting it alone cannot answer
+ * "which one is that?" — a candidate can touch a member at the edge of the
+ * viewport and run off screen. Deliberately conservative: it waits, it only
+ * acts when the segment is not already fully visible, and it never zooms in,
+ * so scanning a list neither jumps nor loses the way you are looking at.
+ */
+function revealHoveredSegment(segmentId) {
+  const coordinates = waysGeometryIndex().get(Number(segmentId))?.coordinates || [];
+  if (coordinates.length === 0) return;
+  // Map bounds are the wrong test: the toolbar floats over the canvas, so a
+  // segment can be inside the bounds and still be behind the chrome.
+  const topbar = document.querySelector(".map-topbar");
+  const padding = {
+    top: Math.round(topbar?.getBoundingClientRect().height || 0) + 24,
+    bottom: 60,
+    left: 60,
+    right: 60,
+  };
+  const canvas = map.getCanvas();
+  const width = canvas.clientWidth;
+  const height = canvas.clientHeight;
+  // The midpoint stands for "where this segment is": a member long enough to
+  // cross the whole view stays put, a segment tucked under the chrome moves.
+  const midpoint = map.project(coordinates[Math.floor(coordinates.length / 2)]);
+  const onScreen = midpoint.x >= padding.left
+    && midpoint.x <= width - padding.right
+    && midpoint.y >= padding.top
+    && midpoint.y <= height - padding.bottom;
+  if (onScreen) return;
+  // Frame the way plus the segment rather than growing the current view: the
+  // result is the same wherever the curator had panned to, and repeated
+  // reveals cannot spiral outwards.
+  const bounds = new mapboxgl.LngLatBounds();
+  for (const coordinate of coordinates) bounds.extend(coordinate);
+  for (const record of guidanceWayMemberRecords(state.guidance.selectedWayId)) {
+    for (const coordinate of record.feature.geometry?.coordinates || []) {
+      bounds.extend(coordinate);
+    }
+  }
+  map.fitBounds(bounds, { padding, duration: 450, maxZoom: 15 });
+}
+
+const HOVER_REVEAL_DELAY_MS = 400;
+
+function bindWaysRowHover(node, segmentId) {
+  node.addEventListener("mouseenter", () => {
+    state.guidance.hoverSegmentId = segmentId;
+    updateWaysContextSource();
+    window.clearTimeout(state.guidance.hoverRevealTimer);
+    state.guidance.hoverRevealTimer = window.setTimeout(() => {
+      if (state.guidance.hoverSegmentId !== segmentId) return;
+      revealHoveredSegment(segmentId);
+    }, HOVER_REVEAL_DELAY_MS);
+  });
+  node.addEventListener("mouseleave", () => {
+    window.clearTimeout(state.guidance.hoverRevealTimer);
+    if (state.guidance.hoverSegmentId !== segmentId) return;
+    state.guidance.hoverSegmentId = null;
+    updateWaysContextSource();
+  });
+}
+
 function renderWayMembers(model) {
   const entry = model.selected;
   els.wayEditorMembers.replaceChildren();
@@ -12147,6 +12213,7 @@ function renderWayMembers(model) {
       removeSegmentFromGuidanceWay(row.segmentId).catch(showError));
 
     line.append(open, label, length, remove);
+    bindWaysRowHover(line, row.segmentId);
     els.wayEditorMembers.append(line);
 
     const gap = gapsAfter.get(row.segmentId);
@@ -12195,6 +12262,7 @@ function renderWayCandidates(model) {
     row.addEventListener("click", () =>
       attachSegmentToGuidanceWay(candidate.segmentId, state.guidance.selectedWayId)
         .catch(showError));
+    bindWaysRowHover(row, candidate.segmentId);
     els.wayCandidates.append(row);
   }
   if (candidates.length === 0 && !state.guidance.creatingWay) {
@@ -12296,6 +12364,10 @@ function renderWaysManager() {
   els.waysModeReview.setAttribute("aria-pressed", String(mode === "review"));
   els.waysModeLibrary.setAttribute("aria-pressed", String(mode !== "review"));
 
+  if (mode !== "detail") {
+    window.clearTimeout(state.guidance.hoverRevealTimer);
+    state.guidance.hoverSegmentId = null;
+  }
   if (mode === "library") {
     renderWaysLibrary(model);
   } else if (mode === "detail") {
@@ -12324,7 +12396,10 @@ function waysContextFeatureCollection() {
   for (const { feature, sourceIndex } of state.activeFeatures) {
     const segmentId = Number(feature.properties?.id);
     let waysRole = null;
-    if (previewIds.has(segmentId)) {
+    if (segmentId === state.guidance.hoverSegmentId) {
+      // Pointing at a row answers "which one is that?" without a click.
+      waysRole = "hover";
+    } else if (previewIds.has(segmentId)) {
       waysRole = "preview";
     } else if (memberIds.has(segmentId)) {
       waysRole = "member";
@@ -15682,12 +15757,17 @@ async function addMapLayers() {
       filter: [
         "in",
         ["get", "waysRole"],
-        ["literal", ["member", "candidate", "preview"]],
+        ["literal", ["member", "candidate", "preview", "hover"]],
       ],
       layout: { "line-join": "round", "line-cap": "round", visibility: "none" },
       paint: {
         "line-color": "#ffffff",
-        "line-width": ["case", ["==", ["get", "waysRole"], "preview"], 14, 12],
+        "line-width": [
+          "case",
+          ["in", ["get", "waysRole"], ["literal", ["preview", "hover"]]],
+          14,
+          12,
+        ],
         "line-opacity": 0.9,
       },
     });
@@ -15750,6 +15830,21 @@ async function addMapLayers() {
         "line-color": "#f2c94c",
         "line-width": 8,
         "line-opacity": 0.95,
+      },
+    });
+  }
+
+  if (!map.getLayer("ways-hover-layer")) {
+    map.addLayer({
+      id: "ways-hover-layer",
+      type: "line",
+      source: "ways-context",
+      filter: ["==", ["get", "waysRole"], "hover"],
+      layout: { "line-join": "round", "line-cap": "round", visibility: "none" },
+      paint: {
+        "line-color": "#f97316",
+        "line-width": 8,
+        "line-opacity": 1,
       },
     });
   }

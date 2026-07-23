@@ -223,6 +223,7 @@ for (const layerId of [
   "ways-candidate-layer",
   "ways-member-layer",
   "ways-preview-layer",
+  "ways-hover-layer",
 ]) {
   assert.ok(editor.includes(`id: "${layerId}"`), `map layer ${layerId} is missing`);
 }
@@ -245,6 +246,19 @@ assert.ok(
 assert.ok(
   editor.includes("setGuidanceUndo(before,"),
   "membership writes must be undoable",
+);
+// Pointing at a member or candidate row must answer "which segment is that?".
+assert.ok(
+  editor.includes("bindWaysRowHover(line, row.segmentId)"),
+  "member rows must highlight their segment on hover",
+);
+assert.ok(
+  editor.includes("bindWaysRowHover(row, candidate.segmentId)"),
+  "candidate rows must highlight their segment on hover",
+);
+assert.ok(
+  editor.includes("function revealHoveredSegment(segmentId)"),
+  "a hovered segment hidden behind the chrome must be brought into view",
 );
 assert.ok(
   editor.includes("document.addEventListener(\"keydown\", handleWaysKeydown)"),

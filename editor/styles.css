@@ -3161,6 +3161,14 @@ button.direction-review-queue-item {
   background: color-mix(in srgb, var(--accent) 8%, var(--panel));
 }
 
+/* Pointing at a row lights the segment on the map; the row picks up the same
+   hover colour so the two are obviously the same thing. */
+.way-member-row:hover,
+.way-candidate-row:hover {
+  border-color: #f97316;
+  background: color-mix(in srgb, #f97316 10%, var(--panel));
+}
+
 .way-member-id {
   border: 0;
   padding: 0;
@@ -3249,13 +3257,14 @@ button.direction-review-queue-item {
   cursor: pointer;
 }
 
-.way-candidate-row:hover {
-  background: color-mix(in srgb, var(--accent) 12%, var(--panel));
-}
-
 .way-candidate-row.is-taken {
   border-color: #6b5b95;
   background: color-mix(in srgb, #6b5b95 8%, var(--panel));
+}
+
+.way-candidate-row.is-taken:hover {
+  border-color: #f97316;
+  background: color-mix(in srgb, #f97316 10%, var(--panel));
 }
 
 .way-candidate-plus {
