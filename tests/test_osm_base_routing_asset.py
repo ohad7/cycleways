@@ -759,6 +759,63 @@ class BaseRoutingAssetTests(unittest.TestCase):
             self.assertFalse((output_dir / "shards" / f"{shard['id']}.json").exists())
             self.assertFalse((output_dir / "shards" / f"{shard['id']}.msgpack").exists())
 
+    def test_strict_runtime_shard_manifest_is_content_deterministic(self):
+        manifest, _, _ = build_base_routing_shards(
+            {
+                "schemaVersion": 3,
+                "generatedAt": "2026-07-23T12:34:56Z",
+                "graphVersion": "semantic-graph-version",
+                "policyId": "policy",
+                "policyDigest": "policy-digest",
+                "routingContract": {"strictTraversalPolicy": True},
+                "nodes": [
+                    {"id": "n1", "coord": [35, 33]},
+                    {"id": "n2", "coord": [35.001, 33]},
+                ],
+                "edges": [
+                    {
+                        "id": "edge",
+                        "from": "n1",
+                        "to": "n2",
+                        "distanceMeters": 93,
+                        "coordinates": [[35, 33], [35.001, 33]],
+                    }
+                ],
+            },
+        )
+
+        self.assertEqual(manifest["graphVersion"], "semantic-graph-version")
+        self.assertNotIn("generatedAt", manifest)
+
+    def test_legacy_runtime_shard_write_preserves_timestamp_when_unchanged(self):
+        with tempfile.TemporaryDirectory() as directory:
+            output_dir = Path(directory) / "base-routing-shards"
+            asset = {
+                "schemaVersion": 2,
+                "generatedAt": "2026-07-23T12:00:00Z",
+                "nodes": [
+                    {"id": "n1", "coord": [35, 33]},
+                    {"id": "n2", "coord": [35.001, 33]},
+                ],
+                "edges": [
+                    {
+                        "id": "edge",
+                        "from": "n1",
+                        "to": "n2",
+                        "distanceMeters": 93,
+                        "coordinates": [[35, 33], [35.001, 33]],
+                    }
+                ],
+            }
+            write_base_routing_shards(output_dir, asset)
+            asset["generatedAt"] = "2026-07-23T13:00:00Z"
+            write_base_routing_shards(output_dir, asset)
+            manifest = json.loads(
+                (output_dir / "manifest.json").read_text(encoding="utf-8")
+            )
+
+            self.assertEqual(manifest["generatedAt"], "2026-07-23T12:00:00Z")
+
     def test_public_cycleways_geometry_uses_directed_overlay_edges_and_fallbacks(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -967,6 +1024,35 @@ class BaseRoutingAssetTests(unittest.TestCase):
             )
             self.assertEqual(manifest["validation"]["overlayDisplaySegments"], 2)
             self.assertEqual(manifest["validation"]["sourceDisplayFallbackSegments"], 1)
+
+            manifest["generatedAt"] = "content-stable-timestamp"
+            write_json(manifest_path, manifest)
+            _, second_manifest_path = write_runtime_manifest(
+                public_data_dir,
+                output_geojson,
+                output_segments,
+                output_cw_base_index,
+                output_kml,
+                output_routing_shards,
+                {"skipElevation": True, "failures": 0},
+                {
+                    "featureCount": 0,
+                    "segmentsCount": 0,
+                    "newSegments": [],
+                    "baseRouting": {},
+                    "cyclewaysDisplayGeometry": {
+                        "derivedSegments": 2,
+                        "sourceFallbackSegments": 1,
+                    },
+                },
+            )
+            second_manifest = json.loads(
+                second_manifest_path.read_text(encoding="utf-8")
+            )
+            self.assertEqual(
+                second_manifest["generatedAt"],
+                "content-stable-timestamp",
+            )
 
 
 if __name__ == "__main__":

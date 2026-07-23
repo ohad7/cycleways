@@ -11,6 +11,7 @@ import { PLAYBACK_BEHAVIORS } from "../src/components/featured/playbackRamp.js";
 import sharp from "sharp";
 import { createRequire } from "node:module";
 import { pathToFileURL } from "node:url";
+import { isDeepStrictEqual } from "node:util";
 import {
   createRouteManager,
   restoreRouteFromParam,
@@ -1600,6 +1601,15 @@ export function stablePromotionManifest(manifest, {
     };
   }
 
+  const currentGeneratedAt = current.generatedAt;
+  if (typeof currentGeneratedAt === "string") {
+    const { generatedAt: _nextGeneratedAt, ...nextSemantic } = stable;
+    const { generatedAt: _currentGeneratedAt, ...currentSemantic } = current;
+    if (isDeepStrictEqual(nextSemantic, currentSemantic)) {
+      stable.generatedAt = currentGeneratedAt;
+    }
+  }
+
   return stable;
 }
 
@@ -1617,7 +1627,16 @@ async function preparePromotionRelease({
   const stableCatalogPath = resolve(buildPublicDataDir, "route-catalog.json");
   await copyFileAtomic(promotionCatalogPath, stableCatalogPath);
 
+  const baselineSnapshotsDir = await currentFeaturedRouteSnapshotDirectory();
   await rm(promotionFeaturedRoutesDir, { recursive: true, force: true });
+  try {
+    await cp(baselineSnapshotsDir, promotionFeaturedRoutesDir, {
+      recursive: true,
+      force: true,
+    });
+  } catch (error) {
+    if (error?.code !== "ENOENT") throw error;
+  }
   invalidateFeaturedAssetCache();
   const snapshots = await buildFeaturedRouteSnapshots({
     routeCatalogPath: stableCatalogPath,

@@ -8221,7 +8221,7 @@
       [35.610472,33.211411,89.0],
       [35.61049,33.211275,89.0]
   ]}},
-  {"type":"Feature","properties":{"name":"דרך עפר חצבאני קיאקים כפר בלום","id":24,"status":"active","roadType":"dirt","stroke":"#ae9067","stroke-opacity":1,"stroke-width":5},"geometry":{"type":"LineString","coordinates":[
+  {"type":"Feature","properties":{"name":"דרך עפר חצבאני","id":24,"status":"active","roadType":"dirt","stroke":"#ae9067","stroke-opacity":1,"stroke-width":5},"geometry":{"type":"LineString","coordinates":[
       [35.609357,33.199588,84.0],
       [35.609485,33.199386,84.0],
       [35.609644,33.19919,84.0],
@@ -11659,7 +11659,7 @@
       [35.601936,33.214678,92.0],
       [35.601859,33.214609,92.0]
   ]}},
-  {"type":"Feature","properties":{"name":"גדר המערכת בית הלל","id":139,"status":"active","roadType":"paved","stroke":"#0288d1","stroke-opacity":1,"stroke-width":5},"geometry":{"type":"LineString","coordinates":[
+  {"type":"Feature","properties":{"name":"גדר המערכת בית הלל","id":374,"status":"active","roadType":"paved","stroke":"#0288d1","stroke-opacity":1,"stroke-width":5},"geometry":{"type":"LineString","coordinates":[
       [35.601818,33.214563,92.0],
       [35.601702,33.214371,92.0],
       [35.601652,33.214237,91.0],
@@ -11772,12 +11772,15 @@
       [35.607673,33.198838,83.0],
       [35.607635,33.199072,83.0],
       [35.607608,33.199211,82.0],
-      [35.60756,33.199466,82.0],
-      [35.607839,33.199441,82.0],
-      [35.608133,33.199415,82.0],
+      [35.607567,33.199413,82.0]
+  ]}},
+  {"type":"Feature","properties":{"name":"כביש גישה קייאקי כפר בלום","id":375,"status":"active","roadType":"paved","stroke":"#0288d1","stroke-opacity":1,"stroke-width":5},"geometry":{"type":"LineString","coordinates":[
+      [35.60763,33.199461,82.0],
+      [35.607937,33.199432,82.0],
+      [35.60822,33.199407,82.0],
       [35.608394,33.19939,83.0],
       [35.608645,33.199423,83.0],
-      [35.608898,33.199486,83.0],
+      [35.608918,33.199493,83.0],
       [35.609168,33.199554,84.0],
       [35.609338,33.199595,84.0]
   ]}},

@@ -178,6 +178,17 @@ assert.equal(
 assert.equal(stableRelease.routeCatalog, "route-catalog.json");
 assert.equal(stableRelease.featuredRoutesBase, "featured-routes");
 
+const stableTimestamp = stablePromotionManifest(
+  { ...stableRelease, generatedAt: "2026-07-23T13:00:00.000Z" },
+  {
+    currentManifest: {
+      ...stableRelease,
+      generatedAt: "2026-07-23T12:00:00.000Z",
+    },
+  },
+);
+assert.equal(stableTimestamp.generatedAt, "2026-07-23T12:00:00.000Z");
+
 const existingPublication = {
   bikeRoads: "bike_roads.oldslot.geojson",
   segments: "segments.oldslot.json",

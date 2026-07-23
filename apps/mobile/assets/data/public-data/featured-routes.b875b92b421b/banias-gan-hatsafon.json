@@ -1,16 +1,16 @@
 {
   "schemaVersion": 2,
   "slug": "banias-gan-hatsafon",
-  "generatedAt": "2026-07-23T19:18:15.925Z",
+  "generatedAt": "2026-07-23T20:17:52.576Z",
   "source": {
-    "routeTokenHash": "sha256:af8f55c9ef7eff2615e7b0b7b59cd093d8f458049c01144f57ee43781cea7bca",
+    "routeTokenHash": "sha256:299bceb17a241207178ee9ece3d5969fd27edd8549ce44b415fc1c4221502698",
     "routeFormat": "base_route_v4",
-    "mapVersion": "81d7a15db3e3",
+    "mapVersion": "71a935c29650",
     "assetHashes": {
-      "bikeRoads": "8a69522a11a0c62b49f6338b4fa4cd369e3ac0a2cc77f46a671515119ec7d675",
-      "segments": "9a6693441c63f4bb9a63e64838622561a3930e1a60bdc2e7ef89ae0035fd32a0",
-      "cwBaseIndex": "53bab956ab9e8259f7aa644f1a67b080615a749cbad7db5aa13d808c4b70e1f9",
-      "baseRoutingShards": "74fb1ef659b702b68ddaaf195cd425e29329815c24a577fc07ad5404cce2ceb5"
+      "bikeRoads": "5e82b8a909b021433f275e205addda8a9e240d8f346f28944e280d520c514955",
+      "segments": "683270e1de8006323bbdc74771e9d550072aeca4b51428060e8a294dd5f43c9b",
+      "cwBaseIndex": "34a78c04437e747acd193c3e2dc39422220330e30479984f63a30c8154510ca9",
+      "baseRoutingShards": "cbc13b78af2d811d78e8af7ef372bca4f532f1ab061086207ea168b3a9baafa4"
     }
   },
   "route": {

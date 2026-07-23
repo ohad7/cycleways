@@ -2,7 +2,6 @@ import { cp, copyFile, mkdir, readFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { buildFeaturedRouteSnapshots } from "./lib/featuredRouteSnapshotBuilder.mjs";
 
 const repoRoot = fileURLToPath(new URL("../", import.meta.url));
 const distDir = resolve(repoRoot, "dist");
@@ -14,10 +13,9 @@ const files = new Set([
 ]);
 
 // Image assets live under public/ (Vite's publicDir), which Vite copies into
-// the build automatically — so they are not listed here.
+// the build automatically — so they are not listed here. This packaging step
+// only copies promoted source assets; it must not regenerate tracked files.
 const directories = ["icons", "public-data"];
-
-await import("./build-sticker-redirects.mjs");
 
 const dataFiles = ["data/places.json", "data/region-zones.json", "data/sticker-redirects.json"];
 
@@ -26,22 +24,6 @@ for (const filePath of dataFiles) {
 }
 
 await mkdir(distDir, { recursive: true });
-
-// Regenerate route snapshots BEFORE copying public-data/ into dist/ so
-// the freshly generated public-data/featured-routes/*.json are included in the
-// build. Snapshots are derived public data; never hand-edit them.
-{
-  const { written, removed, errors } = await buildFeaturedRouteSnapshots({});
-  console.log(
-    `Route snapshots: ${written.length} written, ${removed.length} removed`,
-  );
-  if (errors.length > 0) {
-    for (const { slug, error } of errors) {
-      console.error(`Route snapshot failed for ${slug}: ${error}`);
-    }
-    throw new Error("route snapshot generation failed");
-  }
-}
 
 for (const filePath of files) {
   const source = resolve(repoRoot, filePath);

@@ -186,6 +186,27 @@ def write_json(path: Path, data: Any, *, compact: bool = False) -> None:
         handle.write("\n")
 
 
+def preserve_generated_at_if_unchanged(
+    existing: Any,
+    candidate: dict[str, Any],
+) -> dict[str, Any]:
+    """Keep provenance stable when the generated artifact is semantically equal."""
+    if not isinstance(existing, dict):
+        return candidate
+    existing_generated_at = existing.get("generatedAt")
+    if not isinstance(existing_generated_at, str):
+        return candidate
+    existing_semantic = {
+        key: value for key, value in existing.items() if key != "generatedAt"
+    }
+    candidate_semantic = {
+        key: value for key, value in candidate.items() if key != "generatedAt"
+    }
+    if existing_semantic == candidate_semantic:
+        candidate["generatedAt"] = existing_generated_at
+    return candidate
+
+
 def write_sorted_json(path: Path, data: Any) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8") as handle:
@@ -3046,7 +3067,6 @@ def build_base_routing_shards(
     manifest = {
         "schemaVersion": BASE_ROUTING_SHARD_MANIFEST_SCHEMA_VERSION,
         "shardSchemaVersion": BASE_ROUTING_SHARD_SCHEMA_VERSION,
-        "generatedAt": base_routing_asset.get("generatedAt"),
         "sourceRoutingSchemaVersion": base_routing_asset.get("schemaVersion"),
         "defaultFormat": "compact",
         "routeShare": {
@@ -3070,6 +3090,11 @@ def build_base_routing_shards(
                 "routingContract": base_routing_asset.get("routingContract"),
             }
         )
+    else:
+        # Legacy clients use this as a graph-version fallback. Strict V3
+        # manifests have a semantic graphVersion, so including a wall-clock
+        # timestamp would make otherwise identical release versions differ.
+        manifest["generatedAt"] = base_routing_asset.get("generatedAt")
     report = {
         "manifest": {
             "schemaVersion": manifest["schemaVersion"],
@@ -3102,6 +3127,10 @@ def write_base_routing_shards(
     manifest_path = output_dir / "manifest.json"
     report_path = output_dir / "report.json"
     shards_dir = output_dir / "shards"
+    manifest = preserve_generated_at_if_unchanged(
+        load_json(manifest_path, None),
+        manifest,
+    )
     if shards_dir.exists():
         shutil.rmtree(shards_dir)
     write_json(manifest_path, manifest)
@@ -3827,6 +3856,10 @@ def write_runtime_manifest(
         # resolved guidance lives inside the segments asset, so there is no
         # second naming file and no second digest.
         manifest["guidance"] = guidance_summary
+    manifest = preserve_generated_at_if_unchanged(
+        load_json(manifest_path, None),
+        manifest,
+    )
     write_json(manifest_path, manifest)
     runtime = {
         "version": version,

@@ -1,16 +1,16 @@
 {
   "schemaVersion": 2,
   "slug": "sovev-beit-hillel",
-  "generatedAt": "2026-07-23T19:25:21.487Z",
+  "generatedAt": "2026-07-23T20:19:06.725Z",
   "source": {
     "routeTokenHash": "sha256:1b4e57e3cc362d4c8869f0ade487f914867a1954b2794ea94764cfacae1e5dfb",
     "routeFormat": "compact_route",
-    "mapVersion": "81d7a15db3e3",
+    "mapVersion": "71a935c29650",
     "assetHashes": {
-      "bikeRoads": "8a69522a11a0c62b49f6338b4fa4cd369e3ac0a2cc77f46a671515119ec7d675",
-      "segments": "9a6693441c63f4bb9a63e64838622561a3930e1a60bdc2e7ef89ae0035fd32a0",
-      "cwBaseIndex": "53bab956ab9e8259f7aa644f1a67b080615a749cbad7db5aa13d808c4b70e1f9",
-      "baseRoutingShards": "74fb1ef659b702b68ddaaf195cd425e29329815c24a577fc07ad5404cce2ceb5"
+      "bikeRoads": "5e82b8a909b021433f275e205addda8a9e240d8f346f28944e280d520c514955",
+      "segments": "683270e1de8006323bbdc74771e9d550072aeca4b51428060e8a294dd5f43c9b",
+      "cwBaseIndex": "34a78c04437e747acd193c3e2dc39422220330e30479984f63a30c8154510ca9",
+      "baseRoutingShards": "cbc13b78af2d811d78e8af7ef372bca4f532f1ab061086207ea168b3a9baafa4"
     }
   },
   "route": {
@@ -937,6 +937,7 @@
     "selectedSegments": [
       "שביל אופניים חצבאני חופים צפוני",
       "שביל אופניים חצבאני בית הלל",
+      "כביש גישה קייאקי כפר בלום",
       "גדר המערכת בית הלל",
       "רחוב הדולב בית הלל מערב",
       "גדר מערכת בית הלל צפון",
@@ -946,15 +947,15 @@
     "guidanceMode": "guidance-v1",
     "itinerary": [
       {
-        "id": "class:1:0-2372",
-        "guidanceIdentity": null,
-        "role": null,
-        "resolutionStatus": "unreviewed",
-        "name": "שביל",
-        "spokenName": "שביל",
-        "kind": "path",
-        "icon": "trail",
-        "isFallback": true,
+        "id": "way:cycleway-snir:1:0-2372",
+        "guidanceIdentity": "way:cycleway-snir",
+        "role": "named-way",
+        "resolutionStatus": "resolved",
+        "name": "שביל אופניים חצבאני",
+        "spokenName": "שביל אופניים חצבאני",
+        "kind": "cycleway",
+        "icon": "cycleway",
+        "isFallback": false,
         "startMeters": 0,
         "endMeters": 2372.437549950736,
         "distanceMeters": 2372.437549950736,
@@ -969,13 +970,13 @@
             "startMeters": 0,
             "endMeters": 2372.437549950736,
             "networkRole": "segment",
-            "resolutionStatus": "unreviewed",
-            "guidanceIdentity": null,
-            "name": null,
+            "resolutionStatus": "resolved",
+            "guidanceIdentity": "way:cycleway-snir",
+            "name": "שביל אופניים חצבאני",
             "spokenName": null,
-            "role": null,
-            "kind": "path",
-            "wayId": null,
+            "role": "named-way",
+            "kind": "cycleway",
+            "wayId": "cycleway-snir",
             "segmentIds": [
               100,
               101
@@ -997,7 +998,7 @@
         ]
       },
       {
-        "id": "class:1:2372-5283",
+        "id": "class:1:2372-2543",
         "guidanceIdentity": null,
         "role": null,
         "resolutionStatus": "unreviewed",
@@ -1007,18 +1008,17 @@
         "icon": "road",
         "isFallback": true,
         "startMeters": 2372.437549950736,
-        "endMeters": 5283.237549950735,
-        "distanceMeters": 2910.7999999999993,
+        "endMeters": 2543.137549950736,
+        "distanceMeters": 170.69999999999982,
         "segmentIds": [
-          139,
-          303
+          375
         ],
         "sectionLabels": [],
         "junctionContexts": [],
         "children": [
           {
             "startMeters": 2372.437549950736,
-            "endMeters": 5283.237549950735,
+            "endMeters": 2543.137549950736,
             "networkRole": "segment",
             "resolutionStatus": "unreviewed",
             "guidanceIdentity": null,
@@ -1028,14 +1028,80 @@
             "kind": "road",
             "wayId": null,
             "segmentIds": [
-              139,
-              303
+              375
             ],
             "sectionLabels": [],
             "junctionId": null,
             "junctionName": null,
             "onCycleways": true,
             "routeClass": "local_road"
+          }
+        ],
+        "warningCount": 0,
+        "poiCount": 0,
+        "dataPointIds": []
+      },
+      {
+        "id": "way:paved-beit-hillel-fence:1:2543-5283",
+        "guidanceIdentity": "way:paved-beit-hillel-fence",
+        "role": "named-way",
+        "resolutionStatus": "resolved",
+        "name": "כביש המערכת בית הלל",
+        "spokenName": "כביש המערכת בית הלל",
+        "kind": "cycleway",
+        "icon": "cycleway",
+        "isFallback": false,
+        "startMeters": 2543.137549950736,
+        "endMeters": 6338.737549950735,
+        "distanceMeters": 3795.5999999999995,
+        "segmentIds": [
+          303,
+          374,
+          301
+        ],
+        "sectionLabels": [],
+        "junctionContexts": [],
+        "children": [
+          {
+            "startMeters": 2543.137549950736,
+            "endMeters": 5283.237549950735,
+            "networkRole": "segment",
+            "resolutionStatus": "resolved",
+            "guidanceIdentity": "way:paved-beit-hillel-fence",
+            "name": "כביש המערכת בית הלל",
+            "spokenName": null,
+            "role": "named-way",
+            "kind": "cycleway",
+            "wayId": "paved-beit-hillel-fence",
+            "segmentIds": [
+              303,
+              374
+            ],
+            "sectionLabels": [],
+            "junctionId": null,
+            "junctionName": null,
+            "onCycleways": true,
+            "routeClass": "local_road"
+          },
+          {
+            "startMeters": 5283.237549950735,
+            "endMeters": 6338.737549950735,
+            "networkRole": "segment",
+            "resolutionStatus": "resolved",
+            "guidanceIdentity": "way:paved-beit-hillel-fence",
+            "name": "כביש המערכת בית הלל",
+            "spokenName": null,
+            "role": "named-way",
+            "kind": "cycleway",
+            "wayId": "paved-beit-hillel-fence",
+            "segmentIds": [
+              301
+            ],
+            "sectionLabels": [],
+            "junctionId": null,
+            "junctionName": null,
+            "onCycleways": true,
+            "routeClass": "manual"
           }
         ],
         "warningCount": 3,
@@ -1047,65 +1113,20 @@
         ]
       },
       {
-        "id": "class:1:5283-6339",
-        "guidanceIdentity": null,
-        "role": null,
-        "resolutionStatus": "unreviewed",
-        "name": "מקטע",
-        "spokenName": "מקטע",
-        "kind": "other",
-        "icon": "segment",
-        "isFallback": true,
-        "startMeters": 5283.237549950735,
-        "endMeters": 6338.737549950735,
-        "distanceMeters": 1055.5,
-        "segmentIds": [
-          301
-        ],
-        "sectionLabels": [],
-        "junctionContexts": [],
-        "children": [
-          {
-            "startMeters": 5283.237549950735,
-            "endMeters": 6338.737549950735,
-            "networkRole": "segment",
-            "resolutionStatus": "unreviewed",
-            "guidanceIdentity": null,
-            "name": null,
-            "spokenName": null,
-            "role": null,
-            "kind": "other",
-            "wayId": null,
-            "segmentIds": [
-              301
-            ],
-            "sectionLabels": [],
-            "junctionId": null,
-            "junctionName": null,
-            "onCycleways": true,
-            "routeClass": "manual"
-          }
-        ],
-        "warningCount": 0,
-        "poiCount": 0,
-        "dataPointIds": []
-      },
-      {
-        "id": "class:2:6339-6435",
-        "guidanceIdentity": null,
-        "role": null,
-        "resolutionStatus": "unreviewed",
-        "name": "כביש",
-        "spokenName": "כביש",
+        "id": "way:road-9888:1:6339-6435",
+        "guidanceIdentity": "way:road-9888",
+        "role": "named-way",
+        "resolutionStatus": "resolved",
+        "name": "כביש 9888",
+        "spokenName": "כביש 9888",
         "kind": "road",
         "icon": "road",
-        "isFallback": true,
+        "isFallback": false,
         "startMeters": 6338.737549950735,
-        "endMeters": 6478.208844215283,
-        "distanceMeters": 139.4712942645474,
+        "endMeters": 6435.337549950736,
+        "distanceMeters": 96.60000000000036,
         "segmentIds": [
-          304,
-          101
+          304
         ],
         "sectionLabels": [],
         "junctionContexts": [],
@@ -1114,13 +1135,13 @@
             "startMeters": 6338.737549950735,
             "endMeters": 6435.337549950736,
             "networkRole": "segment",
-            "resolutionStatus": "unreviewed",
-            "guidanceIdentity": null,
-            "name": null,
+            "resolutionStatus": "resolved",
+            "guidanceIdentity": "way:road-9888",
+            "name": "כביש 9888",
             "spokenName": null,
-            "role": null,
+            "role": "named-way",
             "kind": "road",
-            "wayId": null,
+            "wayId": "road-9888",
             "segmentIds": [
               304
             ],
@@ -1129,18 +1150,42 @@
             "junctionName": null,
             "onCycleways": true,
             "routeClass": "road"
-          },
+          }
+        ],
+        "warningCount": 0,
+        "poiCount": 0,
+        "dataPointIds": []
+      },
+      {
+        "id": "way:cycleway-snir:2:6435-6478",
+        "guidanceIdentity": "way:cycleway-snir",
+        "role": "named-way",
+        "resolutionStatus": "resolved",
+        "name": "שביל אופניים חצבאני",
+        "spokenName": "שביל אופניים חצבאני",
+        "kind": "cycleway",
+        "icon": "cycleway",
+        "isFallback": false,
+        "startMeters": 6435.337549950736,
+        "endMeters": 6478.208844215283,
+        "distanceMeters": 42.87129426454703,
+        "segmentIds": [
+          101
+        ],
+        "sectionLabels": [],
+        "junctionContexts": [],
+        "children": [
           {
             "startMeters": 6435.337549950736,
             "endMeters": 6478.208844215283,
             "networkRole": "segment",
-            "resolutionStatus": "unreviewed",
-            "guidanceIdentity": null,
-            "name": null,
+            "resolutionStatus": "resolved",
+            "guidanceIdentity": "way:cycleway-snir",
+            "name": "שביל אופניים חצבאני",
             "spokenName": null,
-            "role": null,
-            "kind": "path",
-            "wayId": null,
+            "role": "named-way",
+            "kind": "cycleway",
+            "wayId": "cycleway-snir",
             "segmentIds": [
               101
             ],
