@@ -117,6 +117,7 @@ import { EditorActivityLog } from "./lib/editor-activity-log.mjs";
 import {
   applySuggestionGroup,
   buildRoutingEvidenceBySegmentId,
+  introducedGuidanceBlockers,
   reviewGuidanceDocuments,
 } from "./lib/navigation-ways.mjs";
 
@@ -7492,15 +7493,32 @@ const server = createServer(async (request, response) => {
         sendJson(response, 400, { ok: false, error: message });
         return;
       }
-      const review = await reviewGuidancePair(source, registry);
-      // Blocking issues never reach canonical data. Structure warnings do:
-      // multi-component and branching ways are legitimate once acknowledged,
-      // and forcing a split to clear them would fragment one real facility.
-      if (review.blocking.length > 0) {
+      const routingEvidenceBySegmentId = await loadGuidanceRoutingEvidence();
+      const [currentSource, currentRegistry] = await Promise.all([
+        readFile(sourcePath, "utf-8").then(JSON.parse),
+        readNavigationWaysRegistry(),
+      ]);
+      const currentReview = await reviewGuidancePair(
+        currentSource,
+        currentRegistry,
+        routingEvidenceBySegmentId,
+      );
+      const review = await reviewGuidancePair(
+        source,
+        registry,
+        routingEvidenceBySegmentId,
+      );
+      const introducedBlocking = introducedGuidanceBlockers(currentReview, review);
+      // Migration must remain incremental. Existing blockers stay visible in
+      // the returned full review, but only a new or materially changed blocker
+      // rejects this edit. Otherwise one unrelated bad pilot classification
+      // would freeze all curator CRUD. Structure warnings remain non-blocking.
+      if (introducedBlocking.length > 0) {
         sendJson(response, 400, {
           ok: false,
           error: "guidance validation failed",
           review,
+          introducedBlocking,
         });
         return;
       }

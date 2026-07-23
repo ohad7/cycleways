@@ -9,6 +9,7 @@ import {
   emptyRegistry,
   guidancePreview,
   indexActiveSegments,
+  introducedGuidanceBlockers,
   reviewGuidanceDocuments,
   revokeStructureAcknowledgement,
 } from "../editor/lib/navigation-ways.mjs";
@@ -205,6 +206,64 @@ const straight = (startLng, lat, steps = 20) =>
     spokenName: null,
   });
   assert.equal(assignmentFacilityConflict(source, compatible, 174, "road-99"), null);
+}
+
+// An unrelated canonical blocker stays visible but does not freeze incremental
+// curation. A new blocker caused by the proposed edit still rejects the write.
+{
+  const currentReview = {
+    blocking: [{
+      code: "facility-class-conflict",
+      severity: "error",
+      wayId: "kfar-yuval-fields",
+      segmentId: 121,
+      wayKind: "dirt-road",
+      wayFacilityClass: "roadway",
+      memberFacilityClass: "trail-path",
+      waivable: false,
+    }],
+  };
+  const compatibleAssignment = {
+    blocking: [...currentReview.blocking],
+  };
+  assert.deepEqual(
+    introducedGuidanceBlockers(currentReview, compatibleAssignment),
+    [],
+    "segment 121 must not prevent an unrelated compatible assignment",
+  );
+
+  const introduced = {
+    blocking: [
+      ...currentReview.blocking,
+      {
+        code: "facility-class-conflict",
+        severity: "error",
+        wayId: "cycleway-99",
+        segmentId: 172,
+        wayKind: "cycleway",
+        wayFacilityClass: "cycleway",
+        memberFacilityClass: "roadway",
+        waivable: false,
+      },
+    ],
+  };
+  assert.deepEqual(
+    introducedGuidanceBlockers(currentReview, introduced),
+    [introduced.blocking[1]],
+    "a blocker introduced by the edited assignment must still be rejected",
+  );
+
+  const materiallyChanged = {
+    blocking: [{
+      ...currentReview.blocking[0],
+      memberFacilityClass: "cycleway",
+    }],
+  };
+  assert.deepEqual(
+    introducedGuidanceBlockers(currentReview, materiallyChanged),
+    [materiallyChanged.blocking[0]],
+    "a materially changed blocker is not grandfathered",
+  );
 }
 
 // --- suggestion groups ----------------------------------------------------

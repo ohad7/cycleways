@@ -819,6 +819,10 @@ explicit permission for that specific change; do not assume it.
       and requires the expected source and registry content digests before
       writing either canonical file. Do not rely on `/api/source` having a
       server revision contract; it currently does not.
+- [x] Compare proposed blockers with the canonical pre-edit review. Reject new
+      or materially changed blockers, but keep unrelated existing blockers
+      visible without freezing incremental migration CRUD. Error responses
+      identify the blocker introduced by the attempted edit.
 - [x] Stage both JSON payloads to temporary files, then replace the canonical
       files with rollback on a partial failure. A failed save leaves both editor
       documents dirty.

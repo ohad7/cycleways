@@ -858,6 +858,11 @@ function showAlert(title, message) {
   els.editorAlert.hidden = false;
 }
 
+function setAlert(message) {
+  showAlert("Action failed", message);
+  setStatus(message, "error");
+}
+
 function clearAlert() {
   els.editorAlert.hidden = true;
   els.editorAlertTitle.textContent = "";
@@ -12167,7 +12172,9 @@ async function saveGuidanceDocuments(nextSource, nextRegistry, successMessage) {
         await loadGuidanceRegistry();
         return false;
       }
-      const first = payload.review?.blocking?.[0];
+      const first =
+        payload.introducedBlocking?.[0]
+        || payload.review?.blocking?.[0];
       throw new Error(first ? guidanceIssueText(first) : payload.error || "save failed");
     }
     state.source = nextSource;

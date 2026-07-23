@@ -1183,7 +1183,12 @@ The first-release CRUD workflow is explicit:
 
 The Network inspector offers the same segment-to-way assignment boundary for
 geometry-first work. Both surfaces call the same transaction and validator;
-neither stores a second membership list.
+neither stores a second membership list. During incremental curation, the
+transaction rejects blockers introduced or materially changed by the proposed
+edit, while retaining unrelated pre-existing blockers in the full review. This
+keeps classification incremental instead of allowing one existing conflict to
+freeze all CRUD. Build and promotion still evaluate the complete canonical
+issue set.
 
 Because the data is spatially sequential, the editor can propose the unique
 contiguous chain between two selected members. It traverses the same reviewed

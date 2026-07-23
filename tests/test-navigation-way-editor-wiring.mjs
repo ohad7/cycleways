@@ -105,6 +105,11 @@ for (const key of [
 assert.ok(editor.includes("renderGuidanceSection();"), "guidance is not rendered");
 assert.ok(editor.includes("await loadGuidanceRegistry();"), "registry is not loaded at startup");
 assert.ok(editor.includes("await loadGuidanceSuggestions();"), "suggestions are not loaded at startup");
+assert.match(
+  editor,
+  /function setAlert\(message\) \{\s*showAlert\("Action failed", message\);\s*setStatus\(message, "error"\);\s*\}/,
+  "Ways validation errors must use a defined editor alert helper",
+);
 assert.ok(
   editor.includes("saveSelectedSegmentGuidance().catch(showError)"),
   "save button is not wired",
@@ -194,8 +199,16 @@ assert.ok(
   "server does not know the registry path",
 );
 assert.ok(
-  server.includes("if (review.blocking.length > 0)"),
-  "server must refuse blocking guidance issues",
+  server.includes("if (introducedBlocking.length > 0)"),
+  "server must refuse blockers introduced by a guidance edit",
+);
+assert.ok(
+  server.includes("introducedGuidanceBlockers(currentReview, review)"),
+  "pre-existing unrelated blockers must not freeze incremental curation",
+);
+assert.ok(
+  editor.includes("payload.introducedBlocking?.[0]"),
+  "the editor must report the blocker introduced by the attempted edit",
 );
 assert.ok(
   server.includes('return { ok: false, status: 409, error: "superseded"'),

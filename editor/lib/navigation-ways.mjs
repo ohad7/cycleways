@@ -207,6 +207,29 @@ export function reviewGuidanceDocuments(
   };
 }
 
+/**
+ * Return only blockers introduced or materially changed by a proposed edit.
+ *
+ * Migration is intentionally incremental: an unrelated blocker already
+ * present in the canonical pair must remain visible, but it must not freeze
+ * every other CRUD operation. Exact canonical issue identity means an edit
+ * cannot disguise a changed blocker as an existing one.
+ */
+export function introducedGuidanceBlockers(currentReview, proposedReview) {
+  const currentCounts = new Map();
+  for (const entry of currentReview?.blocking || []) {
+    const identity = canonicalSha256(entry);
+    currentCounts.set(identity, (currentCounts.get(identity) || 0) + 1);
+  }
+  return (proposedReview?.blocking || []).filter((entry) => {
+    const identity = canonicalSha256(entry);
+    const remaining = currentCounts.get(identity) || 0;
+    if (remaining === 0) return true;
+    currentCounts.set(identity, remaining - 1);
+    return false;
+  });
+}
+
 function memberAdjacency(memberIds, segments) {
   const adjacency = new Map(memberIds.map((id) => [id, new Set()]));
   const endpointOnlyLinks = [];
