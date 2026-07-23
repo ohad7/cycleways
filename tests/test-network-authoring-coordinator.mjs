@@ -10,8 +10,35 @@ import {
   isCurrentAuthoringObjectRevision,
   isRetryableAuthoringConflict,
   mergeBaseGraphFeaturePatch,
+  networkMetadataSourceUnsaved,
   summarizeAuthoringTimings,
 } from "../editor/lib/network-authoring-coordinator.mjs";
+
+// A metadata/lifecycle reconciliation only reads a segment's name and status.
+// A genuinely absent feature is "not saved yet" and must be refused; but a
+// persisted feature that was split into an archive keeps only metadata and no
+// LineString geometry, and recording that it is now deprecated/non-navigable
+// is exactly this call's job — so it must NOT be treated as missing.
+{
+  assert.equal(networkMetadataSourceUnsaved(undefined), true, "absent feature is unsaved");
+  assert.equal(networkMetadataSourceUnsaved(null), true, "null feature is unsaved");
+  assert.equal(
+    networkMetadataSourceUnsaved({
+      properties: { id: 53, status: "deprecated" },
+      geometry: null,
+    }),
+    false,
+    "a split archive with no geometry is a valid lifecycle target, not missing",
+  );
+  assert.equal(
+    networkMetadataSourceUnsaved({
+      properties: { id: 62, status: "active" },
+      geometry: { type: "LineString", coordinates: [[0, 0], [1, 1]] },
+    }),
+    false,
+    "an active segment is present",
+  );
+}
 
 const revisions = new Map();
 assert.equal(bumpAuthoringObjectRevision(revisions, 319), 1);

@@ -178,6 +178,15 @@ assert.match(
   /\["deprecated", "legacy", "draft"\]\.includes\(sourceStatus\)[\s\S]{0,240}applyNetworkAuthoringSegmentMetadata/,
   "the segment endpoint must defensively redirect stale inactive routing requests",
 );
+// A lifecycle/metadata update must accept a persisted-but-archived segment
+// (split archives have no LineString geometry): only a genuinely absent
+// segment is "not saved yet". Otherwise reconciling a split segment's lifecycle
+// wedges the editor on every load.
+assert.match(
+  server,
+  /if \(networkMetadataSourceUnsaved\(sourceFeature\)\) \{\s*throw new Error\(`Source segment \$\{segmentId\} was not found/,
+  "the metadata handler must not require a LineString geometry to deprecate a segment",
+);
 assert.match(server, /"manual-editor"/);
 assert.match(server, /validatePublishedDirectionReviewOverlay\(parsed\)/);
 assert.match(server, /last published path while evaluating a revised source shape/);

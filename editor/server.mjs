@@ -106,6 +106,7 @@ import {
   validationWithAutomaticDecision,
 } from "./lib/network-auto-apply.mjs";
 import { networkSegmentStatus } from "./lib/network-authoring-status.mjs";
+import { networkMetadataSourceUnsaved } from "./lib/network-authoring-coordinator.mjs";
 import { repairRoundaboutReverse } from "../scripts/migrate-cw-base-overlay-v2.mjs";
 import {
   BASE_GRAPH_INPUTS,
@@ -2692,7 +2693,10 @@ async function applyNetworkAuthoringSegmentMetadata(payload) {
   const sourceFeature = source?.features?.find(
     (feature) => Number(feature?.properties?.id) === segmentId,
   );
-  if (!sourceFeature?.geometry || sourceFeature.geometry.type !== "LineString") {
+  // A lifecycle/metadata update reads only name and status, and deprecating a
+  // split archive (which has no LineString geometry) is exactly its job — so
+  // only a segment genuinely absent from the saved source is "not saved yet".
+  if (networkMetadataSourceUnsaved(sourceFeature)) {
     throw new Error(`Source segment ${segmentId} was not found; save the source first`);
   }
 

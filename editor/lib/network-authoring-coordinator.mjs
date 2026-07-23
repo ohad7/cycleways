@@ -26,6 +26,22 @@ export function isAuthoringAbort(error) {
   return error?.name === "AbortError" || error?.code === AUTHORING_REQUEST_ABORTED;
 }
 
+/**
+ * Does a network metadata/lifecycle request target a segment that is not in the
+ * saved source at all? Only a genuinely absent feature is "not saved yet" and
+ * must be refused.
+ *
+ * A persisted feature that is deprecated or archived is a valid target: when a
+ * segment is split, its LineString geometry moves to the segments it became and
+ * the archive keeps only metadata. The metadata handler reads only the name and
+ * status, and recording that the archive is no longer navigable is precisely
+ * its purpose — so a missing/non-LineString geometry must not be mistaken for a
+ * missing segment.
+ */
+export function networkMetadataSourceUnsaved(sourceFeature) {
+  return !sourceFeature;
+}
+
 export function authoringSourceIsCurrent({
   currentRevision,
   snapshotRevision,
