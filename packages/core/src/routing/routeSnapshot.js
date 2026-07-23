@@ -14,7 +14,11 @@ export function emptyRouteSnapshot() {
     routeFailure: null,
     segmentSpans: [],
     guidanceSpans: [],
+    guidanceItinerary: [],
+    oppositeSegmentSpans: [],
+    oppositeGuidanceSpans: [],
     guidanceMode: "legacy",
+    guidancePresentationPolicy: "named",
     routingValidation: null,
   };
 }

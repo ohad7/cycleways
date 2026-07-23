@@ -66,7 +66,7 @@ const navigationRoute = {
   junctions: [],
   crossings: [],
   segmentSpans: [],
-  maneuverGeneratorVersion: "navigation-cues-v3",
+  maneuverGeneratorVersion: "navigation-cues-v4",
 };
 const withoutCrossing = navigationPlanFingerprint(navigationRoute);
 const withCrossing = navigationPlanFingerprint({
@@ -74,5 +74,24 @@ const withCrossing = navigationPlanFingerprint({
   crossings: [{ kind: "crossing", crossingId: "c1", mappingId: "m1", entryMeters: 10, exitMeters: 20, complete: true }],
 });
 assert.notEqual(withCrossing, withoutCrossing, "confirmed crossing evidence invalidates persisted cue plans");
+const withGuidance = navigationPlanFingerprint({
+  ...navigationRoute,
+  guidanceMode: "guidance-v1",
+  guidancePresentationPolicy: "named",
+  guidanceProvenance: { mapVersion: "map-v2", segmentsHash: "segments-v2" },
+  guidanceSpans: [{
+    startMeters: 0,
+    endMeters: 547.3,
+    guidanceIdentity: "way:road-99",
+    name: "כביש 99",
+    kind: "road",
+    role: "named-way",
+  }],
+});
+assert.notEqual(
+  withGuidance,
+  withoutCrossing,
+  "guidance names, policy, and provenance invalidate persisted cue plans",
+);
 
 console.log("route attestation ok");

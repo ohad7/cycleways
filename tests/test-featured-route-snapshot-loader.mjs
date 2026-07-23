@@ -6,7 +6,7 @@ import {
 
 function makeSnapshot(overrides = {}) {
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     slug: "demo-route",
     generatedAt: "2026-06-03T00:00:00.000Z",
     source: {
@@ -25,6 +25,16 @@ function makeSnapshot(overrides = {}) {
       elevationGain: 12,
       elevationLoss: 11,
       selectedSegments: ["seg a", "seg b"],
+      guidanceMode: "guidance-v1",
+      itinerary: [
+        {
+          id: "way:road-99:1:0-1235",
+          name: "כביש 99",
+          kind: "road",
+          distanceMeters: 1234.5,
+          segmentIds: [99],
+        },
+      ],
     },
     pois: {
       activeDataPoints: [
@@ -58,6 +68,8 @@ function makeSnapshot(overrides = {}) {
   assert.equal(state.elevationLoss, 11);
   assert.deepEqual(state.points, []);
   assert.equal(state.routeFailure, null);
+  assert.equal(state.guidanceMode, "guidance-v1");
+  assert.equal(state.guidanceItinerary[0].name, "כביש 99");
 
   // activeDataPoints round-trip preserves rich fields
   assert.equal(state.activeDataPoints.length, 1);
@@ -69,6 +81,12 @@ function makeSnapshot(overrides = {}) {
   assert.deepEqual(poi.location, [33.15, 35.65]);
   assert.equal(poi.routeFraction, 0.42);
   assert.deepEqual(poi.images, [{ photo: "p.webp", thumbnail: "t.webp" }]);
+}
+
+// Schema 1 remains readable and projects no itinerary.
+{
+  const state = snapshotToRouteState(makeSnapshot({ schemaVersion: 1 }));
+  assert.deepEqual(state.guidanceItinerary, []);
 }
 
 // --- snapshotToRouteState: empty / missing groups default safely ---

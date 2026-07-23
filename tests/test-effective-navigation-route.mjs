@@ -122,9 +122,75 @@ function route({ circular = false } = {}) {
   assert.equal(clipped.guidanceSpans[0].guidanceIdentity, "way:b");
   assert.equal(clipped.guidanceSpans[0].startMeters, 0);
 
+  // Reverse consumes the precomputed opposite projection instead of falling
+  // back to legacy naming: an out-and-back ride must name its ways the same way
+  // on both legs.
+  const withOpposite = route();
+  withOpposite.guidanceMode = "guidance-v1";
+  withOpposite.guidanceSpans = source.guidanceSpans.map((span) => ({ ...span }));
+  withOpposite.oppositeGuidanceSpans = [
+    {
+      startMeters: 0,
+      endMeters: source.distanceMeters / 2,
+      guidanceIdentity: "way:b",
+      name: "B",
+    },
+    {
+      startMeters: source.distanceMeters / 2,
+      endMeters: source.distanceMeters,
+      guidanceIdentity: "way:a",
+      name: "A",
+    },
+  ];
+  const reversed = reverseNavigationRoute(withOpposite);
+  assert.equal(reversed.guidanceMode, "guidance-v1");
+  assert.equal(reversed.guidanceSpans[0].guidanceIdentity, "way:b");
+  assert.equal(reversed.guidanceSpans[1].guidanceIdentity, "way:a");
+  assert.equal(reversed.crossingsNeedRecompute, false,
+    "reverse transforms reviewed crossings synchronously");
+
+  // Double reverse restores the forward projection.
+  const restored = reverseNavigationRoute(reversed);
+  assert.deepEqual(
+    restored.guidanceSpans.map((span) => span.guidanceIdentity),
+    ["way:a", "way:b"],
+  );
+
+  // A route persisted before reverse-ready spans existed cannot prove an
+  // asymmetric return identity. It keeps class context instead of reusing the
+  // outbound proper name.
+  const legacyShaped = reverseNavigationRoute(source);
+  assert.equal(legacyShaped.guidanceMode, "guidance-v1");
+  assert.equal(legacyShaped.guidanceSpans[0].guidanceIdentity, null);
+  assert.equal(legacyShaped.guidanceSpans[0].name, null);
+}
+
+{
+  const source = route();
+  source.crossings = [{
+    kind: "crossing",
+    crossingId: "c1",
+    mappingId: "m1",
+    crossingKind: "side-change",
+    continuation: { type: "turn", direction: "left" },
+    entryMeters: source.distanceMeters * 0.2,
+    exitMeters: source.distanceMeters * 0.25,
+    complete: true,
+  }];
   const reversed = reverseNavigationRoute(source);
-  assert.equal(reversed.guidanceMode, "legacy");
-  assert.deepEqual(reversed.guidanceSpans, []);
+  assert.equal(reversed.crossings.length, 1);
+  assert.ok(
+    Math.abs(reversed.crossings[0].entryMeters - source.distanceMeters * 0.75) < 0.01,
+  );
+  assert.equal(reversed.crossings[0].continuation.direction, "right");
+  const clipped = buildEffectiveNavigationRoute(source, {
+    direction: "forward",
+    startProgressMeters: source.distanceMeters * 0.1,
+  });
+  assert.equal(clipped.crossings.length, 1);
+  assert.ok(
+    Math.abs(clipped.crossings[0].entryMeters - source.distanceMeters * 0.1) < 0.01,
+  );
 }
 
 {

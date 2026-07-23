@@ -37,6 +37,10 @@ textarea {
   overflow: hidden;
 }
 
+.ways-workspace .app-shell {
+  grid-template-columns: minmax(420px, 1fr) 430px;
+}
+
 .details {
   min-width: 0;
   display: flex;
@@ -2655,3 +2659,394 @@ button.direction-review-queue-item {
 .rich-text-preview p { margin: 0 0 4px; }
 .rich-text-preview p:last-child { margin-bottom: 0; }
 .rich-text-preview a { color: #1580b7; }
+
+/* Guidance (navigation-way) authoring. The rider-facing identity is shown
+   alongside the internal editor name so it stays obvious that they differ. */
+.segment-guidance-details {
+  margin-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  padding-top: 8px;
+}
+
+.segment-guidance-details > summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.segment-guidance {
+  display: grid;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.guidance-preview {
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 6px;
+  padding: 8px 10px;
+}
+
+.guidance-preview-eyebrow {
+  font-size: 11px;
+  opacity: 0.7;
+}
+
+.guidance-preview-title {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.guidance-preview-title.is-fallback {
+  opacity: 0.6;
+  font-style: italic;
+}
+
+.guidance-preview-internal,
+.guidance-preview-section {
+  font-size: 11px;
+  opacity: 0.65;
+}
+
+.guidance-issue {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  border-radius: 4px;
+  padding: 5px 8px;
+}
+
+.guidance-issue-warning {
+  background: rgba(240, 180, 60, 0.18);
+}
+
+.guidance-issue-error {
+  background: rgba(240, 90, 70, 0.22);
+}
+
+.guidance-coverage {
+  font-size: 11px;
+  opacity: 0.7;
+}
+
+.guidance-review-panel {
+  display: block;
+  margin-top: 14px;
+  padding: 10px;
+  border: 1px solid rgba(30, 144, 255, 0.45);
+  border-radius: 7px;
+}
+
+.guidance-review-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.guidance-review-badge {
+  border-radius: 999px;
+  background: rgba(30, 144, 255, 0.18);
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.guidance-review-body {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.guidance-review-help,
+.guidance-suggestion-note {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.45;
+  opacity: 0.78;
+}
+
+.guidance-suggestion-binding {
+  border-radius: 5px;
+  padding: 6px 8px;
+  font-size: 11px;
+}
+
+.guidance-suggestion-binding.is-current {
+  background: rgba(58, 180, 110, 0.15);
+}
+
+.guidance-suggestion-binding.is-stale {
+  background: rgba(235, 90, 70, 0.22);
+}
+
+.guidance-review-toolbar,
+.guidance-suggestion-fields {
+  display: grid;
+  gap: 6px;
+}
+
+.guidance-review-toolbar {
+  grid-template-columns: minmax(0, 1fr) auto auto;
+}
+
+.guidance-suggestion-list {
+  display: grid;
+  gap: 8px;
+  max-height: min(58vh, 720px);
+  overflow: auto;
+  padding-inline-end: 3px;
+}
+
+.guidance-suggestion-card {
+  display: grid;
+  gap: 7px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-inline-start: 4px solid rgba(58, 180, 110, 0.75);
+  border-radius: 7px;
+  padding: 9px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.guidance-suggestion-card.is-warning {
+  border-inline-start-color: #d7a331;
+}
+
+.guidance-suggestion-card.is-blocked {
+  border-inline-start-color: #d55747;
+}
+
+.guidance-suggestion-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.guidance-suggestion-heading span {
+  font-size: 10px;
+  opacity: 0.68;
+}
+
+.guidance-suggestion-segments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.guidance-suggestion-fields {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.guidance-suggestion-field {
+  display: grid;
+  gap: 3px;
+  font-size: 10px;
+  opacity: 0.92;
+}
+
+.guidance-audible-verified {
+  grid-column: 1 / -1;
+  font-size: 11px;
+}
+
+.guidance-suggestion-validator {
+  margin: 0;
+  padding-inline-start: 18px;
+  font-size: 11px;
+  color: #f0bd55;
+}
+
+.ways-panel {
+  display: grid;
+  gap: 10px;
+}
+
+.ways-panel .panel-header {
+  align-items: flex-start;
+}
+
+.ways-panel-intro {
+  margin: 3px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.ways-toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 7px;
+}
+
+.ways-list {
+  display: grid;
+  gap: 5px;
+  max-height: 250px;
+  overflow: auto;
+}
+
+.way-list-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 2px 8px;
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 7px 9px;
+  color: inherit;
+  background: var(--panel);
+  text-align: right;
+  cursor: pointer;
+}
+
+.way-list-item:hover,
+.way-list-item.active {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 9%, var(--panel));
+}
+
+.way-list-item strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.way-list-item span,
+.way-list-item code {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.way-list-item code {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-self: center;
+  direction: ltr;
+}
+
+.way-editor {
+  display: grid;
+  gap: 6px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 10px;
+  background: color-mix(in srgb, var(--accent) 3%, var(--panel));
+}
+
+.way-editor[hidden] {
+  display: none;
+}
+
+.way-editor-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.way-editor-heading > div {
+  display: grid;
+  gap: 2px;
+}
+
+.way-editor-id {
+  min-width: 190px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+}
+
+.way-editor h3 {
+  margin: 5px 0 0;
+  font-size: 13px;
+}
+
+.way-editor-members {
+  display: grid;
+  gap: 4px;
+}
+
+.way-member-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px;
+}
+
+.way-member {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.way-audible-verification {
+  font-size: 11px;
+}
+
+.guidance-way-actions {
+  margin-top: 6px;
+}
+
+.way-segment-assignment {
+  display: grid;
+  gap: 7px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 10px;
+  background: color-mix(in srgb, var(--selected) 7%, var(--panel));
+}
+
+.way-segment-assignment h3 {
+  margin: 0;
+  font-size: 14px;
+}
+
+.ways-segment-results {
+  display: grid;
+  gap: 4px;
+  max-height: 180px;
+  overflow: auto;
+}
+
+.way-segment-result {
+  display: grid;
+  gap: 2px;
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  padding: 6px 8px;
+  color: inherit;
+  background: var(--panel);
+  text-align: right;
+  cursor: pointer;
+}
+
+.way-segment-result:hover,
+.way-segment-result.active {
+  border-color: var(--accent);
+}
+
+.way-segment-result span {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.ways-selected-segment {
+  display: grid;
+  gap: 2px;
+  border-radius: 5px;
+  padding: 7px 8px;
+  background: var(--panel);
+}
+
+.ways-selected-segment span {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+@media (max-width: 900px) {
+  .guidance-review-toolbar,
+  .guidance-suggestion-fields {
+    grid-template-columns: 1fr;
+  }
+}

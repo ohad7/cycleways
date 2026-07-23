@@ -118,9 +118,17 @@ function createNavigationRoute({
     guidanceMode: routeState?.guidanceMode === "guidance-v1"
       ? "guidance-v1"
       : "legacy",
+    guidancePresentationPolicy:
+      routeState?.guidancePresentationPolicy === "class-only"
+        ? "class-only"
+        : "named",
+    guidanceProvenance: {
+      mapVersion: metadata?.mapVersion || null,
+      segmentsHash: metadata?.segmentsHash || null,
+    },
     junctions: cloneJunctionList(routeState?.junctions),
     crossings: cloneCrossingList(routeState?.crossings),
-    maneuverGeneratorVersion: "navigation-cues-v3",
+    maneuverGeneratorVersion: "navigation-cues-v4",
   };
 }
 

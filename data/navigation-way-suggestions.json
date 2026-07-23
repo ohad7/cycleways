@@ -1,0 +1,2452 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-07-23",
+  "sourceDocument": "plans/navigation-way-names/model-suggestions.md",
+  "evidenceSetDigest": "sha256:d08188d8250a8a81a42ef266b9df64c9f9345c1d3ac481851f67596f939d1b27",
+  "boundFiles": {
+    "data/map-source.geojson": "d1cc9811ab68fd128955c197f1bed3497d28e7da77588376dbc40bdcd3378d04",
+    "data/navigation-ways.json": "2129372c9b9d4790d0e649f44e7fed0fe4bf52f70d4713751415630191b0d20a",
+    "data/cw-base-overlay.json": "2db09ffef7b4ec38e8f1cec41092f664a61ee0defaf9f41170b0c41367285dd2",
+    "data/network-junctions.json": "e23ca87d82adc2c32ea6b3f75e505a55bd86dd18649299f4be60e81b81ed3e28",
+    "build/public-data/cw-base-index.json": "8bd30442bb74fac71856262b98e3d20ed83bdccd1b6a3fad9ced7a1bccf78357",
+    "build/public-data/network-junctions.json": "ce5d4ed328f923a070a532a06c643d1a60aa955f3b9902b7f556bb6a03a17dd8",
+    "build/public-data/base-routing-shards/manifest.json": "f95117b13702e6f9fde2b5939b27d7969445b8fc8b0d0fbc82808123c8a771ac"
+  },
+  "groups": [
+    {
+      "id": "named-way:road-886",
+      "role": "named-way",
+      "wayId": "road-886",
+      "segmentIds": [
+        47
+      ],
+      "name": "כביש 886",
+      "audibleCandidate": "כביש שמונה מאות שמונים ושש",
+      "kind": "road",
+      "confidence": "H",
+      "note": "One explicit numbered-road segment.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way-consolidated:road-90",
+      "role": "named-way",
+      "wayId": "road-90",
+      "segmentIds": [
+        48,
+        172,
+        173
+      ],
+      "name": "כביש 90",
+      "audibleCandidate": "כביש תשעים",
+      "kind": "road",
+      "confidence": "M",
+      "note": "Consolidated 2 mapped evidence components as one conceptual way. Separate mapped component; do not include dirt segment 49. Extend existing member 159; current endpoints form its northern component.",
+      "reviewStatus": "pending",
+      "sourceProposalIds": [
+        "named-way:road-90-agmon",
+        "named-way:road-90"
+      ],
+      "componentNotes": [
+        "Separate mapped component; do not include dirt segment 49.",
+        "Extend existing member 159; current endpoints form its northern component."
+      ],
+      "conceptualWayConsolidation": true
+    },
+    {
+      "id": "named-way-consolidated:road-959",
+      "role": "named-way",
+      "wayId": "road-959",
+      "segmentIds": [
+        53,
+        54
+      ],
+      "name": "כביש 959",
+      "audibleCandidate": "כביש תשע מאות חמישים ותשע",
+      "kind": "road",
+      "confidence": "M",
+      "note": "Consolidated 2 mapped evidence components as one conceptual way. Same display as the next component; continuity is not proved. Keep separate unless topology validation connects it to 53.",
+      "reviewStatus": "pending",
+      "sourceProposalIds": [
+        "named-way:road-959-gonen",
+        "named-way:road-959-kela-alon"
+      ],
+      "componentNotes": [
+        "Same display as the next component; continuity is not proved.",
+        "Keep separate unless topology validation connects it to 53."
+      ],
+      "conceptualWayConsolidation": true
+    },
+    {
+      "id": "named-way:road-9888",
+      "role": "named-way",
+      "wayId": "road-9888",
+      "segmentIds": [
+        55,
+        56,
+        304,
+        305
+      ],
+      "name": "כביש 9888",
+      "audibleCandidate": "כביש תשעת אלפים שמונה מאות שמונים ושמונה",
+      "kind": "road",
+      "confidence": "H",
+      "note": "Explicit connected numbered-road chain.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way-consolidated:road-99",
+      "role": "named-way",
+      "wayId": "road-99",
+      "segmentIds": [
+        58,
+        60,
+        61,
+        210,
+        211,
+        212,
+        213,
+        214,
+        311,
+        312,
+        317,
+        331
+      ],
+      "name": "כביש 99",
+      "audibleCandidate": "כביש תשעים ותשע",
+      "kind": "road",
+      "confidence": "M",
+      "note": "Consolidated 2 mapped evidence components as one conceptual way. Connected upper component; keep distinct from existing member 174 and isolated 317. Isolated current component east of the main mapped chain.",
+      "reviewStatus": "pending",
+      "sourceProposalIds": [
+        "named-way:road-99-upper",
+        "named-way:road-99-east"
+      ],
+      "componentNotes": [
+        "Connected upper component; keep distinct from existing member 174 and isolated 317.",
+        "Isolated current component east of the main mapped chain."
+      ],
+      "conceptualWayConsolidation": true
+    },
+    {
+      "id": "named-way:road-9977",
+      "role": "named-way",
+      "wayId": "road-9977",
+      "segmentIds": [
+        63,
+        64
+      ],
+      "name": "כביש 9977",
+      "audibleCandidate": "כביש תשעת אלפים תשע מאות שבעים ושבע",
+      "kind": "road",
+      "confidence": "H",
+      "note": "Explicit connected pair.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:road-9115",
+      "role": "named-way",
+      "wayId": "road-9115",
+      "segmentIds": [
+        133,
+        134
+      ],
+      "name": "כביש 9115",
+      "audibleCandidate": "כביש תשעת אלפים מאה וחמש עשרה",
+      "kind": "road",
+      "confidence": "H",
+      "note": "Explicit connected pair.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:road-8966",
+      "role": "named-way",
+      "wayId": "road-8966",
+      "segmentIds": [
+        189
+      ],
+      "name": "כביש 8966",
+      "audibleCandidate": "כביש שמונת אלפים תשע מאות שישים ושש",
+      "kind": "road",
+      "confidence": "H",
+      "note": "One explicit numbered-road segment.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:road-9118",
+      "role": "named-way",
+      "wayId": "road-9118",
+      "segmentIds": [
+        190,
+        191,
+        192
+      ],
+      "name": "כביש 9118",
+      "audibleCandidate": "כביש תשעת אלפים מאה ושמונה עשרה",
+      "kind": "road",
+      "confidence": "H",
+      "note": "Explicit connected chain.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way-consolidated:road-918",
+      "role": "named-way",
+      "wayId": "road-918",
+      "segmentIds": [
+        195,
+        217,
+        229,
+        230,
+        267,
+        268,
+        284,
+        289,
+        292,
+        293,
+        338
+      ],
+      "name": "כביש 918",
+      "audibleCandidate": "כביש תשע מאות ושמונה עשרה",
+      "kind": "road",
+      "confidence": "M",
+      "note": "Consolidated 3 mapped evidence components as one conceptual way. Connected northern component. Separate current component. Connected Jordan component.",
+      "reviewStatus": "pending",
+      "sourceProposalIds": [
+        "named-way:road-918-north",
+        "named-way:road-918-dardara",
+        "named-way:road-918-jordan"
+      ],
+      "componentNotes": [
+        "Connected northern component.",
+        "Separate current component.",
+        "Connected Jordan component."
+      ],
+      "conceptualWayConsolidation": true
+    },
+    {
+      "id": "named-way:road-9970",
+      "role": "named-way",
+      "wayId": "road-9970",
+      "segmentIds": [
+        204
+      ],
+      "name": "כביש 9970",
+      "audibleCandidate": "כביש תשעת אלפים תשע מאות שבעים",
+      "kind": "road",
+      "confidence": "H",
+      "note": "Explicit numbered-road segment at the published Rajar junction.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:road-998",
+      "role": "named-way",
+      "wayId": "road-998",
+      "segmentIds": [
+        294
+      ],
+      "name": "כביש 998",
+      "audibleCandidate": "כביש תשע מאות תשעים ושמונה",
+      "kind": "road",
+      "confidence": "M",
+      "note": "Source calls this a connection; verify it is the numbered road itself.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:road-9895",
+      "role": "named-way",
+      "wayId": "road-9895",
+      "segmentIds": [
+        321,
+        322
+      ],
+      "name": "כביש 9895",
+      "audibleCandidate": "כביש תשעת אלפים שמונה מאות תשעים וחמש",
+      "kind": "road",
+      "confidence": "H",
+      "note": "Explicit connected pair.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:road-899",
+      "role": "named-way",
+      "wayId": "road-899",
+      "segmentIds": [
+        371
+      ],
+      "name": "כביש 899",
+      "audibleCandidate": "כביש שמונה מאות תשעים ותשע",
+      "kind": "road",
+      "confidence": "H",
+      "note": "One explicit numbered-road segment.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:hermon-border-security-road",
+      "role": "named-way",
+      "wayId": "hermon-border-security-road",
+      "segmentIds": [
+        202,
+        203
+      ],
+      "name": "דרך הביטחון בגבול הר דב",
+      "audibleCandidate": null,
+      "kind": "road",
+      "confidence": "M",
+      "note": "Two sides of the same security-road context; verify junction continuity.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way-consolidated:cycleway-9779",
+      "role": "named-way",
+      "wayId": "cycleway-9779",
+      "segmentIds": [
+        89,
+        90,
+        92,
+        93,
+        296,
+        297
+      ],
+      "name": "שביל אופניים 9779",
+      "audibleCandidate": "שביל אופניים תשעת אלפים שבע מאות שבעים ותשע",
+      "kind": "cycleway",
+      "confidence": "H",
+      "note": "Consolidated 2 mapped evidence components as one conceptual way. Connected northern component. Connected southern component.",
+      "reviewStatus": "pending",
+      "sourceProposalIds": [
+        "named-way:cycleway-9779-north",
+        "named-way:cycleway-9779-south"
+      ],
+      "componentNotes": [
+        "Connected northern component.",
+        "Connected southern component."
+      ],
+      "conceptualWayConsolidation": true
+    },
+    {
+      "id": "named-way-consolidated:cycleway-99",
+      "role": "named-way",
+      "wayId": "cycleway-99",
+      "segmentIds": [
+        94,
+        96,
+        280,
+        281,
+        327,
+        336
+      ],
+      "name": "שביל אופניים 99",
+      "audibleCandidate": "שביל אופניים תשעים ותשע",
+      "kind": "cycleway",
+      "confidence": "M",
+      "note": "Consolidated 2 mapped evidence components as one conceptual way. Extend existing 97 and 326; segment 280 is a bridge carrying this facility. Separate mapped component; do not merge by visible name alone.",
+      "reviewStatus": "pending",
+      "sourceProposalIds": [
+        "named-way:cycleway-99",
+        "named-way:cycleway-99-dafna"
+      ],
+      "componentNotes": [
+        "Extend existing 97 and 326; segment 280 is a bridge carrying this facility.",
+        "Separate mapped component; do not merge by visible name alone."
+      ],
+      "conceptualWayConsolidation": true
+    },
+    {
+      "id": "named-way:village-sde-nehemia-cycleway",
+      "role": "named-way",
+      "wayId": "village-sde-nehemia-cycleway",
+      "segmentIds": [
+        99
+      ],
+      "name": "שביל אופניים וילג שדה נחמיה",
+      "audibleCandidate": "שביל אופניים וילג׳, שדה נחמיה",
+      "kind": "cycleway",
+      "confidence": "M",
+      "note": "Clean display removes pronunciation punctuation.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:hatzbani-cycleway",
+      "role": "named-way",
+      "wayId": "hatzbani-cycleway",
+      "segmentIds": [
+        100,
+        101
+      ],
+      "name": "שביל אופניים חצבאני",
+      "audibleCandidate": null,
+      "kind": "cycleway",
+      "confidence": "H",
+      "note": "Repeated explicit facility name.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:dafna-cycleway",
+      "role": "named-way",
+      "wayId": "dafna-cycleway",
+      "segmentIds": [
+        330,
+        364
+      ],
+      "name": "שביל אופניים דפנה",
+      "audibleCandidate": null,
+      "kind": "cycleway",
+      "confidence": "M",
+      "note": "Both attach at the Hurlat Tal junction; inspect overlap before acceptance.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:helicopter-memorial-cycleway",
+      "role": "named-way",
+      "wayId": "helicopter-memorial-cycleway",
+      "segmentIds": [
+        337
+      ],
+      "name": "שביל אופניים אנדרטת אסון המסוקים",
+      "audibleCandidate": null,
+      "kind": "cycleway",
+      "confidence": "H",
+      "note": "One explicit named cycleway.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:cycleway-918-dafna",
+      "role": "named-way",
+      "wayId": "cycleway-918-dafna",
+      "segmentIds": [
+        339
+      ],
+      "name": "שביל אופניים 918 דפנה",
+      "audibleCandidate": "שביל אופניים תשע מאות ושמונה עשרה דפנה",
+      "kind": "cycleway",
+      "confidence": "H",
+      "note": "Keep distinct from Road 918.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:jordan-street-cycleway",
+      "role": "named-way",
+      "wayId": "jordan-street-cycleway",
+      "segmentIds": [
+        368
+      ],
+      "name": "שביל אופניים רחוב הירדן",
+      "audibleCandidate": null,
+      "kind": "cycleway",
+      "confidence": "H",
+      "note": "Keep distinct from street segment 369.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:israel-trail",
+      "role": "named-way",
+      "wayId": "israel-trail",
+      "segmentIds": [
+        250,
+        252,
+        254,
+        255
+      ],
+      "name": "שביל ישראל",
+      "audibleCandidate": null,
+      "kind": "trail",
+      "confidence": "H",
+      "note": "Explicit connected marked-trail chain.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:brown-trail-tel-naama",
+      "role": "named-way",
+      "wayId": "brown-trail-tel-naama",
+      "segmentIds": [
+        105
+      ],
+      "name": "שביל חום תל נעמה",
+      "audibleCandidate": null,
+      "kind": "trail",
+      "confidence": "M",
+      "note": "A color mark is only locally identifying; confirm this name is sufficient.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:palri-canal-trail",
+      "role": "named-way",
+      "wayId": "palri-canal-trail",
+      "segmentIds": [
+        113
+      ],
+      "name": "שביל תעלת פלרי",
+      "audibleCandidate": null,
+      "kind": "trail",
+      "confidence": "H",
+      "note": "One explicit named trail.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:har-naftali-red-trail",
+      "role": "named-way",
+      "wayId": "har-naftali-red-trail",
+      "segmentIds": [
+        187
+      ],
+      "name": "שביל אדום הרי נפתלי",
+      "audibleCandidate": null,
+      "kind": "trail",
+      "confidence": "M",
+      "note": "Confirm the red mark is locally unique.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:tel-kalil-trail",
+      "role": "named-way",
+      "wayId": "tel-kalil-trail",
+      "segmentIds": [
+        231,
+        232
+      ],
+      "name": "שביל תל קליל",
+      "audibleCandidate": null,
+      "kind": "trail",
+      "confidence": "H",
+      "note": "Explicit north/south pair.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:stadium-trail",
+      "role": "named-way",
+      "wayId": "stadium-trail",
+      "segmentIds": [
+        365
+      ],
+      "name": "שביל האיצטדיון",
+      "audibleCandidate": null,
+      "kind": "path",
+      "confidence": "M",
+      "note": "Likely rider-recognizable local path.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:agmon-hahula",
+      "role": "named-way",
+      "wayId": "agmon-hahula",
+      "segmentIds": [
+        2,
+        147,
+        149,
+        265,
+        266
+      ],
+      "name": "שבילי אגמון החולה",
+      "audibleCandidate": null,
+      "kind": "promenade",
+      "confidence": "M",
+      "note": "Connected facility, but possible loop/branch requires degree validation.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:banias-trail",
+      "role": "named-way",
+      "wayId": "banias-trail",
+      "segmentIds": [
+        4,
+        5,
+        6,
+        7
+      ],
+      "name": "שביל הבניאס",
+      "audibleCandidate": null,
+      "kind": "trail",
+      "confidence": "L",
+      "note": "Internal labels may describe several facilities; inspect individually.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:patrol-road",
+      "role": "named-way",
+      "wayId": "patrol-road",
+      "segmentIds": [
+        16,
+        18,
+        19,
+        206,
+        207,
+        225,
+        226
+      ],
+      "name": "דרך הפטרולים",
+      "audibleCandidate": "דֶּרֶךְ הַפַּטְרוֹלִים",
+      "kind": "dirt-road",
+      "confidence": "H",
+      "note": "All repeated-name sections form the current connected candidate.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:hamenafta-road",
+      "role": "named-way",
+      "wayId": "hamenafta-road",
+      "segmentIds": [
+        15
+      ],
+      "name": "דרך המנפטה",
+      "audibleCandidate": null,
+      "kind": "dirt-road",
+      "confidence": "H",
+      "note": "Explicit proper road name.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:naftali-scenic-road",
+      "role": "named-way",
+      "wayId": "naftali-scenic-road",
+      "segmentIds": [
+        21,
+        22,
+        167,
+        274,
+        275
+      ],
+      "name": "דרך נוף הרי נפתלי",
+      "audibleCandidate": null,
+      "kind": "road",
+      "confidence": "H",
+      "note": "Explicit connected chain.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:historical-jordan",
+      "role": "named-way",
+      "wayId": "historical-jordan",
+      "segmentIds": [
+        27
+      ],
+      "name": "הירדן ההיסטורי",
+      "audibleCandidate": null,
+      "kind": "trail",
+      "confidence": "H",
+      "note": "One explicit rider-facing corridor.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:ami-promenade",
+      "role": "named-way",
+      "wayId": "ami-promenade",
+      "segmentIds": [
+        31
+      ],
+      "name": "טיילת עמי",
+      "audibleCandidate": null,
+      "kind": "promenade",
+      "confidence": "H",
+      "note": "One explicit promenade.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:mountain-jordan",
+      "role": "named-way",
+      "wayId": "mountain-jordan",
+      "segmentIds": [
+        33
+      ],
+      "name": "הירדן ההררי",
+      "audibleCandidate": null,
+      "kind": "trail",
+      "confidence": "H",
+      "note": "One explicit river corridor.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:jordan-east",
+      "role": "named-way",
+      "wayId": "jordan-east",
+      "segmentIds": [
+        34,
+        37,
+        38,
+        286,
+        349,
+        350
+      ],
+      "name": "דרך הירדן המזרחית",
+      "audibleCandidate": null,
+      "kind": "dirt-road",
+      "confidence": "M",
+      "note": "Main eastern corridor; segment 286 may need its own occurrence ID.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:jordan-east-south",
+      "role": "named-way",
+      "wayId": "jordan-east-south",
+      "segmentIds": [
+        35,
+        290
+      ],
+      "name": "דרך הירדן המזרחית",
+      "audibleCandidate": null,
+      "kind": "dirt-road",
+      "confidence": "M",
+      "note": "Separate southern component with the same display name.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:jordan-west",
+      "role": "named-way",
+      "wayId": "jordan-west",
+      "segmentIds": [
+        40,
+        41,
+        42,
+        43,
+        44,
+        46,
+        131,
+        346,
+        347
+      ],
+      "name": "דרך הירדן המערבית",
+      "audibleCandidate": null,
+      "kind": "dirt-road",
+      "confidence": "M",
+      "note": "Long current component; inspect branches and paved member 44.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:jordan-west-south",
+      "role": "named-way",
+      "wayId": "jordan-west-south",
+      "segmentIds": [
+        129,
+        130
+      ],
+      "name": "דרך הירדן המערבית",
+      "audibleCandidate": null,
+      "kind": "road",
+      "confidence": "M",
+      "note": "Separate southern road component.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:nahal-tal",
+      "role": "named-way",
+      "wayId": "nahal-tal",
+      "segmentIds": [
+        74
+      ],
+      "name": "שביל נחל טל",
+      "audibleCandidate": null,
+      "kind": "path",
+      "confidence": "M",
+      "note": "Internal label may be location-only.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:nahal-machanayim",
+      "role": "named-way",
+      "wayId": "nahal-machanayim",
+      "segmentIds": [
+        75,
+        137
+      ],
+      "name": "דרך נחל מחניים",
+      "audibleCandidate": null,
+      "kind": "dirt-road",
+      "confidence": "H",
+      "note": "Explicit connected pair.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:nahal-ayun",
+      "role": "named-way",
+      "wayId": "nahal-ayun",
+      "segmentIds": [
+        78,
+        79,
+        279
+      ],
+      "name": "שביל נחל עיון",
+      "audibleCandidate": null,
+      "kind": "trail",
+      "confidence": "H",
+      "note": "Explicit connected corridor.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:hatzbani-west-trail",
+      "role": "named-way",
+      "wayId": "hatzbani-west-trail",
+      "segmentIds": [
+        110
+      ],
+      "name": "דרך החצבאני המערבית",
+      "audibleCandidate": null,
+      "kind": "dirt-road",
+      "confidence": "M",
+      "note": "Likely recognizable corridor; confirm it is more than an internal location label.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:nahal-hatzor",
+      "role": "named-way",
+      "wayId": "nahal-hatzor",
+      "segmentIds": [
+        136,
+        163
+      ],
+      "name": "דרך נחל חצור",
+      "audibleCandidate": null,
+      "kind": "dirt-road",
+      "confidence": "M",
+      "note": "Likely one named corridor; verify the current connection.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:nabi-yusha-forest",
+      "role": "named-way",
+      "wayId": "nabi-yusha-forest",
+      "segmentIds": [
+        151
+      ],
+      "name": "דרך יער נבי ישע",
+      "audibleCandidate": null,
+      "kind": "dirt-road",
+      "confidence": "L",
+      "note": "Internal label may only describe location.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:nahal-dishon",
+      "role": "named-way",
+      "wayId": "nahal-dishon",
+      "segmentIds": [
+        154,
+        155
+      ],
+      "name": "דרך נחל דישון",
+      "audibleCandidate": null,
+      "kind": "dirt-road",
+      "confidence": "H",
+      "note": "Explicit upper/lower pair.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:nahal-zemer",
+      "role": "named-way",
+      "wayId": "nahal-zemer",
+      "segmentIds": [
+        156
+      ],
+      "name": "דרך נחל זמר",
+      "audibleCandidate": null,
+      "kind": "dirt-road",
+      "confidence": "M",
+      "note": "One explicit geographic corridor.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:wadi-yanshuf",
+      "role": "named-way",
+      "wayId": "wadi-yanshuf",
+      "segmentIds": [
+        158
+      ],
+      "name": "ואדי ינשוף",
+      "audibleCandidate": "וָאדִי יַנְשׁוּף",
+      "kind": "dirt-road",
+      "confidence": "M",
+      "note": "Audible form is provisional.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:nahal-ashaf",
+      "role": "named-way",
+      "wayId": "nahal-ashaf",
+      "segmentIds": [
+        162,
+        272,
+        273
+      ],
+      "name": "דרך נחל אשף",
+      "audibleCandidate": null,
+      "kind": "dirt-road",
+      "confidence": "M",
+      "note": "Segment 272 is a connector that appears to carry the same corridor.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:maale-nahal-bedolah",
+      "role": "named-way",
+      "wayId": "maale-nahal-bedolah",
+      "segmentIds": [
+        180
+      ],
+      "name": "מעלה נחל בדולח",
+      "audibleCandidate": null,
+      "kind": "trail",
+      "confidence": "H",
+      "note": "Explicit climb name.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:nahal-rahum",
+      "role": "named-way",
+      "wayId": "nahal-rahum",
+      "segmentIds": [
+        205
+      ],
+      "name": "דרך נחל רחום",
+      "audibleCandidate": null,
+      "kind": "dirt-road",
+      "confidence": "M",
+      "note": "One explicit geographic corridor.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:oil-axis",
+      "role": "named-way",
+      "wayId": "oil-axis",
+      "segmentIds": [
+        209,
+        257,
+        259,
+        260
+      ],
+      "name": "ציר הנפט",
+      "audibleCandidate": "צִיר הַנֶּפְט",
+      "kind": "road",
+      "confidence": "H",
+      "note": "Repeated explicit connected corridor.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:hidden-lake",
+      "role": "named-way",
+      "wayId": "hidden-lake",
+      "segmentIds": [
+        223
+      ],
+      "name": "האגם הנעלם",
+      "audibleCandidate": null,
+      "kind": "trail",
+      "confidence": "M",
+      "note": "Confirm this is a route identity rather than only a destination.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:roman-road",
+      "role": "named-way",
+      "wayId": "roman-road",
+      "segmentIds": [
+        224
+      ],
+      "name": "הדרך הרומית",
+      "audibleCandidate": null,
+      "kind": "dirt-road",
+      "confidence": "H",
+      "note": "Explicit historic-road identity.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:ein-sahar-grove",
+      "role": "named-way",
+      "wayId": "ein-sahar-grove",
+      "segmentIds": [
+        233
+      ],
+      "name": "דרך עין סהר",
+      "audibleCandidate": null,
+      "kind": "dirt-road",
+      "confidence": "M",
+      "note": "Separate from segment 236 until continuity is reviewed.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:nahal-kalil",
+      "role": "named-way",
+      "wayId": "nahal-kalil",
+      "segmentIds": [
+        234,
+        235
+      ],
+      "name": "דרך נחל קליל",
+      "audibleCandidate": null,
+      "kind": "dirt-road",
+      "confidence": "H",
+      "note": "Explicit east/west pair.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:ein-sahar-west",
+      "role": "named-way",
+      "wayId": "ein-sahar-west",
+      "segmentIds": [
+        236
+      ],
+      "name": "דרך עין סהר",
+      "audibleCandidate": null,
+      "kind": "dirt-road",
+      "confidence": "M",
+      "note": "Same display, separate current component.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:nahal-dan",
+      "role": "named-way",
+      "wayId": "nahal-dan",
+      "segmentIds": [
+        249
+      ],
+      "name": "שביל נחל דן",
+      "audibleCandidate": null,
+      "kind": "trail",
+      "confidence": "M",
+      "note": "Internal name says a narrow trail along the river.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:hirbat-omrit",
+      "role": "named-way",
+      "wayId": "hirbat-omrit",
+      "segmentIds": [
+        261
+      ],
+      "name": "דרך חורבת עומרית",
+      "audibleCandidate": null,
+      "kind": "dirt-road",
+      "confidence": "M",
+      "note": "Confirm the ruin is the route identity, not only its destination.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:tel-azaziat",
+      "role": "named-way",
+      "wayId": "tel-azaziat",
+      "segmentIds": [
+        262
+      ],
+      "name": "דרך תל עזזיאת",
+      "audibleCandidate": null,
+      "kind": "dirt-road",
+      "confidence": "M",
+      "note": "Confirm the tel is the route identity.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:nahal-gershom",
+      "role": "named-way",
+      "wayId": "nahal-gershom",
+      "segmentIds": [
+        270,
+        271
+      ],
+      "name": "דרך נחל גרשום",
+      "audibleCandidate": null,
+      "kind": "dirt-road",
+      "confidence": "H",
+      "note": "Explicit connected pair.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:syrian-patrol-road",
+      "role": "named-way",
+      "wayId": "syrian-patrol-road",
+      "segmentIds": [
+        306
+      ],
+      "name": "דרך הפטרולים הסורית",
+      "audibleCandidate": null,
+      "kind": "dirt-road",
+      "confidence": "H",
+      "note": "Distinct proper name; do not merge with `patrol-road`.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:ein-el-disa-trail",
+      "role": "named-way",
+      "wayId": "ein-el-disa-trail",
+      "segmentIds": [
+        307
+      ],
+      "name": "שביל עין אל דיסא",
+      "audibleCandidate": null,
+      "kind": "trail",
+      "confidence": "H",
+      "note": "Explicit named trail.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:tel-fakhr",
+      "role": "named-way",
+      "wayId": "tel-fakhr",
+      "segmentIds": [
+        308
+      ],
+      "name": "דרך תל פאחר",
+      "audibleCandidate": null,
+      "kind": "dirt-road",
+      "confidence": "M",
+      "note": "Confirm the site is the route identity.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:ein-fit",
+      "role": "named-way",
+      "wayId": "ein-fit",
+      "segmentIds": [
+        309
+      ],
+      "name": "דרך עין פית",
+      "audibleCandidate": "עֵין פִית",
+      "kind": "dirt-road",
+      "confidence": "M",
+      "note": "Audible form is provisional.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:banias-springs",
+      "role": "named-way",
+      "wayId": "banias-springs",
+      "segmentIds": [
+        310
+      ],
+      "name": "דרך מעיינות הבניאס",
+      "audibleCandidate": null,
+      "kind": "path",
+      "confidence": "M",
+      "note": "Confirm this is a named traversable feature.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:nahal-saar",
+      "role": "named-way",
+      "wayId": "nahal-saar",
+      "segmentIds": [
+        318,
+        319,
+        320
+      ],
+      "name": "שביל נחל סער",
+      "audibleCandidate": "נַחַל סַעַר",
+      "kind": "trail",
+      "confidence": "H",
+      "note": "Explicit connected three-segment corridor.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:peleg-hadan",
+      "role": "named-way",
+      "wayId": "peleg-hadan",
+      "segmentIds": [
+        340
+      ],
+      "name": "דרך פלג הדן",
+      "audibleCandidate": null,
+      "kind": "dirt-road",
+      "confidence": "M",
+      "note": "One explicit geographic corridor.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:nahal-machbaram",
+      "role": "named-way",
+      "wayId": "nahal-machbaram",
+      "segmentIds": [
+        344
+      ],
+      "name": "דרך נחל מכברם",
+      "audibleCandidate": null,
+      "kind": "dirt-road",
+      "confidence": "M",
+      "note": "One explicit geographic corridor.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:bikat-yahmur",
+      "role": "named-way",
+      "wayId": "bikat-yahmur",
+      "segmentIds": [
+        354
+      ],
+      "name": "דרך בקעת יחמור",
+      "audibleCandidate": null,
+      "kind": "dirt-road",
+      "confidence": "M",
+      "note": "Confirm the valley is the route identity.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:ein-tao",
+      "role": "named-way",
+      "wayId": "ein-tao",
+      "segmentIds": [
+        370
+      ],
+      "name": "דרך עין תאו",
+      "audibleCandidate": "עֵין תֵּאוֹ",
+      "kind": "dirt-road",
+      "confidence": "M",
+      "note": "Audible form is provisional.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:givat-haem",
+      "role": "named-way",
+      "wayId": "givat-haem",
+      "segmentIds": [
+        9
+      ],
+      "name": "דרך גבעת האם",
+      "audibleCandidate": "גִּבְעַת הָאֵם",
+      "kind": "dirt-road",
+      "confidence": "M",
+      "note": "Likely recognizable locally; audible form is provisional.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:system-road-kiryat-shmona",
+      "role": "named-way",
+      "wayId": "system-road-kiryat-shmona",
+      "segmentIds": [
+        69
+      ],
+      "name": "כביש המערכת קריית שמונה",
+      "audibleCandidate": null,
+      "kind": "dirt-road",
+      "confidence": "M",
+      "note": "Confirm this is one public guidance identity.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:nabi-yehuda-pipeline",
+      "role": "named-way",
+      "wayId": "nabi-yehuda-pipeline",
+      "segmentIds": [
+        72
+      ],
+      "name": "דרך נקודת הצינור נבי יהודה",
+      "audibleCandidate": null,
+      "kind": "road",
+      "confidence": "L",
+      "note": "Descriptive internal label; individual review required.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:beit-hillel-fields",
+      "role": "named-way",
+      "wayId": "beit-hillel-fields",
+      "segmentIds": [
+        117,
+        157
+      ],
+      "name": "שדות בית הלל",
+      "audibleCandidate": null,
+      "kind": "dirt-road",
+      "confidence": "M",
+      "note": "Mirrors the existing field-area naming pattern; verify continuity.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:amir-fields",
+      "role": "named-way",
+      "wayId": "amir-fields",
+      "segmentIds": [
+        123,
+        124,
+        125
+      ],
+      "name": "שדות עמיר",
+      "audibleCandidate": null,
+      "kind": "dirt-road",
+      "confidence": "M",
+      "note": "Three local field sections; inspect branching.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:founders-street-yesod",
+      "role": "named-way",
+      "wayId": "founders-street-yesod",
+      "segmentIds": [
+        128
+      ],
+      "name": "רחוב המייסדים יסוד המעלה",
+      "audibleCandidate": null,
+      "kind": "road",
+      "confidence": "H",
+      "note": "Explicit street name.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:beit-hillel-perimeter",
+      "role": "named-way",
+      "wayId": "beit-hillel-perimeter",
+      "segmentIds": [
+        139,
+        301
+      ],
+      "name": "דרך גדר המערכת בית הלל",
+      "audibleCandidate": null,
+      "kind": "road",
+      "confidence": "M",
+      "note": "Repeated perimeter context with variant internal spelling.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:metula-orchard-pass",
+      "role": "named-way",
+      "wayId": "metula-orchard-pass",
+      "segmentIds": [
+        165,
+        177
+      ],
+      "name": "דרך מטעי מטולה",
+      "audibleCandidate": null,
+      "kind": "dirt-road",
+      "confidence": "L",
+      "note": "Likely descriptive rather than an established proper name.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:metula-scenic-road",
+      "role": "named-way",
+      "wayId": "metula-scenic-road",
+      "segmentIds": [
+        168
+      ],
+      "name": "דרך נוף מטולה",
+      "audibleCandidate": null,
+      "kind": "road",
+      "confidence": "H",
+      "note": "Explicit scenic-road name.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:mitzpe-adi-road",
+      "role": "named-way",
+      "wayId": "mitzpe-adi-road",
+      "segmentIds": [
+        169,
+        170
+      ],
+      "name": "דרך נוף מצפה עדי",
+      "audibleCandidate": null,
+      "kind": "road",
+      "confidence": "H",
+      "note": "Explicit south/north pair.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:har-hatzfiya",
+      "role": "named-way",
+      "wayId": "har-hatzfiya",
+      "segmentIds": [
+        171
+      ],
+      "name": "דרך הר הצפייה",
+      "audibleCandidate": null,
+      "kind": "road",
+      "confidence": "M",
+      "note": "Confirm whether this and segment 179 are one facility.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:maale-dado",
+      "role": "named-way",
+      "wayId": "maale-dado",
+      "segmentIds": [
+        178
+      ],
+      "name": "מעלה דדו",
+      "audibleCandidate": null,
+      "kind": "road",
+      "confidence": "H",
+      "note": "Explicit climb name.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:maale-hatzfiya",
+      "role": "named-way",
+      "wayId": "maale-hatzfiya",
+      "segmentIds": [
+        179
+      ],
+      "name": "מעלה הצפייה",
+      "audibleCandidate": null,
+      "kind": "road",
+      "confidence": "H",
+      "note": "Explicit climb name.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:har-naftali-single-bypass",
+      "role": "named-way",
+      "wayId": "har-naftali-single-bypass",
+      "segmentIds": [
+        182
+      ],
+      "name": "עוקף סינגל הרי נפתלי",
+      "audibleCandidate": null,
+      "kind": "trail",
+      "confidence": "L",
+      "note": "Could be a descriptive connector rather than a named way.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:hachetzav-street",
+      "role": "named-way",
+      "wayId": "hachetzav-street",
+      "segmentIds": [
+        184
+      ],
+      "name": "רחוב החצב",
+      "audibleCandidate": null,
+      "kind": "road",
+      "confidence": "H",
+      "note": "Explicit street name.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:hanasi-street",
+      "role": "named-way",
+      "wayId": "hanasi-street",
+      "segmentIds": [
+        185
+      ],
+      "name": "רחוב הנשיא",
+      "audibleCandidate": null,
+      "kind": "road",
+      "confidence": "H",
+      "note": "Explicit street name.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:ein-zahav-veradim-street",
+      "role": "named-way",
+      "wayId": "ein-zahav-veradim-street",
+      "segmentIds": [
+        186
+      ],
+      "name": "רחוב עין זהב והוורדים",
+      "audibleCandidate": null,
+      "kind": "road",
+      "confidence": "L",
+      "note": "May span two streets; split after map review if needed.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:tel-avel-beit-maakha",
+      "role": "named-way",
+      "wayId": "tel-avel-beit-maakha",
+      "segmentIds": [
+        188
+      ],
+      "name": "דרך תל אבל בית מעכה",
+      "audibleCandidate": null,
+      "kind": "dirt-road",
+      "confidence": "M",
+      "note": "Confirm the archaeological site is the route identity.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:area-100-alma-cave",
+      "role": "named-way",
+      "wayId": "area-100-alma-cave",
+      "segmentIds": [
+        193
+      ],
+      "name": "דרך מערת עלמה",
+      "audibleCandidate": null,
+      "kind": "dirt-road",
+      "confidence": "L",
+      "note": "Remove the internal “שטח 100” wording from rider copy.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:tel-turmus",
+      "role": "named-way",
+      "wayId": "tel-turmus",
+      "segmentIds": [
+        196
+      ],
+      "name": "דרך תל תורמוס",
+      "audibleCandidate": null,
+      "kind": "dirt-road",
+      "confidence": "M",
+      "note": "Confirm the tel is the route identity.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:kfar-szold-center",
+      "role": "named-way",
+      "wayId": "kfar-szold-center",
+      "segmentIds": [
+        221
+      ],
+      "name": "דרך מרכז כפר סאלד",
+      "audibleCandidate": null,
+      "kind": "road",
+      "confidence": "M",
+      "note": "Local road; confirm public recognizability.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:kfar-szold-perimeter",
+      "role": "named-way",
+      "wayId": "kfar-szold-perimeter",
+      "segmentIds": [
+        222
+      ],
+      "name": "הדרך ההיקפית כפר סאלד",
+      "audibleCandidate": null,
+      "kind": "road",
+      "confidence": "M",
+      "note": "Explicit perimeter-road semantics.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:shear-yashuv-perimeter",
+      "role": "named-way",
+      "wayId": "shear-yashuv-perimeter",
+      "segmentIds": [
+        239,
+        240,
+        241
+      ],
+      "name": "הדרך ההיקפית שאר ישוב",
+      "audibleCandidate": null,
+      "kind": "road",
+      "confidence": "H",
+      "note": "Explicit north/east/west perimeter group.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:sovev-dafna",
+      "role": "named-way",
+      "wayId": "sovev-dafna",
+      "segmentIds": [
+        243,
+        246,
+        247,
+        335
+      ],
+      "name": "סובב דפנה",
+      "audibleCandidate": null,
+      "kind": "dirt-road",
+      "confidence": "H",
+      "note": "Segment 335 appears to continue the named perimeter.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:rose-street",
+      "role": "named-way",
+      "wayId": "rose-street",
+      "segmentIds": [
+        263,
+        264
+      ],
+      "name": "רחוב הוורדים",
+      "audibleCandidate": null,
+      "kind": "road",
+      "confidence": "H",
+      "note": "Explicit connected street pair.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:geological-park-road",
+      "role": "named-way",
+      "wayId": "geological-park-road",
+      "segmentIds": [
+        276,
+        277
+      ],
+      "name": "דרך הפארק הגאולוגי קריית שמונה",
+      "audibleCandidate": null,
+      "kind": "road",
+      "confidence": "M",
+      "note": "One climb plus park section; verify shared identity.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:givat-shahumit",
+      "role": "named-way",
+      "wayId": "givat-shahumit",
+      "segmentIds": [
+        298,
+        299
+      ],
+      "name": "דרך גבעת שחומית",
+      "audibleCandidate": null,
+      "kind": "road",
+      "confidence": "M",
+      "note": "Segment 299 is an access section carrying the candidate identity.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:dolav-street",
+      "role": "named-way",
+      "wayId": "dolav-street",
+      "segmentIds": [
+        302,
+        303
+      ],
+      "name": "רחוב הדולב",
+      "audibleCandidate": null,
+      "kind": "road",
+      "confidence": "H",
+      "note": "Explicit connected street pair.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:founders-trail-dafna",
+      "role": "named-way",
+      "wayId": "founders-trail-dafna",
+      "segmentIds": [
+        334
+      ],
+      "name": "שביל המייסדים דפנה",
+      "audibleCandidate": null,
+      "kind": "path",
+      "confidence": "H",
+      "note": "Explicit local trail name.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:ahuzat-hayarden",
+      "role": "named-way",
+      "wayId": "ahuzat-hayarden",
+      "segmentIds": [
+        342
+      ],
+      "name": "דרך אחוזת הירדן",
+      "audibleCandidate": null,
+      "kind": "dirt-road",
+      "confidence": "L",
+      "note": "May name a destination rather than the road.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:kfar-szold-fields",
+      "role": "named-way",
+      "wayId": "kfar-szold-fields",
+      "segmentIds": [
+        323,
+        324
+      ],
+      "name": "שביל שדות כפר סאלד",
+      "audibleCandidate": null,
+      "kind": "dirt-road",
+      "confidence": "M",
+      "note": "Explicit repeated field-trail name.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:sde-eliezer-system-road",
+      "role": "named-way",
+      "wayId": "sde-eliezer-system-road",
+      "segmentIds": [
+        356
+      ],
+      "name": "כביש המערכת שדה אליעזר",
+      "audibleCandidate": null,
+      "kind": "dirt-road",
+      "confidence": "M",
+      "note": "Confirm public recognizability.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:henrietta-szold-street",
+      "role": "named-way",
+      "wayId": "henrietta-szold-street",
+      "segmentIds": [
+        361
+      ],
+      "name": "רחוב הנרייטה סאלד",
+      "audibleCandidate": "רְחוֹב הֶנְרִיֶיטָה סֹאלְד",
+      "kind": "road",
+      "confidence": "H",
+      "note": "Audible spelling must be verified on iOS.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:gold-park",
+      "role": "named-way",
+      "wayId": "gold-park",
+      "segmentIds": [
+        367
+      ],
+      "name": "פארק הזהב",
+      "audibleCandidate": null,
+      "kind": "promenade",
+      "confidence": "M",
+      "note": "Confirm the segment is a park route, not only park-adjacent.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "named-way:jordan-street",
+      "role": "named-way",
+      "wayId": "jordan-street",
+      "segmentIds": [
+        369
+      ],
+      "name": "רחוב הירדן",
+      "audibleCandidate": null,
+      "kind": "road",
+      "confidence": "H",
+      "note": "Keep distinct from cycleway segment 368.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "standalone:12",
+      "role": "standalone",
+      "segmentIds": [
+        12
+      ],
+      "internalName": "גשר חולתה",
+      "name": "גשר חולתה",
+      "audibleCandidate": "גֶּשֶׁר חוּלָתָה",
+      "kind": "bridge",
+      "confidence": "H",
+      "note": "Named bridge between route corridors.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "standalone:13",
+      "role": "standalone",
+      "segmentIds": [
+        13
+      ],
+      "internalName": "גשר חיל ההנדסה ירדן",
+      "name": "גשר חיל ההנדסה בירדן",
+      "audibleCandidate": "גֶּשֶׁר חֵיל הַהַנְדָּסָה, בַּיַּרְדֵּן",
+      "kind": "bridge",
+      "confidence": "M",
+      "note": "Display wording needs curator confirmation.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "standalone:14",
+      "role": "standalone",
+      "segmentIds": [
+        14
+      ],
+      "internalName": "גשר עינות ירדן",
+      "name": "גשר עינות ירדן",
+      "audibleCandidate": "גֶּשֶׁר עֵינוֹת יַרְדֵּן",
+      "kind": "bridge",
+      "confidence": "H",
+      "note": "Reference standalone-bridge case from the design.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "standalone:25",
+      "role": "standalone",
+      "segmentIds": [
+        25
+      ],
+      "internalName": "האי בנחל הבניאס",
+      "name": "האי בנחל הבניאס",
+      "audibleCandidate": null,
+      "kind": "other",
+      "confidence": "M",
+      "note": "Recognizable bounded feature; verify that the complete segment is the island passage.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "standalone:26",
+      "role": "standalone",
+      "segmentIds": [
+        26
+      ],
+      "internalName": "הגשר על הבניאס",
+      "name": "גשר הבניאס",
+      "audibleCandidate": "גֶּשֶׁר הַבַּנְיָאס",
+      "kind": "bridge",
+      "confidence": "H",
+      "note": "Named bounded bridge feature.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "standalone:245",
+      "role": "standalone",
+      "segmentIds": [
+        245
+      ],
+      "internalName": "גשר על נהר הדן",
+      "name": "גשר נהר הדן",
+      "audibleCandidate": "גֶּשֶׁר נְהַר הַדָּן",
+      "kind": "bridge",
+      "confidence": "H",
+      "note": "Named bounded bridge feature.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "standalone:348",
+      "role": "standalone",
+      "segmentIds": [
+        348
+      ],
+      "internalName": "מעבר הולכי רגל גשר להבות",
+      "name": "גשר להבות",
+      "audibleCandidate": "גֶּשֶׁר לְהָבוֹת",
+      "kind": "bridge",
+      "confidence": "M",
+      "note": "Confirm whether riders recognize the bridge by this name.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "unnamed:3",
+      "role": "unnamed",
+      "segmentIds": [
+        3
+      ],
+      "internalName": "בית עלמין שאר ישוב",
+      "kind": "connector",
+      "confidence": "H",
+      "note": "Access to a destination, not the road's name.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "unnamed:8",
+      "role": "unnamed",
+      "segmentIds": [
+        8
+      ],
+      "internalName": "בריכות דגים צומת גומא",
+      "kind": "connector",
+      "confidence": "M",
+      "note": "Endpoint description rather than a proper way.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "unnamed:24",
+      "role": "unnamed",
+      "segmentIds": [
+        24
+      ],
+      "internalName": "דרך עפר חצבאני קיאקים כפר בלום",
+      "kind": "dirt-road",
+      "confidence": "H",
+      "note": "Multi-place internal description.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "unnamed:29",
+      "role": "unnamed",
+      "segmentIds": [
+        29
+      ],
+      "internalName": "חניון האקליפטוס",
+      "kind": "connector",
+      "confidence": "M",
+      "note": "Parking access; bridge/road name is not established.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "unnamed:49",
+      "role": "unnamed",
+      "segmentIds": [
+        49
+      ],
+      "internalName": "כביש 90 שמורת החולה",
+      "kind": "dirt-road",
+      "confidence": "H",
+      "note": "Dirt facility alongside Road 90; unsafe to call it the road.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "unnamed:65",
+      "role": "unnamed",
+      "segmentIds": [
+        65
+      ],
+      "internalName": "כביש גישה אגמון החולה",
+      "kind": "connector",
+      "confidence": "H",
+      "note": "Explicit access road.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "unnamed:67",
+      "role": "unnamed",
+      "segmentIds": [
+        67
+      ],
+      "internalName": "כביש גישה ציר הנפט",
+      "kind": "connector",
+      "confidence": "H",
+      "note": "Explicit access road.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "unnamed:68",
+      "role": "unnamed",
+      "segmentIds": [
+        68
+      ],
+      "internalName": "כביש גישה תל דן",
+      "kind": "connector",
+      "confidence": "H",
+      "note": "Explicit access road.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "unnamed:83",
+      "role": "unnamed",
+      "segmentIds": [
+        83
+      ],
+      "internalName": "עוקף שמורת החולה אינדי פארק",
+      "kind": "dirt-road",
+      "confidence": "H",
+      "note": "Descriptive bypass.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "unnamed:102",
+      "role": "unnamed",
+      "segmentIds": [
+        102
+      ],
+      "internalName": "שביל גישה דג על הדן",
+      "kind": "connector",
+      "confidence": "H",
+      "note": "Explicit access path.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "unnamed:109",
+      "role": "unnamed",
+      "segmentIds": [
+        109
+      ],
+      "internalName": "שביל עפר בניאס שדות שאר ישוב",
+      "kind": "dirt-road",
+      "confidence": "H",
+      "note": "Multi-place internal description.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "unnamed:114",
+      "role": "unnamed",
+      "segmentIds": [
+        114
+      ],
+      "internalName": "שדה נחמיה שער כניסה",
+      "kind": "connector",
+      "confidence": "H",
+      "note": "Gate/entry section.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "unnamed:116",
+      "role": "unnamed",
+      "segmentIds": [
+        116
+      ],
+      "internalName": "שדות אגמון ושמורת החולה",
+      "kind": "dirt-road",
+      "confidence": "M",
+      "note": "Broad area description; no stable proper way name.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "unnamed:118",
+      "role": "unnamed",
+      "segmentIds": [
+        118
+      ],
+      "internalName": "שדות גונן",
+      "kind": "dirt-road",
+      "confidence": "M",
+      "note": "Broad area description.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "unnamed:119",
+      "role": "unnamed",
+      "segmentIds": [
+        119
+      ],
+      "internalName": "שדות דישון",
+      "kind": "dirt-road",
+      "confidence": "M",
+      "note": "Broad area description.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "unnamed:120",
+      "role": "unnamed",
+      "segmentIds": [
+        120
+      ],
+      "internalName": "שדות הגושרים",
+      "kind": "path",
+      "confidence": "M",
+      "note": "Broad area description on a paved path.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "unnamed:122",
+      "role": "unnamed",
+      "segmentIds": [
+        122
+      ],
+      "internalName": "שדות נאות מרדכי מערב",
+      "kind": "dirt-road",
+      "confidence": "M",
+      "note": "Broad area description.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "unnamed:126",
+      "role": "unnamed",
+      "segmentIds": [
+        126
+      ],
+      "internalName": "שדות קיבוץ שדה נחמיה",
+      "kind": "path",
+      "confidence": "M",
+      "note": "Broad area description on a paved path.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "unnamed:132",
+      "role": "unnamed",
+      "segmentIds": [
+        132
+      ],
+      "internalName": "כביש 90 שדה אליעזר",
+      "kind": "dirt-road",
+      "confidence": "H",
+      "note": "Dirt facility near Road 90, not the roadway.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "unnamed:135",
+      "role": "unnamed",
+      "segmentIds": [
+        135
+      ],
+      "internalName": "מטעים יסוד המעלה",
+      "kind": "path",
+      "confidence": "M",
+      "note": "Orchard-area description.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "unnamed:140",
+      "role": "unnamed",
+      "segmentIds": [
+        140
+      ],
+      "internalName": "קמפינג דג על הדן",
+      "kind": "connector",
+      "confidence": "H",
+      "note": "Destination access.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "unnamed:144",
+      "role": "unnamed",
+      "segmentIds": [
+        144
+      ],
+      "internalName": "קרית שמונה תעשייה דרומי",
+      "kind": "road",
+      "confidence": "M",
+      "note": "Industrial-area internal description.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "unnamed:152",
+      "role": "unnamed",
+      "segmentIds": [
+        152
+      ],
+      "internalName": "כביש 90 שמורת נחל עינן מערב",
+      "kind": "dirt-road",
+      "confidence": "H",
+      "note": "Dirt facility near Road 90, not the roadway.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "unnamed:181",
+      "role": "unnamed",
+      "segmentIds": [
+        181
+      ],
+      "internalName": "מצפה דדו מטולה אתר בבניה",
+      "kind": "path",
+      "confidence": "H",
+      "note": "Temporary/construction description must not ship as a name.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "unnamed:197",
+      "role": "unnamed",
+      "segmentIds": [
+        197
+      ],
+      "internalName": "כביש גישה נבי יהודה מזרח",
+      "kind": "connector",
+      "confidence": "H",
+      "note": "Explicit access road.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "unnamed:198",
+      "role": "unnamed",
+      "segmentIds": [
+        198
+      ],
+      "internalName": "כביש גישה נבי יהודה מערב",
+      "kind": "connector",
+      "confidence": "H",
+      "note": "Explicit access road.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "unnamed:200",
+      "role": "unnamed",
+      "segmentIds": [
+        200
+      ],
+      "internalName": "שביל חיבור שמיר ציר הנפט",
+      "kind": "connector",
+      "confidence": "H",
+      "note": "Explicit connection.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "unnamed:201",
+      "role": "unnamed",
+      "segmentIds": [
+        201
+      ],
+      "internalName": "שביל גישה גדר גבול הר דב",
+      "kind": "connector",
+      "confidence": "H",
+      "note": "Explicit access path.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "unnamed:216",
+      "role": "unnamed",
+      "segmentIds": [
+        216
+      ],
+      "internalName": "שביל שדות כפר סאלד כביש 918",
+      "kind": "dirt-road",
+      "confidence": "H",
+      "note": "Multi-place internal description.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "unnamed:220",
+      "role": "unnamed",
+      "segmentIds": [
+        220
+      ],
+      "internalName": "כפר סאלד כביש גישה",
+      "kind": "connector",
+      "confidence": "H",
+      "note": "Explicit access road.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "unnamed:227",
+      "role": "unnamed",
+      "segmentIds": [
+        227
+      ],
+      "internalName": "עלייה מדרך רומית לפטרולים דרום",
+      "kind": "connector",
+      "confidence": "H",
+      "note": "Connection between two named ways.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "unnamed:228",
+      "role": "unnamed",
+      "segmentIds": [
+        228
+      ],
+      "internalName": "עלייה מדרך רומית לפטרולים צפון",
+      "kind": "connector",
+      "confidence": "H",
+      "note": "Connection between two named ways.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "unnamed:237",
+      "role": "unnamed",
+      "segmentIds": [
+        237
+      ],
+      "internalName": "שביל חקלאי ליד תל קליל",
+      "kind": "dirt-road",
+      "confidence": "H",
+      "note": "Generic agricultural path.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "unnamed:238",
+      "role": "unnamed",
+      "segmentIds": [
+        238
+      ],
+      "internalName": "עלייה קטנה לשאר ישוב",
+      "kind": "connector",
+      "confidence": "H",
+      "note": "Descriptive short connection.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "unnamed:244",
+      "role": "unnamed",
+      "segmentIds": [
+        244
+      ],
+      "internalName": "שדות דפנה צפון",
+      "kind": "path",
+      "confidence": "M",
+      "note": "Broad area description on a paved path.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "unnamed:248",
+      "role": "unnamed",
+      "segmentIds": [
+        248
+      ],
+      "internalName": "שביל גישה למחלק",
+      "kind": "connector",
+      "confidence": "H",
+      "note": "Explicit access path.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "unnamed:256",
+      "role": "unnamed",
+      "segmentIds": [
+        256
+      ],
+      "internalName": "שדות קיבוץ דן",
+      "kind": "dirt-road",
+      "confidence": "M",
+      "note": "Broad area description.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "unnamed:269",
+      "role": "unnamed",
+      "segmentIds": [
+        269
+      ],
+      "internalName": "צומת יסוד שביל חיבור",
+      "kind": "connector",
+      "confidence": "H",
+      "note": "Explicit junction connection.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "unnamed:278",
+      "role": "unnamed",
+      "segmentIds": [
+        278
+      ],
+      "internalName": "שער כניסה שדות בית הלל",
+      "kind": "connector",
+      "confidence": "H",
+      "note": "Gate/entry section.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "unnamed:282",
+      "role": "unnamed",
+      "segmentIds": [
+        282
+      ],
+      "internalName": "כביש גישה שדה נחמיה",
+      "kind": "connector",
+      "confidence": "H",
+      "note": "Explicit access road.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "unnamed:283",
+      "role": "unnamed",
+      "segmentIds": [
+        283
+      ],
+      "internalName": "כניסה שדה נחמיה חניה",
+      "kind": "connector",
+      "confidence": "H",
+      "note": "Entry/parking section.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "unnamed:288",
+      "role": "unnamed",
+      "segmentIds": [
+        288
+      ],
+      "internalName": "כניסה פארק התעלות",
+      "kind": "connector",
+      "confidence": "H",
+      "note": "Explicit entrance road.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "unnamed:295",
+      "role": "unnamed",
+      "segmentIds": [
+        295
+      ],
+      "internalName": "שער כניסה שאר ישוב",
+      "kind": "connector",
+      "confidence": "H",
+      "note": "Gate/entry section.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "unnamed:313",
+      "role": "unnamed",
+      "segmentIds": [
+        313
+      ],
+      "internalName": "מטעים עין קניא",
+      "kind": "dirt-road",
+      "confidence": "M",
+      "note": "Orchard-area description despite paved source styling.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "unnamed:314",
+      "role": "unnamed",
+      "segmentIds": [
+        314
+      ],
+      "internalName": "מטעים עין קניא כביש 99",
+      "kind": "dirt-road",
+      "confidence": "H",
+      "note": "Parallel orchard facility; do not call it Road 99.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "unnamed:315",
+      "role": "unnamed",
+      "segmentIds": [
+        315
+      ],
+      "internalName": "מטעים עין קניא חיבור",
+      "kind": "connector",
+      "confidence": "H",
+      "note": "Explicit connection.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "unnamed:316",
+      "role": "unnamed",
+      "segmentIds": [
+        316
+      ],
+      "internalName": "עין קניא מטעים דרומיים",
+      "kind": "dirt-road",
+      "confidence": "M",
+      "note": "Orchard-area description despite paved source styling.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "unnamed:325",
+      "role": "unnamed",
+      "segmentIds": [
+        325
+      ],
+      "internalName": "מעבר מתחת כביש 918",
+      "kind": "connector",
+      "confidence": "H",
+      "note": "Underpass connection, not a named way.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "unnamed:333",
+      "role": "unnamed",
+      "segmentIds": [
+        333
+      ],
+      "internalName": "כניסה לקיבוץ דפנה",
+      "kind": "connector",
+      "confidence": "H",
+      "note": "Explicit entrance road.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "unnamed:343",
+      "role": "unnamed",
+      "segmentIds": [
+        343
+      ],
+      "internalName": "צומת איילת השחר",
+      "kind": "connector",
+      "confidence": "H",
+      "note": "Junction context, not a way identity.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "unnamed:345",
+      "role": "unnamed",
+      "segmentIds": [
+        345
+      ],
+      "internalName": "איילת השחר שדות צפוניים",
+      "kind": "dirt-road",
+      "confidence": "M",
+      "note": "Broad area description.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "unnamed:351",
+      "role": "unnamed",
+      "segmentIds": [
+        351
+      ],
+      "internalName": "שביל גישה גשר להבות",
+      "kind": "connector",
+      "confidence": "H",
+      "note": "Access to standalone bridge 348.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "unnamed:358",
+      "role": "unnamed",
+      "segmentIds": [
+        358
+      ],
+      "internalName": "רחוב פנימי שדה אליעזר",
+      "kind": "road",
+      "confidence": "H",
+      "note": "Explicitly generic internal street.",
+      "reviewStatus": "pending"
+    },
+    {
+      "id": "unnamed:359",
+      "role": "unnamed",
+      "segmentIds": [
+        359
+      ],
+      "internalName": "כביש גישה שדה אליעזר",
+      "kind": "connector",
+      "confidence": "H",
+      "note": "Explicit access road.",
+      "reviewStatus": "pending"
+    }
+  ],
+  "summary": {
+    "groupCount": 169,
+    "sourceGroupCount": 176,
+    "segmentCount": 280,
+    "byRole": {
+      "named-way": 108,
+      "standalone": 7,
+      "unnamed": 54
+    }
+  }
+}

@@ -1,7 +1,7 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "slug": "naftali-dishon-yosha",
-  "generatedAt": "2026-07-23T09:02:52.139Z",
+  "generatedAt": "2026-07-23T14:23:53.333Z",
   "source": {
     "routeTokenHash": "sha256:6aed7196d6cc9938593dc498adb12f4368b55aaad7aadafd2f3c21bd5764ceb8",
     "routeFormat": "hybrid_route_v6",
@@ -5189,6 +5189,1555 @@
       "שביל אופניים 9779 קרית שמונה",
       "קרית שמונה תעשייה דרומי",
       "רחוב הנרייטה סאלד"
+    ],
+    "guidanceMode": "legacy",
+    "itinerary": [
+      {
+        "id": "class:1:0-963",
+        "guidanceIdentity": null,
+        "role": null,
+        "resolutionStatus": "unreviewed",
+        "name": "כביש",
+        "spokenName": "כביש",
+        "kind": "road",
+        "icon": "road",
+        "isFallback": true,
+        "startMeters": 0,
+        "endMeters": 962.617571280481,
+        "distanceMeters": 962.617571280481,
+        "segmentIds": [
+          276
+        ],
+        "sectionLabels": [],
+        "junctionContexts": [],
+        "children": [
+          {
+            "startMeters": 0,
+            "endMeters": 962.617571280481,
+            "networkRole": "segment",
+            "resolutionStatus": "unreviewed",
+            "guidanceIdentity": null,
+            "name": null,
+            "spokenName": null,
+            "role": null,
+            "kind": "road",
+            "routeClass": "road",
+            "segmentIds": [
+              276
+            ],
+            "sectionLabels": [],
+            "junctionId": null,
+            "junctionName": null
+          }
+        ],
+        "warningCount": 0,
+        "poiCount": 0,
+        "dataPointIds": []
+      },
+      {
+        "id": "class:2:963-2087",
+        "guidanceIdentity": null,
+        "role": null,
+        "resolutionStatus": "unreviewed",
+        "name": "כביש",
+        "spokenName": "כביש",
+        "kind": "road",
+        "icon": "road",
+        "isFallback": true,
+        "startMeters": 962.617571280481,
+        "endMeters": 2087.217571280481,
+        "distanceMeters": 1124.6,
+        "segmentIds": [
+          276
+        ],
+        "sectionLabels": [],
+        "junctionContexts": [],
+        "children": [
+          {
+            "startMeters": 962.617571280481,
+            "endMeters": 2087.217571280481,
+            "networkRole": "segment",
+            "resolutionStatus": "unreviewed",
+            "guidanceIdentity": null,
+            "name": null,
+            "spokenName": null,
+            "role": null,
+            "kind": "road",
+            "routeClass": "local_road",
+            "segmentIds": [
+              276
+            ],
+            "sectionLabels": [],
+            "junctionId": null,
+            "junctionName": null
+          }
+        ],
+        "warningCount": 0,
+        "poiCount": 0,
+        "dataPointIds": []
+      },
+      {
+        "id": "class:3:2087-2339",
+        "guidanceIdentity": null,
+        "role": null,
+        "resolutionStatus": "unreviewed",
+        "name": "כביש",
+        "spokenName": "כביש",
+        "kind": "road",
+        "icon": "road",
+        "isFallback": true,
+        "startMeters": 2087.217571280481,
+        "endMeters": 2338.817571280481,
+        "distanceMeters": 251.5999999999999,
+        "segmentIds": [
+          277
+        ],
+        "sectionLabels": [],
+        "junctionContexts": [],
+        "children": [
+          {
+            "startMeters": 2087.217571280481,
+            "endMeters": 2338.817571280481,
+            "networkRole": "segment",
+            "resolutionStatus": "unreviewed",
+            "guidanceIdentity": null,
+            "name": null,
+            "spokenName": null,
+            "role": null,
+            "kind": "road",
+            "routeClass": "local_road",
+            "segmentIds": [
+              277
+            ],
+            "sectionLabels": [],
+            "junctionId": null,
+            "junctionName": null
+          }
+        ],
+        "warningCount": 0,
+        "poiCount": 0,
+        "dataPointIds": []
+      },
+      {
+        "id": "class:4:2339-2920",
+        "guidanceIdentity": null,
+        "role": null,
+        "resolutionStatus": "unreviewed",
+        "name": "כביש",
+        "spokenName": "כביש",
+        "kind": "road",
+        "icon": "road",
+        "isFallback": true,
+        "startMeters": 2338.817571280481,
+        "endMeters": 2920.217571280481,
+        "distanceMeters": 581.4000000000001,
+        "segmentIds": [
+          22
+        ],
+        "sectionLabels": [],
+        "junctionContexts": [],
+        "children": [
+          {
+            "startMeters": 2338.817571280481,
+            "endMeters": 2920.217571280481,
+            "networkRole": "segment",
+            "resolutionStatus": "unreviewed",
+            "guidanceIdentity": null,
+            "name": null,
+            "spokenName": null,
+            "role": null,
+            "kind": "road",
+            "routeClass": "local_road",
+            "segmentIds": [
+              22
+            ],
+            "sectionLabels": [],
+            "junctionId": null,
+            "junctionName": null
+          }
+        ],
+        "warningCount": 0,
+        "poiCount": 0,
+        "dataPointIds": []
+      },
+      {
+        "id": "class:1:2920-3315",
+        "guidanceIdentity": null,
+        "role": null,
+        "resolutionStatus": "unreviewed",
+        "name": "שביל",
+        "spokenName": "שביל",
+        "kind": "path",
+        "icon": "trail",
+        "isFallback": true,
+        "startMeters": 2920.217571280481,
+        "endMeters": 3315.1175712804807,
+        "distanceMeters": 394.89999999999964,
+        "segmentIds": [
+          22
+        ],
+        "sectionLabels": [],
+        "junctionContexts": [],
+        "children": [
+          {
+            "startMeters": 2920.217571280481,
+            "endMeters": 3315.1175712804807,
+            "networkRole": "segment",
+            "resolutionStatus": "unreviewed",
+            "guidanceIdentity": null,
+            "name": null,
+            "spokenName": null,
+            "role": null,
+            "kind": "path",
+            "routeClass": "path_track",
+            "segmentIds": [
+              22
+            ],
+            "sectionLabels": [],
+            "junctionId": null,
+            "junctionName": null
+          }
+        ],
+        "warningCount": 0,
+        "poiCount": 0,
+        "dataPointIds": []
+      },
+      {
+        "id": "class:5:3315-4199",
+        "guidanceIdentity": null,
+        "role": null,
+        "resolutionStatus": "unreviewed",
+        "name": "כביש",
+        "spokenName": "כביש",
+        "kind": "road",
+        "icon": "road",
+        "isFallback": true,
+        "startMeters": 3315.1175712804807,
+        "endMeters": 4198.51757128048,
+        "distanceMeters": 883.3999999999996,
+        "segmentIds": [
+          22
+        ],
+        "sectionLabels": [],
+        "junctionContexts": [],
+        "children": [
+          {
+            "startMeters": 3315.1175712804807,
+            "endMeters": 4198.51757128048,
+            "networkRole": "segment",
+            "resolutionStatus": "unreviewed",
+            "guidanceIdentity": null,
+            "name": null,
+            "spokenName": null,
+            "role": null,
+            "kind": "road",
+            "routeClass": "local_road",
+            "segmentIds": [
+              22
+            ],
+            "sectionLabels": [],
+            "junctionId": null,
+            "junctionName": null
+          }
+        ],
+        "warningCount": 0,
+        "poiCount": 0,
+        "dataPointIds": []
+      },
+      {
+        "id": "class:2:4199-8689",
+        "guidanceIdentity": null,
+        "role": null,
+        "resolutionStatus": "unreviewed",
+        "name": "שביל",
+        "spokenName": "שביל",
+        "kind": "path",
+        "icon": "trail",
+        "isFallback": true,
+        "startMeters": 4198.51757128048,
+        "endMeters": 8688.61757128048,
+        "distanceMeters": 4490.099999999999,
+        "segmentIds": [
+          21
+        ],
+        "sectionLabels": [],
+        "junctionContexts": [],
+        "children": [
+          {
+            "startMeters": 4198.51757128048,
+            "endMeters": 8688.61757128048,
+            "networkRole": "segment",
+            "resolutionStatus": "unreviewed",
+            "guidanceIdentity": null,
+            "name": null,
+            "spokenName": null,
+            "role": null,
+            "kind": "path",
+            "routeClass": "path_track",
+            "segmentIds": [
+              21
+            ],
+            "sectionLabels": [],
+            "junctionId": null,
+            "junctionName": null
+          }
+        ],
+        "warningCount": 1,
+        "poiCount": 1,
+        "dataPointIds": [
+          "poi-03007424"
+        ]
+      },
+      {
+        "id": "class:6:8689-17541",
+        "guidanceIdentity": null,
+        "role": null,
+        "resolutionStatus": "unreviewed",
+        "name": "כביש",
+        "spokenName": "כביש",
+        "kind": "road",
+        "icon": "road",
+        "isFallback": true,
+        "startMeters": 8688.61757128048,
+        "endMeters": 17541.11757128048,
+        "distanceMeters": 8852.5,
+        "segmentIds": [
+          47
+        ],
+        "sectionLabels": [],
+        "junctionContexts": [],
+        "children": [
+          {
+            "startMeters": 8688.61757128048,
+            "endMeters": 17541.11757128048,
+            "networkRole": "segment",
+            "resolutionStatus": "unreviewed",
+            "guidanceIdentity": null,
+            "name": null,
+            "spokenName": null,
+            "role": null,
+            "kind": "road",
+            "routeClass": "road",
+            "segmentIds": [
+              47
+            ],
+            "sectionLabels": [],
+            "junctionId": null,
+            "junctionName": null
+          }
+        ],
+        "warningCount": 1,
+        "poiCount": 1,
+        "dataPointIds": [
+          "poi-11102fea"
+        ]
+      },
+      {
+        "id": "class:7:17541-18309",
+        "guidanceIdentity": null,
+        "role": null,
+        "resolutionStatus": "unreviewed",
+        "name": "כביש",
+        "spokenName": "כביש",
+        "kind": "road",
+        "icon": "road",
+        "isFallback": true,
+        "startMeters": 17541.11757128048,
+        "endMeters": 18309.31757128048,
+        "distanceMeters": 768.2000000000007,
+        "segmentIds": [
+          119
+        ],
+        "sectionLabels": [],
+        "junctionContexts": [],
+        "children": [
+          {
+            "startMeters": 17541.11757128048,
+            "endMeters": 18309.31757128048,
+            "networkRole": "segment",
+            "resolutionStatus": "unreviewed",
+            "guidanceIdentity": null,
+            "name": null,
+            "spokenName": null,
+            "role": null,
+            "kind": "road",
+            "routeClass": "road",
+            "segmentIds": [
+              119
+            ],
+            "sectionLabels": [],
+            "junctionId": null,
+            "junctionName": null
+          }
+        ],
+        "warningCount": 0,
+        "poiCount": 0,
+        "dataPointIds": []
+      },
+      {
+        "id": "class:8:18309-20504",
+        "guidanceIdentity": null,
+        "role": null,
+        "resolutionStatus": "unreviewed",
+        "name": "כביש",
+        "spokenName": "כביש",
+        "kind": "road",
+        "icon": "road",
+        "isFallback": true,
+        "startMeters": 18309.31757128048,
+        "endMeters": 20503.81757128048,
+        "distanceMeters": 2194.5,
+        "segmentIds": [],
+        "sectionLabels": [],
+        "junctionContexts": [],
+        "children": [
+          {
+            "startMeters": 18309.31757128048,
+            "endMeters": 20503.81757128048,
+            "networkRole": null,
+            "resolutionStatus": "unreviewed",
+            "guidanceIdentity": null,
+            "name": null,
+            "spokenName": null,
+            "role": null,
+            "kind": "road",
+            "routeClass": "road",
+            "segmentIds": [],
+            "sectionLabels": [],
+            "junctionId": null,
+            "junctionName": null
+          }
+        ],
+        "warningCount": 0,
+        "poiCount": 0,
+        "dataPointIds": []
+      },
+      {
+        "id": "class:3:20504-25722",
+        "guidanceIdentity": null,
+        "role": null,
+        "resolutionStatus": "unreviewed",
+        "name": "שביל",
+        "spokenName": "שביל",
+        "kind": "path",
+        "icon": "trail",
+        "isFallback": true,
+        "startMeters": 20503.81757128048,
+        "endMeters": 25721.71757128048,
+        "distanceMeters": 5217.899999999998,
+        "segmentIds": [
+          155
+        ],
+        "sectionLabels": [],
+        "junctionContexts": [],
+        "children": [
+          {
+            "startMeters": 20503.81757128048,
+            "endMeters": 25721.71757128048,
+            "networkRole": "segment",
+            "resolutionStatus": "unreviewed",
+            "guidanceIdentity": null,
+            "name": null,
+            "spokenName": null,
+            "role": null,
+            "kind": "path",
+            "routeClass": "path_track",
+            "segmentIds": [
+              155
+            ],
+            "sectionLabels": [],
+            "junctionId": null,
+            "junctionName": null
+          }
+        ],
+        "warningCount": 0,
+        "poiCount": 0,
+        "dataPointIds": []
+      },
+      {
+        "id": "class:9:25722-28196",
+        "guidanceIdentity": null,
+        "role": null,
+        "resolutionStatus": "unreviewed",
+        "name": "כביש",
+        "spokenName": "כביש",
+        "kind": "road",
+        "icon": "road",
+        "isFallback": true,
+        "startMeters": 25721.71757128048,
+        "endMeters": 28312.017571280478,
+        "distanceMeters": 2590.2999999999993,
+        "segmentIds": [
+          155,
+          343
+        ],
+        "sectionLabels": [],
+        "junctionContexts": [],
+        "children": [
+          {
+            "startMeters": 25721.71757128048,
+            "endMeters": 28195.517571280478,
+            "networkRole": "segment",
+            "resolutionStatus": "unreviewed",
+            "guidanceIdentity": null,
+            "name": null,
+            "spokenName": null,
+            "role": null,
+            "kind": "road",
+            "routeClass": "local_road",
+            "segmentIds": [
+              155
+            ],
+            "sectionLabels": [],
+            "junctionId": null,
+            "junctionName": null
+          },
+          {
+            "startMeters": 28195.517571280478,
+            "endMeters": 28289.91757128048,
+            "networkRole": "segment",
+            "resolutionStatus": "unreviewed",
+            "guidanceIdentity": null,
+            "name": null,
+            "spokenName": null,
+            "role": null,
+            "kind": "road",
+            "routeClass": "road",
+            "segmentIds": [
+              155
+            ],
+            "sectionLabels": [],
+            "junctionId": null,
+            "junctionName": null
+          },
+          {
+            "startMeters": 28289.91757128048,
+            "endMeters": 28312.017571280478,
+            "networkRole": "segment",
+            "resolutionStatus": "unreviewed",
+            "guidanceIdentity": null,
+            "name": null,
+            "spokenName": null,
+            "role": null,
+            "kind": "path",
+            "routeClass": "path_track",
+            "segmentIds": [
+              343
+            ],
+            "sectionLabels": [],
+            "junctionId": null,
+            "junctionName": null
+          }
+        ],
+        "warningCount": 0,
+        "poiCount": 0,
+        "dataPointIds": []
+      },
+      {
+        "id": "class:1:28312-28896",
+        "guidanceIdentity": null,
+        "role": null,
+        "resolutionStatus": "unreviewed",
+        "name": "מקטע",
+        "spokenName": "מקטע",
+        "kind": "other",
+        "icon": "segment",
+        "isFallback": true,
+        "startMeters": 28312.017571280478,
+        "endMeters": 28896.06258548156,
+        "distanceMeters": 584.0450142010814,
+        "segmentIds": [
+          345
+        ],
+        "sectionLabels": [],
+        "junctionContexts": [],
+        "children": [
+          {
+            "startMeters": 28312.017571280478,
+            "endMeters": 28896.06258548156,
+            "networkRole": "segment",
+            "resolutionStatus": "unreviewed",
+            "guidanceIdentity": null,
+            "name": null,
+            "spokenName": null,
+            "role": null,
+            "kind": "other",
+            "routeClass": "manual",
+            "segmentIds": [
+              345
+            ],
+            "sectionLabels": [],
+            "junctionId": null,
+            "junctionName": null
+          }
+        ],
+        "warningCount": 0,
+        "poiCount": 0,
+        "dataPointIds": []
+      },
+      {
+        "id": "class:2:28896-29152",
+        "guidanceIdentity": null,
+        "role": null,
+        "resolutionStatus": "unreviewed",
+        "name": "מקטע",
+        "spokenName": "מקטע",
+        "kind": "other",
+        "icon": "segment",
+        "isFallback": true,
+        "startMeters": 28896.06258548156,
+        "endMeters": 29151.732599624338,
+        "distanceMeters": 255.6700141427791,
+        "segmentIds": [
+          345
+        ],
+        "sectionLabels": [],
+        "junctionContexts": [],
+        "children": [
+          {
+            "startMeters": 28896.06258548156,
+            "endMeters": 29151.732599624338,
+            "networkRole": "segment",
+            "resolutionStatus": "unreviewed",
+            "guidanceIdentity": null,
+            "name": null,
+            "spokenName": null,
+            "role": null,
+            "kind": "other",
+            "routeClass": "manual",
+            "segmentIds": [
+              345
+            ],
+            "sectionLabels": [],
+            "junctionId": null,
+            "junctionName": null
+          }
+        ],
+        "warningCount": 0,
+        "poiCount": 0,
+        "dataPointIds": []
+      },
+      {
+        "id": "class:3:29152-30137",
+        "guidanceIdentity": null,
+        "role": null,
+        "resolutionStatus": "unreviewed",
+        "name": "מקטע",
+        "spokenName": "מקטע",
+        "kind": "other",
+        "icon": "segment",
+        "isFallback": true,
+        "startMeters": 29151.732599624338,
+        "endMeters": 30136.857599566036,
+        "distanceMeters": 985.1249999416978,
+        "segmentIds": [
+          345
+        ],
+        "sectionLabels": [],
+        "junctionContexts": [],
+        "children": [
+          {
+            "startMeters": 29151.732599624338,
+            "endMeters": 30136.857599566036,
+            "networkRole": "segment",
+            "resolutionStatus": "unreviewed",
+            "guidanceIdentity": null,
+            "name": null,
+            "spokenName": null,
+            "role": null,
+            "kind": "other",
+            "routeClass": "manual",
+            "segmentIds": [
+              345
+            ],
+            "sectionLabels": [],
+            "junctionId": null,
+            "junctionName": null
+          }
+        ],
+        "warningCount": 0,
+        "poiCount": 0,
+        "dataPointIds": []
+      },
+      {
+        "id": "class:5:30137-30497",
+        "guidanceIdentity": null,
+        "role": null,
+        "resolutionStatus": "unreviewed",
+        "name": "שביל",
+        "spokenName": "שביל",
+        "kind": "path",
+        "icon": "trail",
+        "isFallback": true,
+        "startMeters": 30136.857599566036,
+        "endMeters": 30496.757599566034,
+        "distanceMeters": 359.8999999999978,
+        "segmentIds": [
+          342
+        ],
+        "sectionLabels": [],
+        "junctionContexts": [],
+        "children": [
+          {
+            "startMeters": 30136.857599566036,
+            "endMeters": 30496.757599566034,
+            "networkRole": "segment",
+            "resolutionStatus": "unreviewed",
+            "guidanceIdentity": null,
+            "name": null,
+            "spokenName": null,
+            "role": null,
+            "kind": "path",
+            "routeClass": "path_track",
+            "segmentIds": [
+              342
+            ],
+            "sectionLabels": [],
+            "junctionId": null,
+            "junctionName": null
+          }
+        ],
+        "warningCount": 0,
+        "poiCount": 0,
+        "dataPointIds": []
+      },
+      {
+        "id": "class:4:30497-30608",
+        "guidanceIdentity": null,
+        "role": null,
+        "resolutionStatus": "unreviewed",
+        "name": "מקטע",
+        "spokenName": "מקטע",
+        "kind": "other",
+        "icon": "segment",
+        "isFallback": true,
+        "startMeters": 30496.757599566034,
+        "endMeters": 30635.55759936787,
+        "distanceMeters": 138.79999980183493,
+        "segmentIds": [
+          342,
+          269
+        ],
+        "sectionLabels": [],
+        "junctionContexts": [],
+        "children": [
+          {
+            "startMeters": 30496.757599566034,
+            "endMeters": 30607.657599566035,
+            "networkRole": "segment",
+            "resolutionStatus": "unreviewed",
+            "guidanceIdentity": null,
+            "name": null,
+            "spokenName": null,
+            "role": null,
+            "kind": "other",
+            "routeClass": "manual",
+            "segmentIds": [
+              342
+            ],
+            "sectionLabels": [],
+            "junctionId": null,
+            "junctionName": null
+          },
+          {
+            "startMeters": 30607.657599566035,
+            "endMeters": 30621.60759946695,
+            "networkRole": "segment",
+            "resolutionStatus": "unreviewed",
+            "guidanceIdentity": null,
+            "name": null,
+            "spokenName": null,
+            "role": null,
+            "kind": "road",
+            "routeClass": "road",
+            "segmentIds": [
+              269
+            ],
+            "sectionLabels": [],
+            "junctionId": null,
+            "junctionName": null
+          },
+          {
+            "startMeters": 30621.60759946695,
+            "endMeters": 30635.55759936787,
+            "networkRole": "segment",
+            "resolutionStatus": "unreviewed",
+            "guidanceIdentity": null,
+            "name": null,
+            "spokenName": null,
+            "role": null,
+            "kind": "road",
+            "routeClass": "road",
+            "segmentIds": [
+              269
+            ],
+            "sectionLabels": [],
+            "junctionId": null,
+            "junctionName": null
+          }
+        ],
+        "warningCount": 0,
+        "poiCount": 0,
+        "dataPointIds": []
+      },
+      {
+        "id": "class:6:30636-33543",
+        "guidanceIdentity": null,
+        "role": null,
+        "resolutionStatus": "unreviewed",
+        "name": "שביל",
+        "spokenName": "שביל",
+        "kind": "path",
+        "icon": "trail",
+        "isFallback": true,
+        "startMeters": 30635.55759936787,
+        "endMeters": 33543.45759936787,
+        "distanceMeters": 2907.900000000005,
+        "segmentIds": [
+          132
+        ],
+        "sectionLabels": [],
+        "junctionContexts": [],
+        "children": [
+          {
+            "startMeters": 30635.55759936787,
+            "endMeters": 33543.45759936787,
+            "networkRole": "segment",
+            "resolutionStatus": "unreviewed",
+            "guidanceIdentity": null,
+            "name": null,
+            "spokenName": null,
+            "role": null,
+            "kind": "path",
+            "routeClass": "path_track",
+            "segmentIds": [
+              132
+            ],
+            "sectionLabels": [],
+            "junctionId": null,
+            "junctionName": null
+          }
+        ],
+        "warningCount": 0,
+        "poiCount": 0,
+        "dataPointIds": []
+      },
+      {
+        "id": "class:7:33543-35488",
+        "guidanceIdentity": null,
+        "role": null,
+        "resolutionStatus": "unreviewed",
+        "name": "שביל",
+        "spokenName": "שביל",
+        "kind": "path",
+        "icon": "trail",
+        "isFallback": true,
+        "startMeters": 33543.45759936787,
+        "endMeters": 35487.95759936787,
+        "distanceMeters": 1944.5,
+        "segmentIds": [
+          152
+        ],
+        "sectionLabels": [],
+        "junctionContexts": [],
+        "children": [
+          {
+            "startMeters": 33543.45759936787,
+            "endMeters": 35487.95759936787,
+            "networkRole": "segment",
+            "resolutionStatus": "unreviewed",
+            "guidanceIdentity": null,
+            "name": null,
+            "spokenName": null,
+            "role": null,
+            "kind": "path",
+            "routeClass": "path_track",
+            "segmentIds": [
+              152
+            ],
+            "sectionLabels": [],
+            "junctionId": null,
+            "junctionName": null
+          }
+        ],
+        "warningCount": 1,
+        "poiCount": 1,
+        "dataPointIds": [
+          "כביש 90 שמורת נחל עינן מערב-0"
+        ]
+      },
+      {
+        "id": "class:8:35488-38114",
+        "guidanceIdentity": null,
+        "role": null,
+        "resolutionStatus": "unreviewed",
+        "name": "שביל",
+        "spokenName": "שביל",
+        "kind": "path",
+        "icon": "trail",
+        "isFallback": true,
+        "startMeters": 35487.95759936787,
+        "endMeters": 38113.95759936787,
+        "distanceMeters": 2626,
+        "segmentIds": [
+          151
+        ],
+        "sectionLabels": [],
+        "junctionContexts": [],
+        "children": [
+          {
+            "startMeters": 35487.95759936787,
+            "endMeters": 38113.95759936787,
+            "networkRole": "segment",
+            "resolutionStatus": "unreviewed",
+            "guidanceIdentity": null,
+            "name": null,
+            "spokenName": null,
+            "role": null,
+            "kind": "path",
+            "routeClass": "path_track",
+            "segmentIds": [
+              151
+            ],
+            "sectionLabels": [],
+            "junctionId": null,
+            "junctionName": null
+          }
+        ],
+        "warningCount": 0,
+        "poiCount": 0,
+        "dataPointIds": []
+      },
+      {
+        "id": "class:9:38114-39840",
+        "guidanceIdentity": null,
+        "role": null,
+        "resolutionStatus": "unreviewed",
+        "name": "שביל",
+        "spokenName": "שביל",
+        "kind": "path",
+        "icon": "trail",
+        "isFallback": true,
+        "startMeters": 38113.95759936787,
+        "endMeters": 39839.75759936787,
+        "distanceMeters": 1725.7999999999956,
+        "segmentIds": [
+          156
+        ],
+        "sectionLabels": [],
+        "junctionContexts": [],
+        "children": [
+          {
+            "startMeters": 38113.95759936787,
+            "endMeters": 39839.75759936787,
+            "networkRole": "segment",
+            "resolutionStatus": "unreviewed",
+            "guidanceIdentity": null,
+            "name": null,
+            "spokenName": null,
+            "role": null,
+            "kind": "path",
+            "routeClass": "path_track",
+            "segmentIds": [
+              156
+            ],
+            "sectionLabels": [],
+            "junctionId": null,
+            "junctionName": null
+          }
+        ],
+        "warningCount": 0,
+        "poiCount": 0,
+        "dataPointIds": []
+      },
+      {
+        "id": "class:13:39840-40145",
+        "guidanceIdentity": null,
+        "role": null,
+        "resolutionStatus": "unreviewed",
+        "name": "כביש",
+        "spokenName": "כביש",
+        "kind": "road",
+        "icon": "road",
+        "isFallback": true,
+        "startMeters": 39839.75759936787,
+        "endMeters": 40145.15759936787,
+        "distanceMeters": 305.40000000000146,
+        "segmentIds": [
+          156
+        ],
+        "sectionLabels": [],
+        "junctionContexts": [],
+        "children": [
+          {
+            "startMeters": 39839.75759936787,
+            "endMeters": 40145.15759936787,
+            "networkRole": "segment",
+            "resolutionStatus": "unreviewed",
+            "guidanceIdentity": null,
+            "name": null,
+            "spokenName": null,
+            "role": null,
+            "kind": "road",
+            "routeClass": "road",
+            "segmentIds": [
+              156
+            ],
+            "sectionLabels": [],
+            "junctionId": null,
+            "junctionName": null
+          }
+        ],
+        "warningCount": 0,
+        "poiCount": 0,
+        "dataPointIds": []
+      },
+      {
+        "id": "class:14:40145-41056",
+        "guidanceIdentity": null,
+        "role": null,
+        "resolutionStatus": "unreviewed",
+        "name": "כביש",
+        "spokenName": "כביש",
+        "kind": "road",
+        "icon": "road",
+        "isFallback": true,
+        "startMeters": 40145.15759936787,
+        "endMeters": 41064.25759936787,
+        "distanceMeters": 919.0999999999985,
+        "segmentIds": [
+          371
+        ],
+        "sectionLabels": [],
+        "junctionContexts": [],
+        "children": [
+          {
+            "startMeters": 40145.15759936787,
+            "endMeters": 41055.65759936787,
+            "networkRole": "segment",
+            "resolutionStatus": "unreviewed",
+            "guidanceIdentity": null,
+            "name": null,
+            "spokenName": null,
+            "role": null,
+            "kind": "road",
+            "routeClass": "road",
+            "segmentIds": [
+              371
+            ],
+            "sectionLabels": [],
+            "junctionId": null,
+            "junctionName": null
+          },
+          {
+            "startMeters": 41055.65759936787,
+            "endMeters": 41064.25759936787,
+            "networkRole": "segment",
+            "resolutionStatus": "unreviewed",
+            "guidanceIdentity": null,
+            "name": null,
+            "spokenName": null,
+            "role": null,
+            "kind": "other",
+            "routeClass": "manual",
+            "segmentIds": [
+              371
+            ],
+            "sectionLabels": [],
+            "junctionId": null,
+            "junctionName": null
+          }
+        ],
+        "warningCount": 0,
+        "poiCount": 0,
+        "dataPointIds": []
+      },
+      {
+        "id": "class:10:41064-44244",
+        "guidanceIdentity": null,
+        "role": null,
+        "resolutionStatus": "unreviewed",
+        "name": "שביל",
+        "spokenName": "שביל",
+        "kind": "path",
+        "icon": "trail",
+        "isFallback": true,
+        "startMeters": 41064.25759936787,
+        "endMeters": 44243.65759936786,
+        "distanceMeters": 3179.399999999994,
+        "segmentIds": [
+          370
+        ],
+        "sectionLabels": [],
+        "junctionContexts": [],
+        "children": [
+          {
+            "startMeters": 41064.25759936787,
+            "endMeters": 44243.65759936786,
+            "networkRole": "segment",
+            "resolutionStatus": "unreviewed",
+            "guidanceIdentity": null,
+            "name": null,
+            "spokenName": null,
+            "role": null,
+            "kind": "path",
+            "routeClass": "path_track",
+            "segmentIds": [
+              370
+            ],
+            "sectionLabels": [],
+            "junctionId": null,
+            "junctionName": null
+          }
+        ],
+        "warningCount": 2,
+        "poiCount": 2,
+        "dataPointIds": [
+          "עין תאו-0",
+          "poi-a77bbe8c"
+        ]
+      },
+      {
+        "id": "class:11:44244-46950",
+        "guidanceIdentity": null,
+        "role": null,
+        "resolutionStatus": "unreviewed",
+        "name": "שביל",
+        "spokenName": "שביל",
+        "kind": "path",
+        "icon": "trail",
+        "isFallback": true,
+        "startMeters": 44243.65759936786,
+        "endMeters": 46950.05759936786,
+        "distanceMeters": 2706.399999999994,
+        "segmentIds": [
+          122
+        ],
+        "sectionLabels": [],
+        "junctionContexts": [],
+        "children": [
+          {
+            "startMeters": 44243.65759936786,
+            "endMeters": 46950.05759936786,
+            "networkRole": "segment",
+            "resolutionStatus": "unreviewed",
+            "guidanceIdentity": null,
+            "name": null,
+            "spokenName": null,
+            "role": null,
+            "kind": "path",
+            "routeClass": "path_track",
+            "segmentIds": [
+              122
+            ],
+            "sectionLabels": [],
+            "junctionId": null,
+            "junctionName": null
+          }
+        ],
+        "warningCount": 0,
+        "poiCount": 0,
+        "dataPointIds": []
+      },
+      {
+        "id": "class:15:46950-47548",
+        "guidanceIdentity": null,
+        "role": null,
+        "resolutionStatus": "unreviewed",
+        "name": "כביש",
+        "spokenName": "כביש",
+        "kind": "road",
+        "icon": "road",
+        "isFallback": true,
+        "startMeters": 46950.05759936786,
+        "endMeters": 47547.657599367856,
+        "distanceMeters": 597.5999999999985,
+        "segmentIds": [
+          8
+        ],
+        "sectionLabels": [],
+        "junctionContexts": [],
+        "children": [
+          {
+            "startMeters": 46950.05759936786,
+            "endMeters": 47547.657599367856,
+            "networkRole": "segment",
+            "resolutionStatus": "unreviewed",
+            "guidanceIdentity": null,
+            "name": null,
+            "spokenName": null,
+            "role": null,
+            "kind": "road",
+            "routeClass": "road",
+            "segmentIds": [
+              8
+            ],
+            "sectionLabels": [],
+            "junctionId": null,
+            "junctionName": null
+          }
+        ],
+        "warningCount": 0,
+        "poiCount": 0,
+        "dataPointIds": []
+      },
+      {
+        "id": "class:12:47548-48661",
+        "guidanceIdentity": null,
+        "role": null,
+        "resolutionStatus": "unreviewed",
+        "name": "שביל",
+        "spokenName": "שביל",
+        "kind": "path",
+        "icon": "trail",
+        "isFallback": true,
+        "startMeters": 47547.657599367856,
+        "endMeters": 48660.85759936786,
+        "distanceMeters": 1113.2000000000044,
+        "segmentIds": [
+          8
+        ],
+        "sectionLabels": [],
+        "junctionContexts": [],
+        "children": [
+          {
+            "startMeters": 47547.657599367856,
+            "endMeters": 48660.85759936786,
+            "networkRole": "segment",
+            "resolutionStatus": "unreviewed",
+            "guidanceIdentity": null,
+            "name": null,
+            "spokenName": null,
+            "role": null,
+            "kind": "path",
+            "routeClass": "path_track",
+            "segmentIds": [
+              8
+            ],
+            "sectionLabels": [],
+            "junctionId": null,
+            "junctionName": null
+          }
+        ],
+        "warningCount": 0,
+        "poiCount": 0,
+        "dataPointIds": []
+      },
+      {
+        "id": "class:13:48661-49211",
+        "guidanceIdentity": null,
+        "role": null,
+        "resolutionStatus": "unreviewed",
+        "name": "שביל",
+        "spokenName": "שביל",
+        "kind": "path",
+        "icon": "trail",
+        "isFallback": true,
+        "startMeters": 48660.85759936786,
+        "endMeters": 49257.95759936786,
+        "distanceMeters": 597.0999999999985,
+        "segmentIds": [
+          105
+        ],
+        "sectionLabels": [],
+        "junctionContexts": [],
+        "children": [
+          {
+            "startMeters": 48660.85759936786,
+            "endMeters": 49210.75759936786,
+            "networkRole": "segment",
+            "resolutionStatus": "unreviewed",
+            "guidanceIdentity": null,
+            "name": null,
+            "spokenName": null,
+            "role": null,
+            "kind": "path",
+            "routeClass": "path_track",
+            "segmentIds": [
+              105
+            ],
+            "sectionLabels": [],
+            "junctionId": null,
+            "junctionName": null
+          },
+          {
+            "startMeters": 49210.75759936786,
+            "endMeters": 49257.95759936786,
+            "networkRole": "segment",
+            "resolutionStatus": "unreviewed",
+            "guidanceIdentity": null,
+            "name": null,
+            "spokenName": null,
+            "role": null,
+            "kind": "other",
+            "routeClass": "manual",
+            "segmentIds": [
+              105
+            ],
+            "sectionLabels": [],
+            "junctionId": null,
+            "junctionName": null
+          }
+        ],
+        "warningCount": 0,
+        "poiCount": 0,
+        "dataPointIds": []
+      },
+      {
+        "id": "class:14:49258-51284",
+        "guidanceIdentity": null,
+        "role": null,
+        "resolutionStatus": "unreviewed",
+        "name": "שביל",
+        "spokenName": "שביל",
+        "kind": "path",
+        "icon": "trail",
+        "isFallback": true,
+        "startMeters": 49257.95759936786,
+        "endMeters": 51355.85759936787,
+        "distanceMeters": 2097.9000000000087,
+        "segmentIds": [
+          105,
+          296
+        ],
+        "sectionLabels": [],
+        "junctionContexts": [],
+        "children": [
+          {
+            "startMeters": 49257.95759936786,
+            "endMeters": 51283.85759936787,
+            "networkRole": "segment",
+            "resolutionStatus": "unreviewed",
+            "guidanceIdentity": null,
+            "name": null,
+            "spokenName": null,
+            "role": null,
+            "kind": "path",
+            "routeClass": "path_track",
+            "segmentIds": [
+              105
+            ],
+            "sectionLabels": [],
+            "junctionId": null,
+            "junctionName": null
+          },
+          {
+            "startMeters": 51283.85759936787,
+            "endMeters": 51329.75759936787,
+            "networkRole": "segment",
+            "resolutionStatus": "unreviewed",
+            "guidanceIdentity": null,
+            "name": null,
+            "spokenName": null,
+            "role": null,
+            "kind": "cycleway",
+            "routeClass": "cycle",
+            "segmentIds": [
+              296
+            ],
+            "sectionLabels": [],
+            "junctionId": null,
+            "junctionName": null
+          },
+          {
+            "startMeters": 51329.75759936787,
+            "endMeters": 51355.85759936787,
+            "networkRole": "segment",
+            "resolutionStatus": "unreviewed",
+            "guidanceIdentity": null,
+            "name": null,
+            "spokenName": null,
+            "role": null,
+            "kind": "path",
+            "routeClass": "path_track",
+            "segmentIds": [
+              296
+            ],
+            "sectionLabels": [],
+            "junctionId": null,
+            "junctionName": null
+          }
+        ],
+        "warningCount": 1,
+        "poiCount": 1,
+        "dataPointIds": [
+          "שביל חום תל נעמה-0"
+        ]
+      },
+      {
+        "id": "class:2:51356-53183",
+        "guidanceIdentity": null,
+        "role": null,
+        "resolutionStatus": "unreviewed",
+        "name": "שביל אופניים",
+        "spokenName": "שביל אופניים",
+        "kind": "cycleway",
+        "icon": "cycleway",
+        "isFallback": true,
+        "startMeters": 51355.85759936787,
+        "endMeters": 53222.55759936787,
+        "distanceMeters": 1866.7000000000044,
+        "segmentIds": [
+          297,
+          144
+        ],
+        "sectionLabels": [],
+        "junctionContexts": [],
+        "children": [
+          {
+            "startMeters": 51355.85759936787,
+            "endMeters": 53182.65759936787,
+            "networkRole": "segment",
+            "resolutionStatus": "unreviewed",
+            "guidanceIdentity": null,
+            "name": null,
+            "spokenName": null,
+            "role": null,
+            "kind": "cycleway",
+            "routeClass": "cycle",
+            "segmentIds": [
+              297
+            ],
+            "sectionLabels": [],
+            "junctionId": null,
+            "junctionName": null
+          },
+          {
+            "startMeters": 53182.65759936787,
+            "endMeters": 53222.55759936787,
+            "networkRole": "segment",
+            "resolutionStatus": "unreviewed",
+            "guidanceIdentity": null,
+            "name": null,
+            "spokenName": null,
+            "role": null,
+            "kind": "path",
+            "routeClass": "path_track",
+            "segmentIds": [
+              144
+            ],
+            "sectionLabels": [],
+            "junctionId": null,
+            "junctionName": null
+          }
+        ],
+        "warningCount": 0,
+        "poiCount": 0,
+        "dataPointIds": []
+      },
+      {
+        "id": "class:3:53223-53459",
+        "guidanceIdentity": null,
+        "role": null,
+        "resolutionStatus": "unreviewed",
+        "name": "שביל אופניים",
+        "spokenName": "שביל אופניים",
+        "kind": "cycleway",
+        "icon": "cycleway",
+        "isFallback": true,
+        "startMeters": 53222.55759936787,
+        "endMeters": 53459.357599367875,
+        "distanceMeters": 236.8000000000029,
+        "segmentIds": [
+          144
+        ],
+        "sectionLabels": [],
+        "junctionContexts": [],
+        "children": [
+          {
+            "startMeters": 53222.55759936787,
+            "endMeters": 53459.357599367875,
+            "networkRole": "segment",
+            "resolutionStatus": "unreviewed",
+            "guidanceIdentity": null,
+            "name": null,
+            "spokenName": null,
+            "role": null,
+            "kind": "cycleway",
+            "routeClass": "cycle",
+            "segmentIds": [
+              144
+            ],
+            "sectionLabels": [],
+            "junctionId": null,
+            "junctionName": null
+          }
+        ],
+        "warningCount": 0,
+        "poiCount": 0,
+        "dataPointIds": []
+      },
+      {
+        "id": "class:4:53519-54181",
+        "guidanceIdentity": null,
+        "role": null,
+        "resolutionStatus": "unreviewed",
+        "name": "שביל אופניים",
+        "spokenName": "שביל אופניים",
+        "kind": "cycleway",
+        "icon": "cycleway",
+        "isFallback": true,
+        "startMeters": 53519.05759936788,
+        "endMeters": 54260.924104410835,
+        "distanceMeters": 741.8665050429554,
+        "segmentIds": [
+          361
+        ],
+        "sectionLabels": [],
+        "junctionContexts": [
+          {
+            "junctionId": "junction-custom-mrusibww",
+            "junctionName": "ככר איזור תעשייה דרומי",
+            "startMeters": 53459.357599367875,
+            "endMeters": 53519.05759936788
+          },
+          {
+            "junctionId": "junction-custom-mrv4x7um",
+            "junctionName": "צומת יצחק שדה",
+            "startMeters": 54180.95759936788,
+            "endMeters": 54256.857599367875
+          }
+        ],
+        "children": [
+          {
+            "startMeters": 53519.05759936788,
+            "endMeters": 54180.95759936788,
+            "networkRole": "segment",
+            "resolutionStatus": "unreviewed",
+            "guidanceIdentity": null,
+            "name": null,
+            "spokenName": null,
+            "role": null,
+            "kind": "cycleway",
+            "routeClass": "cycle",
+            "segmentIds": [
+              361
+            ],
+            "sectionLabels": [],
+            "junctionId": null,
+            "junctionName": null
+          },
+          {
+            "startMeters": 54256.857599367875,
+            "endMeters": 54260.924104410835,
+            "networkRole": null,
+            "resolutionStatus": "unreviewed",
+            "guidanceIdentity": null,
+            "name": null,
+            "spokenName": null,
+            "role": null,
+            "kind": "road",
+            "routeClass": "road",
+            "segmentIds": [],
+            "sectionLabels": [],
+            "junctionId": null,
+            "junctionName": null
+          }
+        ],
+        "warningCount": 0,
+        "poiCount": 0,
+        "dataPointIds": []
+      }
     ]
   },
   "pois": {

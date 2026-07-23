@@ -98,11 +98,16 @@ import {
   assert.equal(guidanceSpans[0].guidanceIdentity, "way:cycleway-99");
   assert.deepEqual(guidanceSpans[0].segmentIds, [97, 326]);
 
-  const routeSpans = buildRouteSpans(traversals, new Map(), guidance);
+  const routeSpans = buildRouteSpans(traversals, new Map(), guidance, {
+    guidanceSchemaVersion: 1,
+  });
   assert.equal(routeSpans.guidanceMode, "guidance-v1");
   assert.equal(routeSpans.guidanceSpans.length, 1);
 }
 
+// Naming degrades per span, not per route. An unreviewed member reads as its
+// facility class; it never restores the internal editor name and never demotes
+// the surrounding classified spans.
 {
   const traversals = [{
     distanceMeters: 50,
@@ -111,8 +116,162 @@ import {
     cwMemberships: [{ segmentId: 999 }],
     edge: { routeClass: "path" },
   }];
-  const routeSpans = buildRouteSpans(traversals, new Map([[999, "Unreviewed"]]), new Map());
+  const routeSpans = buildRouteSpans(
+    traversals,
+    new Map([[999, "Unreviewed"]]),
+    new Map(),
+    { guidanceSchemaVersion: 1 },
+  );
+  assert.equal(routeSpans.guidanceMode, "guidance-v1");
+  assert.equal(routeSpans.guidanceSpans.length, 1);
+  assert.equal(routeSpans.guidanceSpans[0].resolutionStatus, "unreviewed");
+  assert.equal(routeSpans.guidanceSpans[0].name, null);
+  assert.equal(routeSpans.guidanceSpans[0].kind, "path",
+    "an unreviewed span still carries a facility class to fall back on");
+}
+
+// A route mixing one classified and one unreviewed member keeps the name it has.
+{
+  const traversals = [
+    {
+      distanceMeters: 100,
+      fromDistance: 0,
+      toDistance: 100,
+      cwMemberships: [{ segmentId: 174 }],
+      edge: { routeClass: "secondary" },
+    },
+    {
+      distanceMeters: 40,
+      fromDistance: 0,
+      toDistance: 40,
+      cwMemberships: [{ segmentId: 888 }],
+      edge: { routeClass: "track" },
+    },
+  ];
+  const guidance = new Map([[174, {
+    role: "named-way",
+    guidanceIdentity: "way:road-99",
+    wayId: "road-99",
+    name: "כביש 99",
+    spokenName: null,
+    kind: "road",
+    sectionLabel: null,
+    resolutionStatus: "resolved",
+    segmentId: 174,
+  }]]);
+  const routeSpans = buildRouteSpans(traversals, new Map(), guidance, {
+    guidanceSchemaVersion: 1,
+  });
+  assert.deepEqual(
+    routeSpans.guidanceSpans.map((span) => [span.name, span.resolutionStatus]),
+    [["כביש 99", "resolved"], [null, "unreviewed"]],
+  );
+}
+
+// Overlapping memberships that disagree speak neither name, but must still
+// expose a class: a null name with a null kind is silent navigation.
+{
+  const traversals = [{
+    distanceMeters: 60,
+    fromDistance: 0,
+    toDistance: 60,
+    cwMemberships: [{ segmentId: 1 }, { segmentId: 2 }],
+    edge: { routeClass: "secondary" },
+  }];
+  const guidance = new Map([
+    [1, {
+      role: "named-way",
+      guidanceIdentity: "way:road-99",
+      wayId: "road-99",
+      name: "כביש 99",
+      spokenName: null,
+      kind: "road",
+      sectionLabel: null,
+      resolutionStatus: "resolved",
+      segmentId: 1,
+    }],
+    [2, {
+      role: "named-way",
+      guidanceIdentity: "way:cycleway-99",
+      wayId: "cycleway-99",
+      name: "שביל אופניים 99",
+      spokenName: null,
+      kind: "cycleway",
+      sectionLabel: null,
+      resolutionStatus: "resolved",
+      segmentId: 2,
+    }],
+  ]);
+  const routeSpans = buildRouteSpans(traversals, new Map(), guidance, {
+    guidanceSchemaVersion: 1,
+  });
+  assert.equal(routeSpans.guidanceSpans[0].resolutionStatus, "conflict");
+  assert.equal(routeSpans.guidanceSpans[0].name, null);
+  assert.equal(routeSpans.guidanceSpans[0].kind, "road",
+    "conflicting kinds fall back to route-class evidence");
+}
+
+// A release with no supported guidance schema is the only remaining legacy path.
+{
+  const routeSpans = buildRouteSpans([{
+    distanceMeters: 50,
+    fromDistance: 0,
+    toDistance: 50,
+    cwMemberships: [{ segmentId: 1 }],
+    edge: { routeClass: "path" },
+  }], new Map(), new Map(), {});
   assert.equal(routeSpans.guidanceMode, "legacy");
   assert.deepEqual(routeSpans.guidanceSpans, []);
+}
+
+// The reverse-ready projection is resolved up front, in the reverse frame.
+{
+  const traversals = [
+    {
+      distanceMeters: 100,
+      fromDistance: 0,
+      toDistance: 100,
+      cwMemberships: [{ segmentId: 1 }],
+      oppositeCwMemberships: [{ segmentId: 1 }],
+      edge: { routeClass: "cycleway" },
+    },
+    {
+      distanceMeters: 50,
+      fromDistance: 0,
+      toDistance: 50,
+      cwMemberships: [{ segmentId: 2 }],
+      // Asymmetric: riding back, these edges belong to a different segment.
+      oppositeCwMemberships: [{ segmentId: 3 }],
+      edge: { routeClass: "cycleway" },
+    },
+  ];
+  const makeWay = (segmentId, wayId, name) => [segmentId, {
+    role: "named-way",
+    guidanceIdentity: `way:${wayId}`,
+    wayId,
+    name,
+    spokenName: null,
+    kind: "cycleway",
+    sectionLabel: null,
+    resolutionStatus: "resolved",
+    segmentId,
+  }];
+  const guidance = new Map([
+    makeWay(1, "one", "One"),
+    makeWay(2, "two", "Two"),
+    makeWay(3, "three", "Three"),
+  ]);
+  const routeSpans = buildRouteSpans(traversals, new Map(), guidance, {
+    guidanceSchemaVersion: 1,
+  });
+  assert.deepEqual(
+    routeSpans.guidanceSpans.map((span) => [span.startMeters, span.endMeters, span.name]),
+    [[0, 100, "One"], [100, 150, "Two"]],
+  );
+  assert.deepEqual(
+    routeSpans.oppositeGuidanceSpans.map((span) => [span.startMeters, span.endMeters, span.name]),
+    [[0, 50, "Three"], [50, 150, "One"]],
+    "asymmetric reverse membership resolves to its own way, not the forward name",
+  );
 }
 console.log("test-segment-spans OK");

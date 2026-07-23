@@ -3,7 +3,7 @@ import { assetPathWithVersion, loadMapManifest } from "./mapAssets.js";
 import { emptyRouteSnapshot } from "../routing/routeSnapshot.js";
 
 const FEATURED_ROUTES_BASE_PATH = "public-data/featured-routes";
-const SUPPORTED_SCHEMA_VERSION = 1;
+const SUPPORTED_SCHEMA_VERSIONS = new Set([1, 2]);
 
 function featuredRouteSnapshotPath(slug, manifest = null) {
   const base = manifest?.featuredRoutesBase || FEATURED_ROUTES_BASE_PATH.replace(/^public-data\//, "");
@@ -14,7 +14,7 @@ function validateSnapshot(snapshot, slug) {
   if (!snapshot || typeof snapshot !== "object") {
     throw new Error(`featured route snapshot "${slug}" is not an object`);
   }
-  if (snapshot.schemaVersion !== SUPPORTED_SCHEMA_VERSION) {
+  if (!SUPPORTED_SCHEMA_VERSIONS.has(snapshot.schemaVersion)) {
     throw new Error(
       `featured route snapshot "${slug}" has unsupported schemaVersion ${snapshot.schemaVersion}`,
     );
@@ -77,6 +77,10 @@ export function snapshotToRouteState(snapshot) {
     elevationLoss: Number.isFinite(route.elevationLoss) ? route.elevationLoss : 0,
     activeDataPoints: Array.isArray(pois.activeDataPoints)
       ? pois.activeDataPoints
+      : [],
+    guidanceMode: route.guidanceMode || "legacy",
+    guidanceItinerary: snapshot.schemaVersion >= 2 && Array.isArray(route.itinerary)
+      ? route.itinerary
       : [],
     points: [],
     routeFailure: null,

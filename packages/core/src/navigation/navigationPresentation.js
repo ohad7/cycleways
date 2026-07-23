@@ -228,13 +228,10 @@ function buildContextText(progress) {
   if (!progress?.hasAcquiredRoute) return "";
   const here = progress.currentGuidanceName
     ? progress.currentGuidanceName
-    : progress.currentOnNetwork && progress.currentSegmentName
-      ? progress.currentSegmentName
-    : routeClassLabel(progress.currentRouteClass);
-  const nextName = progress.nextGuidanceName || progress.nextSegmentName;
-  const nextDistance = progress.nextGuidanceName
-    ? progress.distanceToNextGuidanceMeters
-    : progress.distanceToNextSegmentMeters;
+    : roadClassChipLabel(progress.currentRouteClass)
+      || routeClassLabel(progress.currentRouteClass);
+  const nextName = progress.nextGuidanceName;
+  const nextDistance = progress.distanceToNextGuidanceMeters;
   const next = nextName
     ? ` · הבא: ${nextName} בעוד ${formatDistanceMeters(nextDistance)}`
     : "";
@@ -244,7 +241,6 @@ function buildContextText(progress) {
 function buildCurrentRoadText(progress) {
   if (!progress?.hasAcquiredRoute) return "";
   if (progress.currentGuidanceName) return progress.currentGuidanceName;
-  if (progress.currentSegmentName) return progress.currentSegmentName;
   return roadClassChipLabel(progress.currentRouteClass) || routeClassLabel(progress.currentRouteClass);
 }
 
@@ -374,7 +370,7 @@ export function getNavigationPresentation(state = {}) {
           : "status";
 
   const segmentChipText = (() => {
-    const name = progress?.currentGuidanceName || progress?.currentSegmentName || null;
+    const name = progress?.currentGuidanceName || null;
     const label = roadClassChipLabel(progress?.currentRouteClass);
     if (name && label && !name.startsWith(label)) return `${name} · ${label}`;
     return name || label || null;

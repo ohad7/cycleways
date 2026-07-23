@@ -10,7 +10,11 @@ export const initialRouteState = {
   routeFailure: null,
   segmentSpans: [],
   guidanceSpans: [],
+  guidanceItinerary: [],
+  oppositeSegmentSpans: [],
+  oppositeGuidanceSpans: [],
   guidanceMode: "legacy",
+  guidancePresentationPolicy: "named",
   routingValidation: null,
   pendingPoints: [],
   routingPhase: "idle",
@@ -42,7 +46,14 @@ export function routeReducer(state, action) {
         routeFailure: action.snapshot.routeFailure || null,
         segmentSpans: action.snapshot.segmentSpans || [],
         guidanceSpans: action.snapshot.guidanceSpans || [],
+        guidanceItinerary: action.snapshot.guidanceItinerary || [],
+        oppositeSegmentSpans: action.snapshot.oppositeSegmentSpans || [],
+        oppositeGuidanceSpans: action.snapshot.oppositeGuidanceSpans || [],
         guidanceMode: action.snapshot.guidanceMode || "legacy",
+        guidancePresentationPolicy:
+          action.snapshot.guidancePresentationPolicy === "class-only"
+            ? "class-only"
+            : "named",
         routingValidation: action.snapshot.routingValidation || null,
         pendingPoints: action.preservePending ? state.pendingPoints : [],
         routingPhase:
@@ -67,7 +78,11 @@ export function routeReducer(state, action) {
         routeFailure: null,
         segmentSpans: [],
         guidanceSpans: [],
+        guidanceItinerary: [],
+        oppositeSegmentSpans: [],
+        oppositeGuidanceSpans: [],
         guidanceMode: "legacy",
+        guidancePresentationPolicy: "named",
         routingValidation: null,
         pendingPoints: [],
         routingPhase: "idle",

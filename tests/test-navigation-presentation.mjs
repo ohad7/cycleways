@@ -262,9 +262,9 @@ const paused = getNavigationPresentation({ status: "paused", activeCue: null });
     },
   });
   assert.equal(p.showContext, true);
-  assert.equal(p.currentRoadText, "שביל הירקון");
-  assert.match(p.contextText, /שביל הירקון/);
-  assert.match(p.contextText, /גשר איילון/);
+  assert.equal(p.currentRoadText, "שביל אופניים");
+  assert.match(p.contextText, /שביל אופניים/);
+  assert.doesNotMatch(p.contextText, /שביל הירקון|גשר איילון/);
 }
 {
   const p = getNavigationPresentation({
@@ -298,7 +298,7 @@ const paused = getNavigationPresentation({ status: "paused", activeCue: null });
   assert.equal(p.currentOnNetwork ?? false, false);
   assert.equal(p.currentRoadText, "דרך עפר");
   assert.ok(p.contextText.length > 0, "off-network still shows context");
-  assert.match(p.contextText, /בדרך עפר/);
+  assert.match(p.contextText, /דרך עפר/);
   assert.doesNotMatch(p.contextText, /local roads/);
 }
 // --- approach guidance ---
@@ -409,7 +409,7 @@ const paused = getNavigationPresentation({ status: "paused", activeCue: null });
   assert.equal(riding.cardMode, "cue");
   assert.equal(riding.cuePrimaryText, "פנה שמאלה");
   assert.equal(riding.cueSecondaryText, "אל שביל הצפון");
-  assert.deepEqual(riding.chip, { kind: "segment", text: "דרך נוף הירדן · דרך עפר" });
+  assert.deepEqual(riding.chip, { kind: "segment", text: "דרך עפר" });
   assert.equal(riding.speedText, "17.5 קמ״ש");
   assert.equal(riding.arrivalSummary, null);
 

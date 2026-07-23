@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { getRouteMessage } from "./RoutePanel.jsx";
-import { getSegmentQualityLabel } from "./quality.js";
 import useDialogFocus from "./useDialogFocus.js";
+import { buildRouteItinerary } from "@cycleways/core/ui/routeItinerary.js";
 
 function DownloadModal({
   activeDataPoints,
@@ -16,7 +16,6 @@ function DownloadModal({
 }) {
   const [shareOpen, setShareOpen] = useState(false);
   const [copyStatus, setCopyStatus] = useState("idle");
-  const routeDataPointsBySegment = groupDataPointsBySegment(activeDataPoints);
   const dialogRef = useDialogFocus(onClose, shareOpen ? "share" : "download");
 
   if (shareOpen) {
@@ -69,10 +68,7 @@ function DownloadModal({
           <h4>דרך המסלול</h4>
           <div id="route-segments-list">
             <RouteSegmentsList
-              featureFlags={featureFlags}
-              routeDataPointsBySegment={routeDataPointsBySegment}
               routeState={routeState}
-              segmentsData={segmentsData}
             />
           </div>
 
@@ -131,13 +127,9 @@ function DownloadModal({
   );
 }
 
-function RouteSegmentsList({
-  featureFlags,
-  routeDataPointsBySegment,
-  routeState,
-  segmentsData,
-}) {
-  if (routeState.selectedSegments.length === 0) {
+function RouteSegmentsList({ routeState }) {
+  const itinerary = buildRouteItinerary(routeState);
+  if (itinerary.length === 0) {
     return (
       <p style={{ color: "#666", fontStyle: "italic" }}>
         עדיין אין דרך במסלול
@@ -147,21 +139,15 @@ function RouteSegmentsList({
 
   return (
     <div className="modal-route-list">
-      {routeState.selectedSegments.map((segmentName, index) => {
-        const qualityLabel = getSegmentQualityLabel(
-          segmentsData?.[segmentName],
-          featureFlags,
+      {itinerary.map((row, index) => {
+        const segmentDataPoints = (routeState.activeDataPoints || []).filter(
+          (point) => row.dataPointIds.includes(point.id),
         );
-        const segmentDataPoints = routeDataPointsBySegment.get(segmentName) || [];
         return (
-          <div className="modal-segment-item" key={`${segmentName}-${index}`}>
+          <div className="modal-segment-item" key={row.id}>
             <span>
-              <strong>{index + 1}.</strong> {segmentName}{" "}
-              {qualityLabel && (
-                <span className={`segment-quality-badge ${qualityLabel.tone}`}>
-                  {qualityLabel.text}
-                </span>
-              )}
+              <strong>{index + 1}.</strong> {row.name}{" "}
+              <small>{(row.distanceMeters / 1000).toFixed(1)} ק״מ</small>
             </span>
             {segmentDataPoints.map((dataPoint) => (
               <div

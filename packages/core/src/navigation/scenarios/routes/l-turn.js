@@ -25,5 +25,24 @@ export default {
     { startMeters: 0, endMeters: 600, name: "דרך הפרדס", cwSegmentId: 1, onNetwork: true, routeClass: "cycleway" },
     { startMeters: 600, endMeters: 1200, name: "שביל הצפון", cwSegmentId: 2, onNetwork: true, routeClass: "path" },
   ],
+  guidanceMode: "guidance-v1",
+  guidanceSpans: [
+    {
+      startMeters: 0,
+      endMeters: 600,
+      guidanceIdentity: "way:orchard-road",
+      name: "דרך הפרדס",
+      role: "named-way",
+      kind: "cycleway",
+    },
+    {
+      startMeters: 600,
+      endMeters: 1200,
+      guidanceIdentity: "way:north-trail",
+      name: "שביל הצפון",
+      role: "named-way",
+      kind: "trail",
+    },
+  ],
   distance: 1198,
 };

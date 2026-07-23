@@ -10,6 +10,10 @@
 
 import { getDistance } from "../utils/distance.js";
 import { bearingDelta, computeBearing } from "../utils/geometry.js";
+import {
+  fallbackGuidanceKind,
+  guidanceClassLabel,
+} from "../data/navigationWays.js";
 
 const METERS_PER_DEG_LAT = 111320;
 const MIN_COURSE_SPEED_MPS = 1; // below this, GPS course/heading is unreliable
@@ -97,6 +101,20 @@ export function createRouteProgressTracker(navigationRoute, options = {}) {
     && Array.isArray(navigationRoute?.guidanceSpans)
     ? navigationRoute.guidanceSpans
     : [];
+  const properNamesEnabled =
+    navigationRoute?.guidancePresentationPolicy !== "class-only";
+
+  function presentedGuidance(span) {
+    if (!span) return { name: null, spokenName: null, kind: null };
+    const kind = fallbackGuidanceKind(span.kind, span.routeClass);
+    const className = guidanceClassLabel(kind, span.routeClass);
+    const hasProperName = properNamesEnabled && Boolean(span.name);
+    return {
+      name: hasProperName ? span.name : className,
+      spokenName: hasProperName ? span.spokenName || span.name : className,
+      kind,
+    };
+  }
 
   function emptyGuidanceContext() {
     return {
@@ -138,15 +156,17 @@ export function createRouteProgressTracker(navigationRoute, options = {}) {
       next = candidate;
       break;
     }
+    const presentedCurrent = presentedGuidance(current);
+    const presentedNext = presentedGuidance(next);
     return {
       currentGuidanceIdentity: current?.guidanceIdentity || null,
-      currentGuidanceName: current?.name || null,
-      currentGuidanceSpokenName: current?.spokenName || null,
-      currentGuidanceKind: current?.kind || null,
+      currentGuidanceName: presentedCurrent.name,
+      currentGuidanceSpokenName: presentedCurrent.spokenName,
+      currentGuidanceKind: presentedCurrent.kind,
       currentGuidanceRole: current?.role || null,
       currentOnCycleways: current?.onCycleways === true,
       nextGuidanceIdentity: next?.guidanceIdentity || null,
-      nextGuidanceName: next?.name || null,
+      nextGuidanceName: presentedNext.name,
       distanceToNextGuidanceMeters: next
         ? Math.max(0, Number(next.startMeters) - progressMeters)
         : null,

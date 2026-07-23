@@ -11,6 +11,10 @@
 
 import { getDistance } from "../utils/distance.js";
 import { computeBearing } from "../utils/geometry.js";
+import {
+  fallbackGuidanceKind,
+  guidanceClassLabel,
+} from "../data/navigationWays.js";
 
 const TURN_THRESHOLD_DEG = 40; // min heading change to emit a turn cue
 // With junction data on the route, sharp corners away from any junction are
@@ -44,6 +48,7 @@ const SELECTION_PRIORITY = {
   hazard: 1,
   poi: 1,
   viewpoint: 1,
+  "cross-feature": 2,
   "enter-segment": 2,
 };
 
@@ -178,12 +183,15 @@ export function distanceToNextRouteChoiceMeters(cues, progressMeters) {
   return next ? Math.max(0, Number(next.distanceMeters) - progress) : null;
 }
 
-function guidancePayload(span) {
+function guidancePayload(span, properNamesEnabled = true) {
+  const kind = fallbackGuidanceKind(span?.kind, span?.routeClass);
+  const className = guidanceClassLabel(kind, span?.routeClass);
+  const hasProperName = properNamesEnabled && Boolean(span?.name);
   return {
     guidanceIdentity: span.guidanceIdentity,
-    name: span.name || null,
-    spokenName: span.spokenName || null,
-    kind: span.kind || null,
+    name: hasProperName ? span.name : className,
+    spokenName: hasProperName ? span.spokenName || span.name : className,
+    kind,
     role: span.role || null,
   };
 }
@@ -224,8 +232,8 @@ function guidanceAtDistance(guidanceSpans, meters, direction) {
   return null;
 }
 
-function decorateGuidanceTransition(cue, span) {
-  const guidance = guidancePayload(span);
+function decorateGuidanceTransition(cue, span, properNamesEnabled) {
+  const guidance = guidancePayload(span, properNamesEnabled);
   if (cue.type === "crossing" && cue.thenManeuver?.type === "turn") {
     cue.thenManeuver = {
       ...cue.thenManeuver,
@@ -240,7 +248,7 @@ function decorateGuidanceTransition(cue, span) {
   }
 }
 
-function applyGuidanceSemantics(cues, guidanceSpans) {
+function applyGuidanceSemantics(cues, guidanceSpans, properNamesEnabled) {
   const maneuvers = cues.filter((cue) =>
     cue.type === "turn" || cue.type === "roundabout" || cue.type === "crossing",
   );
@@ -252,7 +260,26 @@ function applyGuidanceSemantics(cues, guidanceSpans) {
       const near = maneuvers.find(
         (cue) => distanceToManeuver(Number(span.startMeters), cue) <= SPAN_MERGE_TOLERANCE_M,
       );
-      if (near) decorateGuidanceTransition(near, span);
+      if (near) decorateGuidanceTransition(near, span, properNamesEnabled);
+    }
+    if (
+      span.role === "standalone"
+      && span.kind === "bridge"
+      && Number(span.startMeters) > 0
+    ) {
+      const near = maneuvers.find(
+        (cue) => distanceToManeuver(Number(span.startMeters), cue) <= SPAN_MERGE_TOLERANCE_M,
+      );
+      const featureGuidance = guidancePayload(span, properNamesEnabled);
+      if (near) {
+        near.crossFeatureGuidance = featureGuidance;
+      } else {
+        cues.push({
+          type: "cross-feature",
+          distanceMeters: Number(span.startMeters),
+          guidance: featureGuidance,
+        });
+      }
     }
     if (identity) previousIdentity = identity;
     else if (span.networkRole !== "junction") previousIdentity = null;
@@ -288,15 +315,15 @@ function applyGuidanceSemantics(cues, guidanceSpans) {
       afterJunction?.guidanceIdentity &&
       before?.guidanceIdentity !== afterJunction.guidanceIdentity
     ) {
-      decorateGuidanceTransition(cue, afterJunction);
+      decorateGuidanceTransition(cue, afterJunction, properNamesEnabled);
     } else if (!alreadyDecorated && before?.guidanceIdentity !== after.guidanceIdentity) {
-      decorateGuidanceTransition(cue, after);
+      decorateGuidanceTransition(cue, after, properNamesEnabled);
     } else if (
       !alreadyDecorated &&
       before?.guidanceIdentity === after.guidanceIdentity &&
       (cue.type === "roundabout" || (cue.type === "turn" && cue.topologyConfirmed === true))
     ) {
-      cue.stayOnGuidance = guidancePayload(after);
+      cue.stayOnGuidance = guidancePayload(after, properNamesEnabled);
     }
   }
 
@@ -503,75 +530,35 @@ export function buildRouteCues(navigationRoute, options = {}) {
       cue.junctionName = junctionSpan.junctionName;
     }
   }
-  const guidanceSpans = navigationRoute?.guidanceMode === "guidance-v1"
-    && Array.isArray(navigationRoute?.guidanceSpans)
+  const guidanceEnabled = navigationRoute?.guidanceMode === "guidance-v1";
+  const guidanceSpans = guidanceEnabled && Array.isArray(navigationRoute?.guidanceSpans)
     ? navigationRoute.guidanceSpans
     : [];
-  if (guidanceSpans.length > 0) {
-    applyGuidanceSemantics(cues, guidanceSpans);
-  } else {
-    const turnCues = cues.filter((c) => c.type === "turn");
-    for (const span of spans) {
-    if (!span.name || span.startMeters <= 0) continue;
-    if (roundaboutTraversals.some(
-      (traversal) =>
-        span.startMeters >= Number(traversal.entryMeters) - ROUNDABOUT_SUPPRESSION_PAD_M
-        && span.startMeters <= Number(traversal.exitMeters) + ROUNDABOUT_SUPPRESSION_PAD_M,
-    )) {
-      const traversal = roundaboutTraversals.find(
-        (candidate) =>
-          span.startMeters >= Number(candidate.entryMeters) - ROUNDABOUT_SUPPRESSION_PAD_M
-          && span.startMeters <= Number(candidate.exitMeters) + ROUNDABOUT_SUPPRESSION_PAD_M
-          && span.endMeters > Number(candidate.exitMeters) + 0.5,
-      );
-      const roundaboutCue = traversal
-        ? cues.find((cue) =>
-            cue.type === "roundabout" && cue.roundaboutId === traversal.roundaboutId,
-          )
-        : null;
-      if (roundaboutCue?.containsReviewedCrossing) {
-        roundaboutCue.ontoSegmentName = span.name;
-      }
-      continue;
-    }
-    const crossingAtSpan = crossingTraversals.find((crossing) => {
-      const tolerance = crossing.crossingRepresentation === "junction-transition"
-        ? SPAN_MERGE_TOLERANCE_M
-        : CROSSING_SUPPRESSION_PAD_M;
-      return span.startMeters >= Number(crossing.entryMeters) - tolerance
-        && span.startMeters <= Number(crossing.exitMeters) + tolerance;
-    });
-    if (crossingAtSpan) {
-      const crossingCue = cues.find(
-        (cue) => cue.type === "crossing"
-          && cue.crossingId === crossingAtSpan.crossingId
-          && Math.abs(cue.distanceMeters - Number(crossingAtSpan.entryMeters)) < 0.1,
-      );
-      if (crossingCue) {
-        crossingCue.ontoSegmentName = span.name;
-        if (crossingCue.thenManeuver?.type === "turn") {
-          crossingCue.thenManeuver = {
-            ...crossingCue.thenManeuver,
-            ontoSegmentName: span.name,
-          };
-        }
-      }
-      continue;
-    }
-    const near = turnCues.find(
-      (t) =>
-        distanceToManeuver(span.startMeters, t) <= SPAN_MERGE_TOLERANCE_M,
+  if (guidanceEnabled) {
+    // Guidance mode owns naming for every span, including the ones that read as
+    // a facility class. The internal-name `enter-segment` path below is the
+    // legacy fallback for a release whose manifest declares no supported
+    // guidance schema; it must never run alongside guidance naming, and it is
+    // the only producer of internal editor names in rider-facing copy.
+    applyGuidanceSemantics(
+      cues,
+      guidanceSpans,
+      navigationRoute?.guidancePresentationPolicy !== "class-only",
     );
-    if (near) {
-      near.ontoSegmentName = span.name; // merge into the turn
-      continue;
-    }
-      cues.push({ type: "enter-segment", distanceMeters: span.startMeters, segmentName: span.name });
-    }
   }
 
-  // Sort by distance; when distances tie, turn/arrive before enter-segment.
-  const PRIORITY = { start: 0, turn: 1, roundabout: 1, crossing: 1, arrive: 1, bend: 1, "enter-segment": 2 };
+  // Old/unsupported manifests keep topology cues but never resurrect internal
+  // editor names. Class-only guidance is produced only from a supported
+  // manifest-bound schema.
+  const PRIORITY = {
+    start: 0,
+    turn: 1,
+    roundabout: 1,
+    crossing: 1,
+    arrive: 1,
+    bend: 1,
+    "cross-feature": 2,
+  };
   cues.sort((a, b) =>
     a.distanceMeters - b.distanceMeters ||
     (PRIORITY[a.type] ?? 3) - (PRIORITY[b.type] ?? 3),
@@ -592,7 +579,11 @@ export function selectActiveCue(cues, progressMeters) {
     if (cue.dataPointId || DISABLED_INFORMATIONAL_CUE_TYPES.has(cue.type)) continue;
     const d = cue.distanceMeters - progressMeters;
     if (d < 0) continue; // already passed
-    const previewMax = cue.type === "arrive" ? ARRIVAL_PREVIEW_MAX_M : PREVIEW_MAX_M;
+    const previewMax = cue.type === "arrive"
+      ? ARRIVAL_PREVIEW_MAX_M
+      : cue.type === "cross-feature"
+        ? FINAL_MAX_M
+        : PREVIEW_MAX_M;
     if (d > previewMax) continue;
     const phasePriority = d <= FINAL_MAX_M ? 0 : 1;
     const priority = SELECTION_PRIORITY[cue.type] ?? 1;

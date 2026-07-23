@@ -23,6 +23,7 @@ import { decodeCompactBaseRoutingShard } from "@cycleways/core/routing/compactBa
 import { decodeMessagePack } from "@cycleways/core/routing/messagePack.js";
 import { createShardedRouteSession } from "@cycleways/core/routing/shardedRouteSession.js";
 import { dataMarkerFeaturesFromActiveDataPoints } from "@cycleways/core/data/dataMarkers.js";
+import { buildRouteItinerary } from "@cycleways/core/ui/routeItinerary.js";
 
 const repoRoot = resolve(fileURLToPath(new URL(".", import.meta.url)), "..", "..");
 const publicDataDir = resolve(repoRoot, "public-data");
@@ -32,7 +33,7 @@ const featuredRoutesDir = resolve(publicDataDir, "featured-routes");
 
 const nodeRequire = createRequire(import.meta.url);
 
-const SNAPSHOT_SCHEMA_VERSION = 1;
+const SNAPSHOT_SCHEMA_VERSION = 2;
 
 function defaultLog(level, ...args) {
   if (level === "warn") console.warn(...args);
@@ -230,6 +231,9 @@ export async function loadRouteStateForSlug(slug, {
   snapshotDir = featuredRoutesDir,
   log = defaultLog,
 } = {}) {
+  const resolvedManifest = manifest || JSON.parse(
+    await readFile(resolve(publicDataRoot, "map-manifest.json"), "utf-8"),
+  );
   const routeToken = await resolveRouteTokenForSlug(slug, {
     draftCatalogPath,
     routeCatalogPath,
@@ -238,7 +242,7 @@ export async function loadRouteStateForSlug(slug, {
   const RouteManagerClass = nodeRequire(resolve(repoRoot, "packages/core/route-manager.js"));
   const { geoJsonData, segmentsData } = await loadFeaturedAssetsFromDisk({
     publicDataRoot,
-    manifest,
+    manifest: resolvedManifest,
   });
   const {
     baseRoutingNetwork,
@@ -251,7 +255,7 @@ export async function loadRouteStateForSlug(slug, {
   } = await getBaseRoutingDecodeAssets({
     log,
     publicDataRoot,
-    manifest,
+    manifest: resolvedManifest,
   });
   let routeState = null;
   let managerForShare = null;
@@ -273,8 +277,15 @@ export async function loadRouteStateForSlug(slug, {
         segmentsData,
         shardManifest,
         loadShard,
-        { cwBaseIndex, legacyRoutingCompatibility, routeAnchorCompatibility },
+        {
+          cwBaseIndex,
+          legacyRoutingCompatibility,
+          routeAnchorCompatibility,
+          guidanceSchemaVersion:
+            resolvedManifest?.guidance?.schemaVersion ?? null,
+        },
       );
+      session.manager.guidancePresentationPolicy = "named";
       routeState = await session.restoreRouteParam(routeToken);
       managerForShare = session.manager;
     } else {
@@ -283,6 +294,11 @@ export async function loadRouteStateForSlug(slug, {
         geoJsonData,
         segmentsData,
         baseRoutingNetwork,
+        {
+          guidanceSchemaVersion:
+            resolvedManifest?.guidance?.schemaVersion ?? null,
+          guidancePresentationPolicy: "named",
+        },
       );
       const payload = decodeRoutePayload(routeToken);
       const restoreCwBaseIndex = payload.type === "hybrid_route_v6"
@@ -373,6 +389,8 @@ export function routeStateFromFeaturedSnapshot(snapshot) {
     elevationLoss: Number(route.elevationLoss) || 0,
     selectedSegments: Array.isArray(route.selectedSegments) ? route.selectedSegments : [],
     activeDataPoints: Array.isArray(pois.activeDataPoints) ? pois.activeDataPoints : [],
+    guidanceMode: route.guidanceMode || "legacy",
+    guidanceItinerary: Array.isArray(route.itinerary) ? route.itinerary : [],
   };
 }
 
@@ -446,6 +464,8 @@ export function buildSnapshotFromRouteState({
       selectedSegments: Array.isArray(routeState.selectedSegments)
         ? routeState.selectedSegments
         : [],
+      guidanceMode: routeState.guidanceMode || "legacy",
+      itinerary: buildRouteItinerary(routeState),
     },
     pois: {
       activeDataPoints,

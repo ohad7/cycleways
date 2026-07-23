@@ -33,6 +33,21 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+# Importable both as `python3 processing/build_map.py` (script directory on
+# sys.path) and as `processing.build_map` (package import from the test suite).
+try:
+    from processing.navigation_ways import (
+        build_routing_evidence_by_segment_id,
+        build_navigation_ways_report,
+        manifest_guidance_summary,
+    )
+except ModuleNotFoundError:  # pragma: no cover - script invocation
+    from navigation_ways import (
+        build_routing_evidence_by_segment_id,
+        build_navigation_ways_report,
+        manifest_guidance_summary,
+    )
+
 try:
     from .roundabout_review import join_roundabout_reviews
     from .crossing_review import join_crossing_reviews
@@ -3639,6 +3654,7 @@ def write_runtime_manifest(
     output_cw_alignment_geometry: Path | None = None,
     legacy_compatibility: dict[str, Any] | None = None,
     route_anchor_compatibility: dict[str, Any] | None = None,
+    guidance_summary: dict[str, Any] | None = None,
 ) -> tuple[dict[str, Any], Path]:
     base_routing_shard_manifest = output_base_routing_shards / "manifest.json"
     version_inputs = [
@@ -3805,6 +3821,12 @@ def write_runtime_manifest(
         manifest["hashes"]["routeAnchorCompatibility"] = file_digest(
             route_anchor_path
         )
+    if guidance_summary is not None:
+        # Non-path release diagnostics and an activation assertion.
+        # `hashes.segments` stays the guidance-data integrity authority: the
+        # resolved guidance lives inside the segments asset, so there is no
+        # second naming file and no second digest.
+        manifest["guidance"] = guidance_summary
     write_json(manifest_path, manifest)
     runtime = {
         "version": version,
@@ -4878,10 +4900,44 @@ def build_from_source_geojson(args: argparse.Namespace) -> dict[str, Any]:
         f"Loaded {len(source_geojson.get('features', []))} source records",
     )
 
+    navigation_ways_registry = load_json(args.navigation_ways.resolve(), {})
     source_segments = resolve_navigation_guidance(
         source_segments_from_geojson(source_geojson),
-        load_json(args.navigation_ways.resolve(), {}),
+        navigation_ways_registry,
     )
+    # Coverage and structure review over the whole active network. Missing
+    # classification is a warning in `migration` and a blocker in `required`;
+    # it never changes rider-facing behavior, because an unreviewed span reads
+    # as its facility class rather than falling back to an internal name.
+    previous_report = load_json(out_dir / "report.json", {})
+    navigation_ways_report = build_navigation_ways_report(
+        source_geojson,
+        navigation_ways_registry,
+        is_active=is_active_source_feature,
+        routing_evidence_by_segment_id=build_routing_evidence_by_segment_id(
+            load_json(args.cw_base_overlay.resolve(), {}),
+            load_json(args.routing_graph.resolve(), {}),
+        ),
+        previous_reviewed_count=(
+            (previous_report.get("navigationWays") or {}).get("reviewedSegments")
+        ),
+    )
+    guidance_blockers = [
+        entry
+        for entry in navigation_ways_report["issues"]
+        if entry["severity"] == "error"
+    ]
+    if guidance_blockers:
+        examples = "; ".join(
+            f"{entry['code']}"
+            + (f" segment {entry['segmentId']}" if entry.get("segmentId") else "")
+            + (f" way {entry['wayId']}" if entry.get("wayId") else "")
+            for entry in guidance_blockers[:5]
+        )
+        raise ValueError(
+            f"Navigation-way validation failed with {len(guidance_blockers)} blocker"
+            f"{'' if len(guidance_blockers) == 1 else 's'}: {examples}"
+        )
     output_kml = public_data_dir / "exports" / "map.kml"
     output_geojson = public_data_dir / "bike_roads.geojson"
     output_segments = public_data_dir / "segments.json"
@@ -5025,6 +5081,7 @@ def build_from_source_geojson(args: argparse.Namespace) -> dict[str, Any]:
         output_cw_alignment_geometry,
         legacy_compatibility,
         route_anchor_compatibility,
+        manifest_guidance_summary(navigation_ways_report),
     )
     emit_progress(args.verbose, f"Build version: {runtime_outputs['version']}")
     report = {
@@ -5061,6 +5118,7 @@ def build_from_source_geojson(args: argparse.Namespace) -> dict[str, Any]:
         },
         "elevation": elevation_stats,
         "siteGeojsonOptimization": site_geojson_optimization,
+        "navigationWays": navigation_ways_report,
         "validation": validation,
     }
     write_json(output_report, report)

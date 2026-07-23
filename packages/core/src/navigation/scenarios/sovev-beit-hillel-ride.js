@@ -10,7 +10,7 @@ export default {
   track: { generate: { speedMps: 8, intervalMs: 1000, jitterM: 6, seed: 21 } },
   expect: [
     { type: "status", value: "navigating" },
-    { type: "current-road", match: "שביל אופניים חצבאני חופים צפוני" },
+    { type: "current-road", match: "דרך עפר" },
     { type: "status", value: "off-route", never: true },
     { type: "arrived" },
   ],

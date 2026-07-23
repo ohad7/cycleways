@@ -25,13 +25,23 @@ export async function createRouteManager(
   geoJsonData,
   segmentsData,
   baseRoutingNetworkData = null,
+  options = {},
 ) {
   if (typeof RouteManagerClass !== "function") {
     throw new Error("RouteManager is not available");
   }
 
   const manager = new RouteManagerClass();
-  await manager.load(geoJsonData, segmentsData, baseRoutingNetworkData);
+  // `guidanceSchemaVersion` comes from the loaded manifest. Passing it here is
+  // what makes guidance naming a property of the release, rather than something
+  // inferred from whether a given route happened to touch a classified segment.
+  await manager.load(geoJsonData, segmentsData, baseRoutingNetworkData, {
+    guidanceSchemaVersion: options.guidanceSchemaVersion ?? null,
+  });
+  manager.guidancePresentationPolicy =
+    options.guidancePresentationPolicy === "class-only"
+      ? "class-only"
+      : "named";
   return manager;
 }
 
@@ -161,7 +171,13 @@ export function snapshotRouteManager(manager, segmentsData) {
     routeFailure: info.failure || null,
     segmentSpans: info.segmentSpans || [],
     guidanceSpans: info.guidanceSpans || [],
+    oppositeSegmentSpans: info.oppositeSegmentSpans || [],
+    oppositeGuidanceSpans: info.oppositeGuidanceSpans || [],
     guidanceMode: info.guidanceMode || "legacy",
+    guidancePresentationPolicy:
+      manager.guidancePresentationPolicy === "class-only"
+        ? "class-only"
+        : "named",
     routingValidation: info.routingValidation
       ? cloneJsonValue(info.routingValidation)
       : null,
@@ -190,7 +206,14 @@ export function routeStateSnapshot(routeState) {
     routeFailure: routeState.routeFailure || null,
     segmentSpans: (routeState.segmentSpans || []).map((s) => ({ ...s })),
     guidanceSpans: cloneJsonValue(routeState.guidanceSpans || []),
+    guidanceItinerary: cloneJsonValue(routeState.guidanceItinerary || []),
+    oppositeSegmentSpans: cloneJsonValue(routeState.oppositeSegmentSpans || []),
+    oppositeGuidanceSpans: cloneJsonValue(routeState.oppositeGuidanceSpans || []),
     guidanceMode: routeState.guidanceMode || "legacy",
+    guidancePresentationPolicy:
+      routeState.guidancePresentationPolicy === "class-only"
+        ? "class-only"
+        : "named",
     routingValidation: routeState.routingValidation
       ? cloneJsonValue(routeState.routingValidation)
       : null,

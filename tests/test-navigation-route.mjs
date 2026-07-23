@@ -115,7 +115,7 @@ assert.equal(built.activeDataPoints.length, 1);
 assert.deepEqual(built.crossings[0].continuation, { type: "turn", direction: "left" });
 assert.equal(built.crossings[0].crossingRepresentation, "junction-transition");
 assert.equal(built.crossings[0].guidancePolicy, "user-option");
-assert.equal(built.maneuverGeneratorVersion, "navigation-cues-v3");
+assert.equal(built.maneuverGeneratorVersion, "navigation-cues-v4");
 
 const catalog = navigationRouteFromCatalogEntry(
   {

@@ -95,6 +95,25 @@ const namedRoute = {
   geometry: transitionRoute.geometry,
   junctions: [center],
   crossings: matches,
+  guidanceMode: "guidance-v1",
+  guidanceSpans: [
+    {
+      startMeters: 0,
+      endMeters: matches[0].entryMeters,
+      guidanceIdentity: "way:red-naftali-trail",
+      name: "שביל אדום הרי נפתלי",
+      role: "named-way",
+      kind: "trail",
+    },
+    {
+      startMeters: matches[0].entryMeters,
+      endMeters: routeTotal,
+      guidanceIdentity: "way:mitzpe-adi-road",
+      name: "דרך נוף מצפה עדי - מטולה דרום",
+      role: "named-way",
+      kind: "road",
+    },
+  ],
   segmentSpans: [
     {
       startMeters: 0,
@@ -113,11 +132,16 @@ const enabledCues = buildRouteCues(namedRoute);
 const enabledCrossing = enabledCues.find((cue) => cue.type === "crossing");
 assert.ok(enabledCrossing);
 assert.equal(enabledCues.filter((cue) => cue.type === "turn").length, 0);
-assert.deepEqual(enabledCrossing.thenManeuver, {
-  type: "turn",
-  direction: "left",
-  ontoSegmentName: "דרך נוף מצפה עדי - מטולה דרום",
-});
+assert.equal(enabledCrossing.thenManeuver.type, "turn");
+assert.equal(enabledCrossing.thenManeuver.direction, "left");
+assert.equal(
+  enabledCrossing.thenManeuver.ontoGuidance.guidanceIdentity,
+  "way:mitzpe-adi-road",
+);
+assert.equal(
+  enabledCrossing.thenManeuver.ontoGuidance.name,
+  "דרך נוף מצפה עדי - מטולה דרום",
+);
 const utterance = createNavigationVoicePlanner().plan(
   {
     kind: "cue",

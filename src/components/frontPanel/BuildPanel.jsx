@@ -27,6 +27,8 @@ export default function BuildPanel({
   onPlanOppositeDirection,
   onAcceptRouteProposal,
   onDismissRouteProposal,
+  selectedItineraryId = null,
+  onItinerarySelect,
   error,
   emptyState,
   legalLinks = null,
@@ -83,6 +85,13 @@ export default function BuildPanel({
 
       {hasRoute && elevation}
       {hasRoute && playback}
+      {hasRoute && buildModel.itinerary.length > 0 ? (
+        <RouteItinerary
+          rows={buildModel.itinerary}
+          selectedId={selectedItineraryId}
+          onSelect={onItinerarySelect}
+        />
+      ) : null}
 
       {hasRoute && (
         <div className="build-panel__direction-actions" aria-label="פעולות כיוון וחזרה">
@@ -149,6 +158,90 @@ export default function BuildPanel({
       {legalLinks}
     </div>
   );
+}
+
+function RouteItinerary({ rows, selectedId, onSelect }) {
+  return (
+    <section className="route-itinerary" aria-labelledby="route-itinerary-title">
+      <div className="dlabel" id="route-itinerary-title">הדרך במסלול</div>
+      <ol className="route-itinerary__list">
+        {rows.map((row) => (
+          <li key={row.id}>
+            <details
+              className={`route-itinerary__row${selectedId === row.id ? " is-selected" : ""}`}
+            >
+              <summary
+                onClick={() => onSelect?.({
+                  id: row.id,
+                  startMeters: row.startMeters,
+                  endMeters: row.endMeters,
+                })}
+              >
+                <span className="route-itinerary__icon" aria-hidden="true">{itineraryIcon(row.icon)}</span>
+                <span className="route-itinerary__name">{row.name}</span>
+                <span className="route-itinerary__distance">{formatProposalDistance(row.distanceMeters)}</span>
+                {row.warningCount > 0 ? (
+                  <span className="route-itinerary__warning" aria-label={`${row.warningCount} נקודות מידע`}>
+                    ⚠ {row.warningCount}
+                  </span>
+                ) : null}
+              </summary>
+              <div className="route-itinerary__details">
+                {row.sectionLabels.length > 0 ? (
+                  <span>{row.sectionLabels.join(" · ")}</span>
+                ) : null}
+                <span>{row.isFallback ? "שם לפי סוג הדרך" : `סוג: ${row.kind}`}</span>
+                {row.junctionContexts.map((junction, index) => (
+                  junction.junctionName ? (
+                    <span key={`${junction.junctionId || "junction"}-${index}`}>
+                      דרך {junction.junctionName}
+                    </span>
+                  ) : null
+                ))}
+                {row.children.length > 1 ? (
+                  <span className="route-itinerary__sections">
+                    {row.children
+                      .filter((child) => child.networkRole !== "junction")
+                      .map((child, index) => (
+                        <button
+                          key={`${row.id}-section-${index}`}
+                          type="button"
+                          onClick={(event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            onSelect?.({
+                              id: `${row.id}:section:${index}`,
+                              startMeters: child.startMeters,
+                              endMeters: child.endMeters,
+                            });
+                          }}
+                        >
+                          {child.sectionLabel
+                            || child.sectionLabels?.join(" · ")
+                            || `קטע ${index + 1}`}
+                        </button>
+                      ))}
+                  </span>
+                ) : null}
+              </div>
+            </details>
+          </li>
+        ))}
+      </ol>
+    </section>
+  );
+}
+
+function itineraryIcon(icon) {
+  return {
+    road: "🛣️",
+    cycleway: "🚲",
+    "dirt-road": "〰️",
+    trail: "🥾",
+    promenade: "🚶",
+    bridge: "🌉",
+    connector: "↔️",
+  }[icon] || "•";
 }
 
 function formatProposalDistance(meters) {

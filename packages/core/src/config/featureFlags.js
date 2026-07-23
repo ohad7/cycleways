@@ -1,6 +1,7 @@
 import { getStoredItem } from "../platform/storage.js";
 
 const DEFAULT_FEATURE_FLAGS = {
+  guidanceWayNames: true,
   routeDiscovery: true,
   segmentQualityPublicDisplay: false,
   segmentQualityRouting: false,

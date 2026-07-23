@@ -37,7 +37,7 @@ export function buildApproachLeg(connectorResult, { id = "approach", target = nu
       routingValidation: connectorResult?.routingValidation
         ? structuredClone(connectorResult.routingValidation)
         : null,
-      maneuverGeneratorVersion: "navigation-cues-v3",
+      maneuverGeneratorVersion: "navigation-cues-v4",
       approachTarget: target,
     },
     geometry,

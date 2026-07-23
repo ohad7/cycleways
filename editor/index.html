@@ -24,6 +24,7 @@
 
           <div class="workspace-tabs" role="group" aria-label="Editor mode">
             <button id="workspace-network" class="tool-button active" type="button">Network</button>
+            <button id="workspace-ways" class="tool-button" type="button">Ways</button>
             <button id="workspace-roundabouts" class="tool-button" type="button">Junctions</button>
             <button id="workspace-crossings" class="tool-button" type="button">Crossings</button>
             <button id="workspace-video-sync" class="tool-button" type="button">Video Sync</button>
@@ -102,6 +103,103 @@
 
       <aside class="details">
         <div class="details-scroll">
+          <section id="ways-panel" class="panel workspace-panel ways-panel" hidden dir="rtl">
+            <header class="panel-header">
+              <div>
+                <h2>דרכים ושמות ניווט</h2>
+                <p class="ways-panel-intro">בחרו דרך כדי לערוך אותה, או בחרו מקטע במפה/בחיפוש כדי לשייך אותו.</p>
+              </div>
+              <span id="ways-coverage"></span>
+            </header>
+
+            <div class="ways-toolbar">
+              <input id="ways-search" class="text-input" type="search" placeholder="חיפוש דרך לפי שם, מספר או מזהה">
+              <button id="ways-create" class="primary-button" type="button">דרך חדשה</button>
+            </div>
+
+            <div id="ways-list" class="ways-list" aria-label="רשימת דרכים"></div>
+
+            <section class="way-segment-assignment" aria-labelledby="way-segment-assignment-title">
+              <h3 id="way-segment-assignment-title">שיוך מקטע</h3>
+              <input id="ways-segment-search" class="text-input" type="search" placeholder="חיפוש מקטע לפי שם או מספר">
+              <div id="ways-segment-results" class="ways-segment-results"></div>
+              <div id="ways-selected-segment" class="ways-selected-segment"></div>
+              <label class="field-label" for="ways-segment-way">דרך לשיוך</label>
+              <select id="ways-segment-way" class="text-input"></select>
+              <div class="action-row">
+                <button id="ways-segment-assign" class="primary-button" type="button">שיוך / העברה לדרך</button>
+                <button id="ways-segment-unassign" class="secondary-button danger" type="button">הסרת שיוך</button>
+              </div>
+            </section>
+
+            <section id="way-editor" class="way-editor" hidden>
+              <div class="way-editor-heading">
+                <div>
+                  <strong id="way-editor-title"></strong>
+                  <input id="way-editor-id" class="text-input way-editor-id" type="text" dir="ltr" aria-label="מזהה דרך">
+                </div>
+                <button id="way-editor-fit" class="mini-button" type="button">הצגה במפה</button>
+              </div>
+
+              <label class="field-label" for="way-editor-name">שם תצוגה</label>
+              <input id="way-editor-name" class="text-input" type="text">
+
+              <label class="field-label" for="way-editor-kind">סוג הדרך</label>
+              <select id="way-editor-kind" class="text-input"></select>
+
+              <label class="field-label" for="way-editor-ref">מספר/סימוכין</label>
+              <input id="way-editor-ref" class="text-input" type="text">
+
+              <label class="field-label" for="way-editor-spoken-name">שם להקראה (רשות)</label>
+              <input id="way-editor-spoken-name" class="text-input" type="text">
+              <label class="checkbox-row way-audible-verification" for="way-editor-audible-verified">
+                <input id="way-editor-audible-verified" type="checkbox">
+                בדקתי שינוי זה ב־iOS
+              </label>
+
+              <div class="action-row">
+                <button id="way-editor-save" class="primary-button" type="button">שמירה</button>
+                <button id="way-editor-cancel" class="secondary-button" type="button">ביטול</button>
+                <button id="way-editor-delete" class="secondary-button danger" type="button">מחיקת הדרך</button>
+              </div>
+
+              <h3>מקטעים משויכים</h3>
+              <div id="way-editor-members" class="way-editor-members"></div>
+              <div id="way-editor-issues" class="guidance-issues" aria-live="polite"></div>
+            </section>
+
+            <details id="guidance-review-panel" class="guidance-review-panel" open>
+              <summary class="guidance-review-summary">
+                <span>הצעות לסיווג ושיוך</span>
+                <span id="guidance-review-badge" class="guidance-review-badge">טוען…</span>
+              </summary>
+              <div class="guidance-review-body" dir="rtl">
+                <p class="guidance-review-help">
+                  ההצעות שנוצרו כבר נמצאות כאן. בחירה אינה משנה נתונים עד ללחיצה על
+                  “אישור ושמירה”.
+                </p>
+                <div id="guidance-suggestion-binding" class="guidance-suggestion-binding"></div>
+                <div class="guidance-review-toolbar">
+                  <input
+                    id="guidance-suggestion-search"
+                    class="text-input"
+                    type="search"
+                    placeholder="חיפוש לפי שם, מזהה דרך או מספר מקטע"
+                  >
+                  <select id="guidance-suggestion-filter" class="text-input compact-select">
+                    <option value="pending">ממתינות לבדיקה</option>
+                    <option value="warning">דורשות תשומת לב</option>
+                    <option value="accepted">אושרו</option>
+                    <option value="rejected">נדחו</option>
+                    <option value="all">הכול</option>
+                  </select>
+                  <button id="guidance-suggestion-refresh" class="mini-button" type="button">רענון</button>
+                </div>
+                <div id="guidance-suggestion-list" class="guidance-suggestion-list"></div>
+              </div>
+            </details>
+          </section>
+
           <section id="network-selection-panel" class="panel">
             <header class="panel-header segment-pinned-header">
               <div class="segment-pinned-title">
@@ -143,6 +241,53 @@
                 <div id="segment-quality" class="quality-section" aria-label="Segment quality"></div>
               </details>
             </form>
+
+            <!-- Guidance classification. The internal name above stays the
+                 editor/build key; this section owns the rider-facing identity.
+                 See plans/navigation-way-names/design.md. -->
+            <details id="segment-guidance-details" class="segment-guidance-details" open>
+              <summary>הכוונה ושם דרך</summary>
+              <div class="segment-guidance" dir="rtl">
+                <div id="guidance-preview" class="guidance-preview" aria-live="polite"></div>
+
+                <label class="field-label" for="guidance-role">סיווג</label>
+                <select id="guidance-role" class="text-input">
+                  <option value="">— לא סווג —</option>
+                  <option value="named-way">חלק מדרך בעלת שם</option>
+                  <option value="standalone">מאפיין עצמאי בעל שם</option>
+                  <option value="unnamed">ללא שם</option>
+                </select>
+
+                <div id="guidance-named-way-fields" hidden>
+                  <label class="field-label" for="guidance-way-id">דרך</label>
+                  <select id="guidance-way-id" class="text-input"></select>
+                  <div class="action-row guidance-way-actions">
+                    <button id="guidance-open-way" class="mini-button" type="button">פתיחה בלשונית Ways</button>
+                    <button id="guidance-create-way" class="mini-button" type="button">דרך חדשה…</button>
+                  </div>
+                  <label class="field-label" for="guidance-section-label">תווית קטע (רשות)</label>
+                  <input id="guidance-section-label" class="text-input" type="text">
+                </div>
+
+                <div id="guidance-standalone-fields" hidden>
+                  <label class="field-label" for="guidance-standalone-name">שם ציבורי</label>
+                  <input id="guidance-standalone-name" class="text-input" type="text">
+                  <label class="field-label" for="guidance-standalone-spoken-name">שם להקראה (רשות, רק אחרי בדיקה ב־iOS)</label>
+                  <input id="guidance-standalone-spoken-name" class="text-input" type="text">
+                </div>
+
+                <div id="guidance-kind-field" hidden>
+                  <label class="field-label" for="guidance-kind">סוג מתקן</label>
+                  <select id="guidance-kind" class="text-input"></select>
+                </div>
+
+                <div id="guidance-issues" class="guidance-issues" aria-live="polite"></div>
+                <div class="action-row">
+                  <button id="guidance-save" class="primary-button" type="button">שמירת סיווג</button>
+                </div>
+                <div id="guidance-coverage" class="guidance-coverage" aria-live="polite"></div>
+              </div>
+            </details>
 
             <div class="edge-pick-edit-controls" id="edge-pick-edit-controls" hidden>
               <button id="edit-segment-edges" class="mini-button" type="button">Add/remove edges</button>

@@ -53,6 +53,11 @@ const {
 const {
   buildRouteAttestation,
 } = require("./src/routing/routeAttestation.js");
+const {
+  fallbackGuidanceKind,
+  guidanceModeForSchema,
+  normalizeResolvedSegmentGuidance,
+} = require("./src/data/navigationWays.js");
 
 class RouteManager {
   constructor() {
@@ -82,6 +87,10 @@ class RouteManager {
     };
     this.segmentNamesById = new Map();
     this.segmentGuidanceById = new Map();
+    // Manifest-bound guidance schema. Null means the loaded release declared no
+    // supported guidance schema, which is the only path that still yields
+    // legacy naming. It is never inferred from route content.
+    this.guidanceSchemaVersion = null;
     this.baseRouteInfo = null;
     this.lastRouteFailure = null;
     this._connectorCostProfile = false;
@@ -94,7 +103,8 @@ class RouteManager {
    * @param {Object} geoJsonData - The geojson feature collection
    * @param {Object} segmentsData - The segments metadata
    */
-  async load(geoJsonData, segmentsData, baseRoutingNetwork = null) {
+  async load(geoJsonData, segmentsData, baseRoutingNetwork = null, options = {}) {
+    this.guidanceSchemaVersion = options?.guidanceSchemaVersion ?? null;
     this.segments.clear();
     this.segmentMetrics.clear();
     this.adjacencyMap.clear();
@@ -471,6 +481,7 @@ class RouteManager {
           routeInfo.traversals,
           this.segmentNamesById,
           this.segmentGuidanceById,
+          { guidanceSchemaVersion: this.guidanceSchemaVersion },
         ),
         routingValidation: this._baseRouteAttestation(
           routeInfo,
@@ -491,7 +502,9 @@ class RouteManager {
       orderedCoordinates: this._getOrderedCoordinates(),
       segmentSpans: [],
       guidanceSpans: [],
-      guidanceMode: "legacy",
+      oppositeSegmentSpans: [],
+      oppositeGuidanceSpans: [],
+      guidanceMode: guidanceModeForSchema(this.guidanceSchemaVersion),
     };
   }
 
@@ -517,6 +530,7 @@ class RouteManager {
         routeInfo.traversals,
         this.segmentNamesById,
         this.segmentGuidanceById,
+        { guidanceSchemaVersion: this.guidanceSchemaVersion },
       ),
       routingValidation: this._baseRouteAttestation(
         routeInfo,
@@ -1400,13 +1414,37 @@ class RouteManager {
     }));
   }
 
+  _traversalDirection(fromDistance, toDistance) {
+    return Number(toDistance) < Number(fromDistance) ? "reverse" : "forward";
+  }
+
   _cwMembershipsForTraversal(edge, fromDistance, toDistance) {
-    const direction = Number(toDistance) < Number(fromDistance) ? "reverse" : "forward";
-    return this._cwMembershipsForDirection(edge, direction);
+    return this._cwMembershipsForDirection(
+      edge,
+      this._traversalDirection(fromDistance, toDistance),
+    );
   }
 
   _junctionMembershipsForTraversal(edge, fromDistance, toDistance) {
-    const direction = Number(toDistance) < Number(fromDistance) ? "reverse" : "forward";
+    const direction = this._traversalDirection(fromDistance, toDistance);
+    return Array.isArray(edge?.cwJunctions?.[direction]) ? edge.cwJunctions[direction] : [];
+  }
+
+  // Memberships for riding this same edge the other way. Legacy undirected
+  // `cwSegmentIds` edges have no direction-scoped data at all; returning the
+  // same list for both directions there is correct, because that legacy shape
+  // asserts membership without direction.
+  _cwMembershipsForOppositeTraversal(edge, fromDistance, toDistance) {
+    const direction = this._traversalDirection(fromDistance, toDistance) === "reverse"
+      ? "forward"
+      : "reverse";
+    return this._cwMembershipsForDirection(edge, direction);
+  }
+
+  _junctionMembershipsForOppositeTraversal(edge, fromDistance, toDistance) {
+    const direction = this._traversalDirection(fromDistance, toDistance) === "reverse"
+      ? "forward"
+      : "reverse";
     return Array.isArray(edge?.cwJunctions?.[direction]) ? edge.cwJunctions[direction] : [];
   }
 
@@ -2588,6 +2626,20 @@ class RouteManager {
         toDistance,
       ).map((value) => ({ ...value })),
       junctionMemberships: this._junctionMembershipsForTraversal(
+        edge,
+        fromDistance,
+        toDistance,
+      ).map((value) => ({ ...value })),
+      // Reverse-ready evidence, captured here because this is the only place
+      // that still has the edge. Route attestation carries opposite segment
+      // membership but not opposite `cwJunctions`, so a later pure reverse
+      // cannot reconstruct the opposite exact projection safely.
+      oppositeCwMemberships: this._cwMembershipsForOppositeTraversal(
+        edge,
+        fromDistance,
+        toDistance,
+      ).map((value) => ({ ...value })),
+      oppositeJunctionMemberships: this._junctionMembershipsForOppositeTraversal(
         edge,
         fromDistance,
         toDistance,
@@ -3971,31 +4023,20 @@ class RouteManager {
   }
 }
 
-function normalizeResolvedSegmentGuidance(raw, segmentId) {
-  if (!raw || typeof raw !== "object") return null;
-  const role = raw.role;
-  if (!new Set(["named-way", "standalone", "unnamed"]).has(role)) return null;
-  const identity = raw.guidanceIdentity == null
-    ? null
-    : String(raw.guidanceIdentity);
-  if (role !== "unnamed" && !identity) return null;
-  return {
-    role,
-    guidanceIdentity: identity,
-    wayId: role === "named-way" && raw.wayId ? String(raw.wayId) : null,
-    name: raw.name ? String(raw.name) : null,
-    spokenName: raw.spokenName ? String(raw.spokenName) : null,
-    kind: raw.kind ? String(raw.kind) : "other",
-    sectionLabel: raw.sectionLabel ? String(raw.sectionLabel) : null,
-    resolutionStatus: role === "unnamed" ? "unnamed" : "resolved",
-    segmentId: Number(segmentId),
-  };
-}
-
-function normalizedMemberships(traversal) {
-  const raw = Array.isArray(traversal?.cwMemberships)
-    ? traversal.cwMemberships
-    : (traversal?.edge?.cwSegmentIds || []).map((segmentId) => ({ segmentId }));
+// Both span families are built from the same traversal list, once per
+// direction. `membershipKey` selects which direction-scoped membership set to
+// read: `cwMemberships` for the direction actually travelled, and
+// `oppositeCwMemberships` for the reverse-ready projection. The legacy
+// undirected `cwSegmentIds` fallback applies to the travelled direction only —
+// it carries no direction information, so using it for the opposite projection
+// would silently assert symmetry the data never claimed.
+function normalizedMemberships(traversal, membershipKey = "cwMemberships") {
+  const explicit = traversal?.[membershipKey];
+  const raw = Array.isArray(explicit)
+    ? explicit
+    : membershipKey === "cwMemberships"
+      ? (traversal?.edge?.cwSegmentIds || []).map((segmentId) => ({ segmentId }))
+      : [];
   const byKey = new Map();
   for (const value of raw) {
     const segmentId = Number(value?.segmentId);
@@ -4015,10 +4056,10 @@ function normalizedMemberships(traversal) {
   );
 }
 
-function normalizedJunctionMemberships(traversal) {
+function normalizedJunctionMemberships(traversal, junctionKey = "junctionMemberships") {
   const byKey = new Map();
-  for (const value of Array.isArray(traversal?.junctionMemberships)
-    ? traversal.junctionMemberships
+  for (const value of Array.isArray(traversal?.[junctionKey])
+    ? traversal[junctionKey]
     : []) {
     const junctionId = value?.junctionId ? String(value.junctionId) : null;
     if (!junctionId) continue;
@@ -4044,20 +4085,28 @@ function stableSpanKey(value) {
  * direction-scoped membership; singular compatibility aliases are emitted only
  * when one segment/junction is authoritative.
  */
-function buildSegmentSpans(traversals, segmentNamesById) {
+function buildSegmentSpans(traversals, segmentNamesById, projection = {}) {
+  const {
+    membershipKey = "cwMemberships",
+    junctionKey = "junctionMemberships",
+    reverseOrder = false,
+  } = projection;
+  const ordered = Array.isArray(traversals)
+    ? (reverseOrder ? [...traversals].reverse() : traversals)
+    : [];
   const spans = [];
   let cursor = 0;
-  for (const traversal of Array.isArray(traversals) ? traversals : []) {
+  for (const traversal of ordered) {
     const length = Math.abs(
       (traversal.distanceMeters ??
         (traversal.toDistance - traversal.fromDistance)) || 0,
     );
     if (length <= 0) continue;
-    const segmentMemberships = normalizedMemberships(traversal);
+    const segmentMemberships = normalizedMemberships(traversal, membershipKey);
     const segmentIds = [...new Set(segmentMemberships.map((value) => value.segmentId))];
     const cwSegmentId = segmentIds.length === 1 ? segmentIds[0] : null;
     const name = cwSegmentId != null ? segmentNamesById.get(cwSegmentId) ?? null : null;
-    const junctionMemberships = normalizedJunctionMemberships(traversal);
+    const junctionMemberships = normalizedJunctionMemberships(traversal, junctionKey);
     const junctionIds = [...new Set(junctionMemberships.map((value) => value.junctionId))];
     const junctionId = junctionIds.length === 1 ? junctionIds[0] : null;
     const junctionName = junctionId
@@ -4074,8 +4123,8 @@ function buildSegmentSpans(traversals, segmentNamesById) {
     const start = cursor;
     cursor += length;
     const prev = spans[spans.length - 1];
-    const membershipKey = stableSpanKey({ segmentMemberships, junctionMemberships, routeClass });
-    if (prev && prev._membershipKey === membershipKey && prev.networkRole === networkRole) {
+    const mergeKey = stableSpanKey({ segmentMemberships, junctionMemberships, routeClass });
+    if (prev && prev._membershipKey === mergeKey && prev.networkRole === networkRole) {
       prev.endMeters = cursor;
       continue;
     }
@@ -4095,16 +4144,25 @@ function buildSegmentSpans(traversals, segmentNamesById) {
       junctionName,
       junctionMemberships,
       routeClass,
-      _membershipKey: membershipKey,
+      _membershipKey: mergeKey,
     });
   }
   return spans.map(({ _membershipKey, ...span }) => span);
 }
 
-function guidanceResolutionForTraversal(traversal, segmentGuidanceById) {
-  const memberships = normalizedMemberships(traversal);
+function guidanceResolutionForTraversal(
+  traversal,
+  segmentGuidanceById,
+  projection = {},
+) {
+  const {
+    membershipKey = "cwMemberships",
+    junctionKey = "junctionMemberships",
+  } = projection;
+  const routeClass = traversal?.edge?.routeClass ?? traversal?.edge?.highway ?? null;
+  const memberships = normalizedMemberships(traversal, membershipKey);
   const segmentIds = [...new Set(memberships.map((value) => value.segmentId))];
-  const junctionMemberships = normalizedJunctionMemberships(traversal);
+  const junctionMemberships = normalizedJunctionMemberships(traversal, junctionKey);
   if (segmentIds.length === 0) {
     if (junctionMemberships.length > 0) {
       const junctionIds = [...new Set(junctionMemberships.map((value) => value.junctionId))];
@@ -4145,6 +4203,10 @@ function guidanceResolutionForTraversal(traversal, segmentGuidanceById) {
 
   const resolutions = segmentIds.map((id) => segmentGuidanceById.get(id) || null);
   if (resolutions.some((value) => value === null)) {
+    // Unreviewed presents exactly like an intentionally unnamed span: a
+    // facility-class fallback, never the internal editor name. The status is
+    // retained for coverage reporting only, so classification progress shows up
+    // route by route instead of waiting for whole-network coverage.
     return {
       networkRole: "segment",
       resolutionStatus: "unreviewed",
@@ -4152,7 +4214,7 @@ function guidanceResolutionForTraversal(traversal, segmentGuidanceById) {
       name: null,
       spokenName: null,
       role: null,
-      kind: null,
+      kind: fallbackGuidanceKind(null, routeClass),
       wayId: null,
       segmentIds,
       sectionLabels: [],
@@ -4165,6 +4227,12 @@ function guidanceResolutionForTraversal(traversal, segmentGuidanceById) {
     value.guidanceIdentity || `role:${value.role}:${value.kind}`,
   ))];
   if (identityKeys.length !== 1) {
+    // Overlapping memberships that disagree: speak neither name. The span still
+    // needs a facility class to fall back on — a null name with a null kind
+    // would turn a data problem into silent navigation — so keep the shared
+    // kind when the conflicting records agree on one, else derive from route
+    // class.
+    const kinds = [...new Set(resolutions.map((value) => value.kind).filter(Boolean))];
     return {
       networkRole: "segment",
       resolutionStatus: "conflict",
@@ -4172,7 +4240,9 @@ function guidanceResolutionForTraversal(traversal, segmentGuidanceById) {
       name: null,
       spokenName: null,
       role: null,
-      kind: null,
+      kind: kinds.length === 1
+        ? kinds[0]
+        : fallbackGuidanceKind(null, routeClass),
       wayId: null,
       segmentIds,
       sectionLabels: resolutions.map((value) => value.sectionLabel).filter(Boolean),
@@ -4199,15 +4269,23 @@ function guidanceResolutionForTraversal(traversal, segmentGuidanceById) {
   };
 }
 
-function buildGuidanceSpans(traversals, segmentGuidanceById) {
+function buildGuidanceSpans(traversals, segmentGuidanceById, projection = {}) {
+  const { reverseOrder = false } = projection;
+  const ordered = Array.isArray(traversals)
+    ? (reverseOrder ? [...traversals].reverse() : traversals)
+    : [];
   const spans = [];
   let cursor = 0;
-  for (const traversal of Array.isArray(traversals) ? traversals : []) {
+  for (const traversal of ordered) {
     const length = Math.abs(
       (traversal.distanceMeters ?? (traversal.toDistance - traversal.fromDistance)) || 0,
     );
     if (length <= 0) continue;
-    const resolution = guidanceResolutionForTraversal(traversal, segmentGuidanceById);
+    const resolution = guidanceResolutionForTraversal(
+      traversal,
+      segmentGuidanceById,
+      projection,
+    );
     const routeClass = traversal.edge?.routeClass ?? traversal.edge?.highway ?? null;
     const start = cursor;
     cursor += length;
@@ -4236,18 +4314,50 @@ function buildGuidanceSpans(traversals, segmentGuidanceById) {
   return spans.map(({ _guidanceKey, ...span }) => span);
 }
 
-function buildRouteSpans(traversals, segmentNamesById, segmentGuidanceById) {
-  const segmentSpans = buildSegmentSpans(traversals, segmentNamesById);
-  const candidateGuidanceSpans = buildGuidanceSpans(traversals, segmentGuidanceById);
-  const hasUnreviewed = candidateGuidanceSpans.some(
-    (span) => span.networkRole === "segment" && span.resolutionStatus === "unreviewed",
-  );
+const OPPOSITE_PROJECTION = {
+  membershipKey: "oppositeCwMemberships",
+  junctionKey: "oppositeJunctionMemberships",
+  reverseOrder: true,
+};
+
+/**
+ * Build both span families for both directions of one computed route.
+ *
+ * Naming degrades per span, never per route: an unreviewed member yields a
+ * class-fallback span while every classified span around it keeps its name.
+ * `guidanceMode` therefore comes from the manifest-bound schema the route
+ * manager was loaded with — not from whether this particular route happened to
+ * touch a classified segment.
+ *
+ * The opposite projection is resolved here, while `segmentGuidanceById` and the
+ * per-edge reverse memberships are still in hand. A later pure reverse
+ * transform sees only distances and IDs, so it cannot resolve an asymmetric
+ * return leg on its own; the reverse transform swaps these precomputed pairs
+ * instead. Opposite spans are already expressed in the reverse route's distance
+ * frame (traversals walked back to front from 0).
+ */
+function buildRouteSpans(
+  traversals,
+  segmentNamesById,
+  segmentGuidanceById,
+  options = {},
+) {
+  const guidanceMode = guidanceModeForSchema(options.guidanceSchemaVersion);
+  const guidanceEnabled = guidanceMode === "guidance-v1";
   return {
-    segmentSpans,
-    guidanceSpans: hasUnreviewed ? [] : candidateGuidanceSpans,
-    guidanceMode: hasUnreviewed || candidateGuidanceSpans.length === 0
-      ? "legacy"
-      : "guidance-v1",
+    segmentSpans: buildSegmentSpans(traversals, segmentNamesById),
+    guidanceSpans: guidanceEnabled
+      ? buildGuidanceSpans(traversals, segmentGuidanceById)
+      : [],
+    oppositeSegmentSpans: buildSegmentSpans(
+      traversals,
+      segmentNamesById,
+      OPPOSITE_PROJECTION,
+    ),
+    oppositeGuidanceSpans: guidanceEnabled
+      ? buildGuidanceSpans(traversals, segmentGuidanceById, OPPOSITE_PROJECTION)
+      : [],
+    guidanceMode,
   };
 }
 

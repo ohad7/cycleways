@@ -579,6 +579,20 @@ import { computeBearing as _cb } from "@cycleways/core/utils/geometry.js";
   assert.equal(progress.nextGuidanceIdentity, "way:cycleway-99");
   assert.equal(progress.nextGuidanceName, "שביל אופניים 99");
   assert.ok(progress.distanceToNextGuidanceMeters > 350);
+
+  const classOnlyProgress = createRouteProgressTracker({
+    ...route,
+    guidancePresentationPolicy: "class-only",
+  }).update({
+    lat: 33.1,
+    lng: 35.602,
+    accuracy: 5,
+    speed: 4,
+    timestamp: 1000,
+  });
+  assert.equal(classOnlyProgress.currentGuidanceName, "כביש");
+  assert.equal(classOnlyProgress.currentGuidanceSpokenName, "כביש");
+  assert.equal(classOnlyProgress.nextGuidanceName, "שביל אופניים");
 }
 
 // --- segment context: approaching (pre-acquisition) path has all null/false ---

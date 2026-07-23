@@ -74,6 +74,9 @@ class ShardedRouteSession {
     this.legacyRoutingCompatibility =
       options.legacyRoutingCompatibility || null;
     this.routeAnchorCompatibility = options.routeAnchorCompatibility || null;
+    // Manifest-bound, so a sharded rebuild keeps the same naming semantics the
+    // session started with.
+    this.guidanceSchemaVersion = options.guidanceSchemaVersion ?? null;
     this.manager = null;
     this.routeRequestGeneration = 0;
     this.pendingRouteProposal = null;
@@ -85,6 +88,7 @@ class ShardedRouteSession {
       this.geoJsonData,
       this.segmentsData,
       null,
+      { guidanceSchemaVersion: this.guidanceSchemaVersion },
     );
     this.notifyStatus("ready");
     return this;
@@ -252,6 +256,7 @@ class ShardedRouteSession {
       this.geoJsonData,
       this.segmentsData,
       network.edges.length > 0 ? network : null,
+      { guidanceSchemaVersion: this.guidanceSchemaVersion },
     );
     if (Array.isArray(points) && points.length > 0 && network.edges.length > 0) {
       restoreRoute(this.manager, points, this.segmentsData);

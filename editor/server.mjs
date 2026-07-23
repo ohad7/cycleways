@@ -114,12 +114,26 @@ import {
 } from "./lib/base-graph-build-freshness.mjs";
 import { OsmSegmentMatcherWorker } from "./lib/osm-segment-matcher-worker.mjs";
 import { EditorActivityLog } from "./lib/editor-activity-log.mjs";
+import {
+  applySuggestionGroup,
+  buildRoutingEvidenceBySegmentId,
+  reviewGuidanceDocuments,
+} from "./lib/navigation-ways.mjs";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 const repoRoot = resolve(__dirname, "..");
 const editorRoot = resolve(repoRoot, "editor");
 const iconsRoot = resolve(repoRoot, "icons");
 const sourcePath = resolve(repoRoot, "data/map-source.geojson");
+const navigationWaysPath = resolve(repoRoot, "data/navigation-ways.json");
+const navigationWaySuggestionsPath = resolve(
+  repoRoot,
+  "data/navigation-way-suggestions.json",
+);
+const navigationWaySuggestionDecisionsPath = resolve(
+  editorRoot,
+  ".drafts/navigation-way-suggestion-decisions.json",
+);
 const tokenPath = resolve(repoRoot, "mapbox-token.js");
 const buildDir = resolve(repoRoot, "build");
 const dataDir = resolve(repoRoot, "data");
@@ -5192,6 +5206,330 @@ async function writeJsonAtomic(target, value) {
   }
 }
 
+// --- navigation-way (guidance) authoring ------------------------------------
+//
+// `data/map-source.geojson` owns membership and `data/navigation-ways.json`
+// owns naming, so creating a way and assigning its members touches both. There
+// is no server revision contract on /api/source yet, so this endpoint uses
+// expected content digests over both complete documents instead, writes them
+// atomically, and rolls back on partial failure. A superseded response can
+// therefore never clear a newer local edit.
+
+function canonicalDocumentDigest(value) {
+  return createHash("sha256")
+    .update(`${JSON.stringify(value, null, 2)}\n`)
+    .digest("hex");
+}
+
+let guidanceWriteTail = Promise.resolve();
+
+function withGuidanceWriteLock(operation) {
+  const running = guidanceWriteTail.then(operation, operation);
+  guidanceWriteTail = running.catch(() => {});
+  return running;
+}
+
+async function loadGuidanceRoutingEvidence() {
+  try {
+    const [{ baseRoutingNetwork }, overlay] = await Promise.all([
+      getBaseRoutingDecodeAssets({ log: () => {} }),
+      readFile(cwBaseOverlayPath, "utf-8").then(JSON.parse),
+    ]);
+    return buildRoutingEvidenceBySegmentId(overlay, baseRoutingNetwork);
+  } catch (error) {
+    console.warn("Navigation-way routing evidence unavailable; using conservative neutral evidence", error);
+    return new Map();
+  }
+}
+
+async function reviewGuidancePair(source, registry, routingEvidenceBySegmentId = null) {
+  return reviewGuidanceDocuments(source, registry, {
+    routingEvidenceBySegmentId:
+      routingEvidenceBySegmentId || await loadGuidanceRoutingEvidence(),
+  });
+}
+
+async function readSuggestionDecisions() {
+  try {
+    const value = JSON.parse(
+      await readFile(navigationWaySuggestionDecisionsPath, "utf-8"),
+    );
+    return value && typeof value === "object"
+      ? value
+      : { schemaVersion: 1, decisions: {} };
+  } catch (error) {
+    if (error?.code !== "ENOENT") throw error;
+    return { schemaVersion: 1, decisions: {} };
+  }
+}
+
+async function currentSuggestionBinding(boundFiles) {
+  const digests = {};
+  const mismatches = [];
+  for (const [relativePath, expected] of Object.entries(boundFiles || {})) {
+    const absolutePath = resolve(repoRoot, relativePath);
+    let actual = null;
+    try {
+      actual = createHash("sha256")
+        .update(await readFile(absolutePath))
+        .digest("hex");
+    } catch {
+      // A missing evidence file is stale, not a server crash.
+    }
+    digests[relativePath] = actual;
+    if (actual !== expected) {
+      mismatches.push({ path: relativePath, expected, actual });
+    }
+  }
+  return { stale: mismatches.length > 0, mismatches, digests };
+}
+
+async function rebindSuggestionsAfterGuidanceWrite(source, registry) {
+  try {
+    const artifact = JSON.parse(
+      await readFile(navigationWaySuggestionsPath, "utf-8"),
+    );
+    const boundFiles = { ...(artifact.boundFiles || {}) };
+    if ("data/map-source.geojson" in boundFiles) {
+      boundFiles["data/map-source.geojson"] = canonicalDocumentDigest(source);
+    }
+    if ("data/navigation-ways.json" in boundFiles) {
+      boundFiles["data/navigation-ways.json"] = canonicalDocumentDigest(registry);
+    }
+    const records = Object.entries(boundFiles).map(
+      ([path, digest]) => `${path}\0${digest}\n`,
+    );
+    await writeJsonAtomic(navigationWaySuggestionsPath, {
+      ...artifact,
+      boundFiles,
+      evidenceSetDigest: `sha256:${createHash("sha256").update(records.join("")).digest("hex")}`,
+      reboundAt: new Date().toISOString(),
+      reboundReason: "editor-guidance-only-transaction",
+    });
+  } catch (error) {
+    if (error?.code !== "ENOENT") throw error;
+  }
+}
+
+async function scoredSuggestionArtifact(source, registry) {
+  const artifact = JSON.parse(
+    await readFile(navigationWaySuggestionsPath, "utf-8"),
+  );
+  const binding = await currentSuggestionBinding(artifact.boundFiles);
+  const decisions = await readSuggestionDecisions();
+
+  // Score the complete proposal corpus once, then project findings back to
+  // groups. This catches cross-group conflicts without running the whole
+  // network validator 176 times.
+  const routingEvidenceBySegmentId = await loadGuidanceRoutingEvidence();
+  const scoredGroups = (artifact.groups || []).map((group) =>
+    adjustSuggestionKindFromRoutingEvidence(
+      group,
+      routingEvidenceBySegmentId,
+    ));
+  let proposedSource = source;
+  let proposedRegistry = registry;
+  for (const group of scoredGroups) {
+    ({ source: proposedSource, registry: proposedRegistry } = applySuggestionGroup(
+      proposedSource,
+      proposedRegistry,
+      group,
+    ));
+  }
+  const proposedReview = await reviewGuidancePair(
+    proposedSource,
+    proposedRegistry,
+    routingEvidenceBySegmentId,
+  );
+  const featureById = new Map(
+    (source.features || []).map((feature) => [
+      Number(feature?.properties?.id),
+      feature,
+    ]),
+  );
+  const groups = scoredGroups.map((group) => {
+    const ids = new Set(group.segmentIds || []);
+    const relevantIssues = proposedReview.issues.filter((entry) =>
+      (group.wayId && entry.wayId === group.wayId)
+      || ids.has(Number(entry.segmentId))
+      || (entry.segmentIds || []).some((id) => ids.has(Number(id))),
+    );
+    const blocking = relevantIssues.filter((entry) => entry.severity === "error");
+    const warnings = relevantIssues.filter((entry) => entry.severity === "warning");
+    const canonicalMatches = suggestionMatchesCanonical(
+      group,
+      featureById,
+      registry,
+    );
+    return {
+      ...group,
+      decision: decisions.decisions?.[group.id]?.status
+        || (canonicalMatches ? "accepted" : "pending"),
+      validator: {
+        verdict: blocking.length > 0 ? "blocked" : warnings.length > 0 ? "warning" : "clear",
+        blocking,
+        warnings,
+      },
+    };
+  });
+  return {
+    ...artifact,
+    binding,
+    groups,
+    decisionsDigest: canonicalDocumentDigest(decisions),
+    proposedCoverage: proposedReview.coverage,
+  };
+}
+
+function adjustSuggestionKindFromRoutingEvidence(
+  group,
+  routingEvidenceBySegmentId,
+) {
+  if (group?.role !== "named-way") return group;
+  const classes = [...new Set(
+    (group.segmentIds || [])
+      .map((segmentId) =>
+        routingEvidenceBySegmentId.get(Number(segmentId))?.facilityClass)
+      .filter((facilityClass) =>
+        facilityClass && facilityClass !== "neutral"),
+  )];
+  if (classes.length !== 1) return group;
+  const [facilityClass] = classes;
+  const kindClass = ["road", "dirt-road"].includes(group.kind)
+    ? "roadway"
+    : group.kind === "cycleway"
+      ? "cycleway"
+      : ["trail", "path", "promenade"].includes(group.kind)
+        ? "trail-path"
+        : "neutral";
+  if (kindClass === facilityClass || kindClass === "neutral") return group;
+  const adjustedKind = facilityClass === "roadway"
+    ? "road"
+    : facilityClass === "cycleway"
+      ? "cycleway"
+      : "trail";
+  return {
+    ...group,
+    originalKind: group.kind,
+    kind: adjustedKind,
+    validatorAdjustment:
+      `הסוג הותאם מ־${group.kind} ל־${adjustedKind} לפי ראיות המסלול המקובלות`,
+  };
+}
+
+function suggestionMatchesCanonical(group, featureById, registry) {
+  if (!Array.isArray(group?.segmentIds) || group.segmentIds.length === 0) {
+    return false;
+  }
+  if (group.role === "named-way") {
+    const way = registry?.ways?.[group.wayId];
+    if (
+      !way
+      || way.name !== group.name
+      || way.kind !== group.kind
+    ) {
+      return false;
+    }
+    return group.segmentIds.every((segmentId) => {
+      const guidance = featureById.get(Number(segmentId))?.properties?.guidance;
+      return guidance?.role === "named-way" && guidance.wayId === group.wayId;
+    });
+  }
+  if (group.role === "standalone") {
+    return group.segmentIds.every((segmentId) => {
+      const guidance = featureById.get(Number(segmentId))?.properties?.guidance;
+      return guidance?.role === "standalone"
+        && guidance.name === group.name
+        && guidance.kind === group.kind;
+    });
+  }
+  if (group.role === "unnamed") {
+    return group.segmentIds.every((segmentId) => {
+      const guidance = featureById.get(Number(segmentId))?.properties?.guidance;
+      return guidance?.role === "unnamed" && guidance.kind === group.kind;
+    });
+  }
+  return false;
+}
+
+async function readNavigationWaysRegistry() {
+  try {
+    return JSON.parse(await readFile(navigationWaysPath, "utf-8"));
+  } catch (error) {
+    if (error?.code !== "ENOENT") throw error;
+    return { schemaVersion: 1, enforcement: "migration", ways: {} };
+  }
+}
+
+async function writeGuidanceDocuments({ source, registry, expectedDigests }) {
+  return withGuidanceWriteLock(async () => {
+    // The digest check and both replacements share one server-side critical
+    // section. Without this lock, two requests can validate the same old
+    // digests and interleave a source document from one request with a registry
+    // from the other.
+    const [sourceBackup, registryBackup] = await Promise.all([
+      readFile(sourcePath, "utf-8"),
+      readFile(navigationWaysPath, "utf-8"),
+    ]);
+    const currentSource = JSON.parse(sourceBackup);
+    const currentRegistry = JSON.parse(registryBackup);
+    const actual = {
+      source: canonicalDocumentDigest(currentSource),
+      registry: canonicalDocumentDigest(currentRegistry),
+    };
+    if (
+      expectedDigests?.source !== actual.source ||
+      expectedDigests?.registry !== actual.registry
+    ) {
+      return { ok: false, status: 409, error: "superseded", digests: actual };
+    }
+
+    const sourceTmp = uniqueAtomicTmpPath(sourcePath);
+    const registryTmp = uniqueAtomicTmpPath(navigationWaysPath);
+    const sourceRollbackTmp = uniqueAtomicTmpPath(sourcePath);
+    const registryRollbackTmp = uniqueAtomicTmpPath(navigationWaysPath);
+    const staged = [sourceTmp, registryTmp, sourceRollbackTmp, registryRollbackTmp];
+    try {
+      // Stage both new documents and both rollback documents before replacing
+      // either canonical path.
+      await Promise.all([
+        writeFile(sourceTmp, `${JSON.stringify(source, null, 2)}\n`, "utf-8"),
+        writeFile(registryTmp, `${JSON.stringify(registry, null, 2)}\n`, "utf-8"),
+        writeFile(sourceRollbackTmp, sourceBackup, "utf-8"),
+        writeFile(registryRollbackTmp, registryBackup, "utf-8"),
+      ]);
+      await rename(sourceTmp, sourcePath);
+      try {
+        await rename(registryTmp, navigationWaysPath);
+      } catch (error) {
+        await rename(sourceRollbackTmp, sourcePath);
+        throw error;
+      }
+      await Promise.all([
+        unlink(sourceRollbackTmp).catch(() => {}),
+        unlink(registryRollbackTmp).catch(() => {}),
+      ]);
+      // This endpoint only changes guidance metadata and its registry. Geometry,
+      // alignments and junction evidence are unchanged, so the remaining
+      // proposals can be rebound and re-scored instead of becoming unusable
+      // after every accepted group.
+      await rebindSuggestionsAfterGuidanceWrite(source, registry).catch((error) => {
+        console.warn("Could not rebind navigation-way suggestions", error);
+      });
+    } catch (error) {
+      await Promise.all(staged.map((path) => unlink(path).catch(() => {})));
+      throw error;
+    }
+    return {
+      ok: true,
+      digests: {
+        source: canonicalDocumentDigest(source),
+        registry: canonicalDocumentDigest(registry),
+      },
+    };
+  });
+}
+
 async function writeJsonAtomicIfChanged(target, value) {
   const nextContent = `${JSON.stringify(value, null, 2)}\n`;
   let currentContent = null;
@@ -7037,6 +7375,155 @@ const server = createServer(async (request, response) => {
         manualBaseEdges,
         overlay: v2Authority ? previousOverlay : overlay,
       });
+      return;
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/navigation-ways") {
+      logApi(requestId, "GET /api/navigation-ways started");
+      const registry = await readNavigationWaysRegistry();
+      const source = JSON.parse(await readFile(sourcePath, "utf-8"));
+      const review = await reviewGuidancePair(source, registry);
+      sendJson(response, 200, {
+        ok: true,
+        registry,
+        review,
+        digests: {
+          source: canonicalDocumentDigest(source),
+          registry: canonicalDocumentDigest(registry),
+        },
+      });
+      return;
+    }
+
+    if (
+      request.method === "GET"
+      && url.pathname === "/api/navigation-way-suggestions"
+    ) {
+      const [source, registry] = await Promise.all([
+        readFile(sourcePath, "utf-8").then(JSON.parse),
+        readNavigationWaysRegistry(),
+      ]);
+      try {
+        sendJson(response, 200, {
+          ok: true,
+          artifact: await scoredSuggestionArtifact(source, registry),
+        });
+      } catch (error) {
+        if (error?.code === "ENOENT") {
+          sendJson(response, 404, {
+            ok: false,
+            error: "navigation-way suggestion artifact is missing",
+          });
+          return;
+        }
+        throw error;
+      }
+      return;
+    }
+
+    if (
+      request.method === "POST"
+      && url.pathname === "/api/navigation-way-suggestions/decision"
+    ) {
+      const payload = await readRequestJson(request);
+      const status = payload?.status;
+      if (
+        typeof payload?.id !== "string"
+        || !["pending", "accepted", "rejected"].includes(status)
+      ) {
+        sendJson(response, 400, {
+          ok: false,
+          error: "id and a valid decision status are required",
+        });
+        return;
+      }
+      const artifact = JSON.parse(
+        await readFile(navigationWaySuggestionsPath, "utf-8"),
+      );
+      if (!(artifact.groups || []).some((group) => group.id === payload.id)) {
+        sendJson(response, 404, { ok: false, error: "unknown suggestion group" });
+        return;
+      }
+      const decisions = await readSuggestionDecisions();
+      decisions.schemaVersion = 1;
+      decisions.artifactEvidenceSetDigest = artifact.evidenceSetDigest;
+      decisions.decisions = { ...(decisions.decisions || {}) };
+      if (status === "pending") {
+        delete decisions.decisions[payload.id];
+      } else {
+        decisions.decisions[payload.id] = {
+          status,
+          decidedAt: new Date().toISOString(),
+        };
+      }
+      await writeJsonAtomic(navigationWaySuggestionDecisionsPath, decisions);
+      sendJson(response, 200, {
+        ok: true,
+        decisionsDigest: canonicalDocumentDigest(decisions),
+      });
+      return;
+    }
+
+    // Validate a proposed pair without writing. The editor calls this before it
+    // offers a save so a curator sees the same issue set Build will report.
+    if (request.method === "POST" && url.pathname === "/api/navigation-ways/review") {
+      const payload = await readRequestJson(request);
+      const source = payload.source
+        ? payload.source
+        : JSON.parse(await readFile(sourcePath, "utf-8"));
+      const registry = payload.registry || (await readNavigationWaysRegistry());
+      sendJson(response, 200, { ok: true, review: await reviewGuidancePair(source, registry) });
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/navigation-ways") {
+      logApi(requestId, "POST /api/navigation-ways started");
+      const payload = await readRequestJson(request);
+      const source = payload.source;
+      const registry = payload.registry;
+      if (!source || !registry) {
+        sendJson(response, 400, { ok: false, error: "source and registry are required" });
+        return;
+      }
+      try {
+        validateSourceGeojson(source);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        sendJson(response, 400, { ok: false, error: message });
+        return;
+      }
+      const review = await reviewGuidancePair(source, registry);
+      // Blocking issues never reach canonical data. Structure warnings do:
+      // multi-component and branching ways are legitimate once acknowledged,
+      // and forcing a split to clear them would fragment one real facility.
+      if (review.blocking.length > 0) {
+        sendJson(response, 400, {
+          ok: false,
+          error: "guidance validation failed",
+          review,
+        });
+        return;
+      }
+      const result = await writeGuidanceDocuments({
+        source,
+        registry,
+        expectedDigests: payload.expectedDigests,
+      });
+      if (!result.ok) {
+        logApi(requestId, "POST /api/navigation-ways superseded");
+        sendJson(response, result.status, {
+          ok: false,
+          error: result.error,
+          digests: result.digests,
+        });
+        return;
+      }
+      logApi(requestId, "POST /api/navigation-ways saved", {
+        durationMs: Date.now() - startedAt,
+        reviewed: review.coverage.reviewedSegments,
+        active: review.coverage.activeSegments,
+      });
+      sendJson(response, 200, { ok: true, review, digests: result.digests });
       return;
     }
 

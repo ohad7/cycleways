@@ -49,6 +49,7 @@ import { getDistance } from "@cycleways/core/utils/distance.js";
 import { dataPointId } from "@cycleways/core/data/dataMarkers.js";
 import { sortByDistanceFromUser } from "@cycleways/core/data/nearMe.js";
 import { routeSliceForRange } from "./components/frontPanel/routeSlice.js";
+import { sliceRouteGeometryRange } from "@cycleways/core/ui/routeItinerary.js";
 import {
   ROUTE_NETWORK_BUCKETS,
   routeNetworkPresentation,
@@ -221,6 +222,7 @@ function App() {
   // Mobile map legend open/close (closed by default). On desktop the legend is
   // always shown, so this only gates the mobile bottom-left legend.
   const [legendOpen, setLegendOpen] = useState(false);
+  const [selectedItineraryRange, setSelectedItineraryRange] = useState(null);
   const manualSheetSnapRef = useRef(false);
   const appliedRouteLoadFitIdRef = useRef(null);
   const [isMobileSheet, setIsMobileSheet] = useState(() =>
@@ -723,6 +725,19 @@ function App() {
     const endM = ((hoveredBand.endPercent ?? 0) / 100) * total;
     return routeSliceForRange(routeState.geometry, cum, startM, endM);
   }, [hoveredBand, routeState.geometry, routeState.distance]);
+  const itineraryHighlight = useMemo(
+    () => selectedItineraryRange
+      ? sliceRouteGeometryRange(
+          routeState.geometry,
+          selectedItineraryRange.startMeters,
+          selectedItineraryRange.endMeters,
+        )
+      : null,
+    [routeState.geometry, selectedItineraryRange],
+  );
+  useEffect(() => {
+    setSelectedItineraryRange(null);
+  }, [routeState.geometry]);
   const plannerPoiPreview = useMemo(
     () => nearestPreviewForCursor(
       plannerCueSlides,
@@ -959,6 +974,10 @@ function App() {
       onPlanOppositeDirection={handlePlanOppositeDirection}
       onAcceptRouteProposal={handleAcceptRouteProposal}
       onDismissRouteProposal={handleDismissRouteProposal}
+      selectedItineraryId={selectedItineraryRange?.id || null}
+      onItinerarySelect={(range) =>
+        setSelectedItineraryRange((current) =>
+          current?.id === range?.id ? null : range)}
       elevation={
         <PanelElevationGraph
           geometry={routeState.geometry}
@@ -1263,7 +1282,7 @@ function App() {
                   videoCursor={plannerRouteReady ? plannerPlayback.cursor : null}
                   videoCursorVariant="progress-head-pulse"
                   videoPlaying={plannerPlayback.isPlaying}
-                  segmentHighlight={bandHighlight}
+                  segmentHighlight={itineraryHighlight || bandHighlight}
                   recommendedRoutes={recommendedRoutes}
                 />
 

@@ -37,7 +37,7 @@ function baseRouteState(overrides = {}) {
     manifest,
   });
 
-  assert.equal(snapshot.schemaVersion, 1);
+  assert.equal(snapshot.schemaVersion, 2);
   assert.equal(snapshot.slug, "demo");
   assert.equal(typeof snapshot.generatedAt, "string");
 
@@ -51,6 +51,8 @@ function baseRouteState(overrides = {}) {
   assert.equal(snapshot.route.elevationGain, 100);
   assert.equal(snapshot.route.elevationLoss, 50);
   assert.deepEqual(snapshot.route.selectedSegments, ["Seg A", "Seg B"]);
+  assert.equal(snapshot.route.guidanceMode, "legacy");
+  assert.deepEqual(snapshot.route.itinerary, []);
 
   const displayImage = { photo: "map.webp", thumbnail: "map-thumb.webp", alt: "Route map" };
   const snapshotWithImage = buildSnapshotFromRouteState({

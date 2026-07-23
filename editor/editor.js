@@ -100,6 +100,13 @@ import {
 } from "./lib/map-view-storage.mjs";
 import { updateGeoJsonSource } from "./lib/map-source-updater.mjs";
 import { createEditorActivityTracker } from "./lib/editor-activity-client.mjs";
+import {
+  acknowledgeStructureIssue,
+  applySegmentGuidance,
+  applySuggestionGroup,
+  applyWay,
+  guidanceClassLabel,
+} from "./lib/navigation-ways.mjs";
 
 const CONNECTOR_CLASS_KEYS = ["cw_network", "road", "local_road", "cycle", "path_track", "manual", "other"];
 const CONNECTOR_ACCESS_KEYS = ["restricted", "conditional"];
@@ -302,6 +309,25 @@ const state = {
   unresolvedSegmentIds: [],
   unresolvedSegmentFilterKey: null,
   changedSegmentIds: new Set(),
+  // Guidance authoring. `registry` and `digests` mirror the canonical
+  // documents; a superseded save response can never clear a newer local edit.
+  guidance: {
+    registry: null,
+    review: null,
+    digests: null,
+    loading: false,
+    saving: false,
+    error: null,
+    suggestions: null,
+    suggestionsLoading: false,
+    suggestionSearch: "",
+    suggestionFilter: "pending",
+    waySearch: "",
+    segmentSearch: "",
+    selectedWayId: null,
+    creatingWay: false,
+    previewSegmentIds: [],
+  },
   processingChangedQueue: false,
   lastMapPointer: null,
   mapSourceDataCache: new Map(),
@@ -450,6 +476,7 @@ const state = {
 const els = {
   mapToolbar: document.querySelector(".map-toolbar"),
   workspaceNetwork: document.getElementById("workspace-network"),
+  workspaceWays: document.getElementById("workspace-ways"),
   networkFocusControls: document.getElementById("network-focus-controls"),
   networkFocusCw: document.getElementById("network-focus-cw"),
   networkFocusBase: document.getElementById("network-focus-base"),
@@ -493,6 +520,31 @@ const els = {
   crossingsConfirmGuideline: document.getElementById("crossings-confirm-guideline"),
   crossingsCancelGuideline: document.getElementById("crossings-cancel-guideline"),
   routeCatalogPanel: document.getElementById("route-catalog-panel"),
+  waysPanel: document.getElementById("ways-panel"),
+  waysCoverage: document.getElementById("ways-coverage"),
+  waysSearch: document.getElementById("ways-search"),
+  waysCreate: document.getElementById("ways-create"),
+  waysList: document.getElementById("ways-list"),
+  waysSegmentSearch: document.getElementById("ways-segment-search"),
+  waysSegmentResults: document.getElementById("ways-segment-results"),
+  waysSelectedSegment: document.getElementById("ways-selected-segment"),
+  waysSegmentWay: document.getElementById("ways-segment-way"),
+  waysSegmentAssign: document.getElementById("ways-segment-assign"),
+  waysSegmentUnassign: document.getElementById("ways-segment-unassign"),
+  wayEditor: document.getElementById("way-editor"),
+  wayEditorTitle: document.getElementById("way-editor-title"),
+  wayEditorId: document.getElementById("way-editor-id"),
+  wayEditorName: document.getElementById("way-editor-name"),
+  wayEditorKind: document.getElementById("way-editor-kind"),
+  wayEditorRef: document.getElementById("way-editor-ref"),
+  wayEditorSpokenName: document.getElementById("way-editor-spoken-name"),
+  wayEditorAudibleVerified: document.getElementById("way-editor-audible-verified"),
+  wayEditorSave: document.getElementById("way-editor-save"),
+  wayEditorCancel: document.getElementById("way-editor-cancel"),
+  wayEditorDelete: document.getElementById("way-editor-delete"),
+  wayEditorFit: document.getElementById("way-editor-fit"),
+  wayEditorMembers: document.getElementById("way-editor-members"),
+  wayEditorIssues: document.getElementById("way-editor-issues"),
   networkSelectionPanel: document.getElementById("network-selection-panel"),
   networkSelectionTitle: document.getElementById("network-selection-title"),
   networkSegmentRouting: document.getElementById("network-segment-routing"),
@@ -515,6 +567,29 @@ const els = {
   segmentStatus: document.getElementById("segment-status"),
   segmentRoadType: document.getElementById("segment-road-type"),
   segmentQuality: document.getElementById("segment-quality"),
+  guidanceDetails: document.getElementById("segment-guidance-details"),
+  guidancePreview: document.getElementById("guidance-preview"),
+  guidanceRole: document.getElementById("guidance-role"),
+  guidanceNamedWayFields: document.getElementById("guidance-named-way-fields"),
+  guidanceWayId: document.getElementById("guidance-way-id"),
+  guidanceOpenWay: document.getElementById("guidance-open-way"),
+  guidanceCreateWay: document.getElementById("guidance-create-way"),
+  guidanceSectionLabel: document.getElementById("guidance-section-label"),
+  guidanceStandaloneFields: document.getElementById("guidance-standalone-fields"),
+  guidanceStandaloneName: document.getElementById("guidance-standalone-name"),
+  guidanceStandaloneSpokenName: document.getElementById("guidance-standalone-spoken-name"),
+  guidanceKindField: document.getElementById("guidance-kind-field"),
+  guidanceKind: document.getElementById("guidance-kind"),
+  guidanceIssues: document.getElementById("guidance-issues"),
+  guidanceSave: document.getElementById("guidance-save"),
+  guidanceCoverage: document.getElementById("guidance-coverage"),
+  guidanceReviewPanel: document.getElementById("guidance-review-panel"),
+  guidanceReviewBadge: document.getElementById("guidance-review-badge"),
+  guidanceSuggestionBinding: document.getElementById("guidance-suggestion-binding"),
+  guidanceSuggestionSearch: document.getElementById("guidance-suggestion-search"),
+  guidanceSuggestionFilter: document.getElementById("guidance-suggestion-filter"),
+  guidanceSuggestionRefresh: document.getElementById("guidance-suggestion-refresh"),
+  guidanceSuggestionList: document.getElementById("guidance-suggestion-list"),
   segmentTodo: document.getElementById("segment-todo"),
   segmentNotes: document.getElementById("segment-notes"),
   addData: document.getElementById("add-data"),
@@ -1565,6 +1640,40 @@ function mapFeatureCollection() {
   };
 }
 
+function guidanceWayMemberRecords(wayId) {
+  if (!wayId) return [];
+  return state.activeFeatures.filter(
+    ({ feature }) =>
+      feature.properties?.guidance?.role === "named-way"
+      && feature.properties.guidance.wayId === wayId,
+  );
+}
+
+function waysHighlightedRecords() {
+  const previewIds = new Set(
+    (state.guidance.previewSegmentIds || []).map(Number),
+  );
+  if (previewIds.size > 0) {
+    return state.activeFeatures.filter(
+      ({ feature }) => previewIds.has(Number(feature.properties?.id)),
+    );
+  }
+  return guidanceWayMemberRecords(state.guidance.selectedWayId);
+}
+
+function waysHighlightedFeatureCollection() {
+  return {
+    type: "FeatureCollection",
+    features: waysHighlightedRecords().map(({ feature, sourceIndex }) => ({
+      ...feature,
+      properties: {
+        ...feature.properties,
+        sourceIndex,
+      },
+    })),
+  };
+}
+
 function selectedRecord() {
   if (state.selectedIndex < 0) return null;
   return state.activeFeatures[state.selectedIndex] || null;
@@ -1599,6 +1708,9 @@ function unselectedFilter() {
 }
 
 function selectedFeatureCollection() {
+  if (state.workspaceMode === "ways") {
+    return waysHighlightedFeatureCollection();
+  }
   const feature = selectedFeature();
   const sourceIndex = selectedSourceIndex();
   if (
@@ -2758,9 +2870,10 @@ function connectorLensFeaturesAtPoint(point) {
 function updateWorkspaceLayerVisibility() {
   const composing = isComposingNewSegmentEdges();
   const editingEdges = (state.editingEdgePickEdges || state.splittingEdgePickAt !== null) && isEdgePickedSelected();
-  const showSegments = false;
+  const showSegments = state.workspaceMode === "ways";
   const showSelectedSegment =
     state.workspaceMode === "overlay" ||
+    state.workspaceMode === "ways" ||
     (state.workspaceMode === "base" && state.networkContextVisible);
   const showUnresolvedSegments =
     state.workspaceMode === "overlay" &&
@@ -5188,7 +5301,9 @@ function renderBaseOverlayReviewQueue() {
 
 function renderWorkspaceChrome() {
   const networkMode = ["base", "overlay"].includes(state.workspaceMode);
+  document.body.classList.toggle("ways-workspace", state.workspaceMode === "ways");
   els.workspaceNetwork.classList.toggle("active", networkMode);
+  els.workspaceWays.classList.toggle("active", state.workspaceMode === "ways");
   els.networkFocusControls.hidden = !networkMode;
   els.networkFocusCw.classList.toggle("active", state.workspaceMode === "overlay");
   els.networkFocusBase.classList.toggle("active", state.workspaceMode === "base");
@@ -5205,11 +5320,12 @@ function renderWorkspaceChrome() {
   els.roundaboutsPanel.hidden = state.workspaceMode !== "roundabouts";
   els.crossingsPanel.hidden = state.workspaceMode !== "crossings";
   els.routeCatalogPanel.hidden = state.workspaceMode !== "route-catalog";
+  els.waysPanel.hidden = state.workspaceMode !== "ways";
   els.networkSelectionPanel.hidden = state.workspaceMode !== "overlay";
   els.segmentDataPanel.hidden = state.workspaceMode !== "overlay";
   els.segmentNotesPanel.hidden = state.workspaceMode !== "overlay";
   els.networkSelectionTitle.textContent = "CW segment";
-  els.mapToolbar.hidden = state.workspaceMode === "roundabouts" || state.workspaceMode === "crossings";
+  els.mapToolbar.hidden = ["ways", "roundabouts", "crossings"].includes(state.workspaceMode);
   els.toggleBaseOverlay.classList.toggle("active", state.baseOverlay.enabled);
   els.toggleBaseOverlay.disabled = state.baseOverlay.loading || state.baseOverlay.recalculating;
 }
@@ -8707,6 +8823,10 @@ function renderAll() {
     renderList();
     advanceStage("segment form");
     renderForm();
+    advanceStage("segment guidance");
+    renderGuidanceSection();
+    advanceStage("ways");
+    renderWaysManager();
     advanceStage("segment routing");
     renderNetworkSegmentRouting();
     advanceStage("segment data");
@@ -8839,7 +8959,7 @@ function setMode(mode) {
 
 async function setWorkspaceMode(mode) {
   if (mode === "segments") mode = "overlay";
-  if (!["base", "overlay", "roundabouts", "crossings", "video-sync", "route-catalog"].includes(mode)) return;
+  if (!["base", "overlay", "ways", "roundabouts", "crossings", "video-sync", "route-catalog"].includes(mode)) return;
   if (state.workspaceMode === mode) {
     if ((mode === "base" || mode === "overlay") && !state.baseOverlay.loaded) {
       state.baseOverlay.enabled = true;
@@ -8919,6 +9039,11 @@ async function setWorkspaceMode(mode) {
       await loadCrossingReview();
     }
     if (mode === "crossings" && state.crossings.loaded) updateCrossingSources();
+  } else if (mode === "ways") {
+    state.baseOverlay.enabled = false;
+    state.guidance.previewSegmentIds = [];
+    renderWaysManager();
+    setStatus("Ways mode: manage each public name once, review suggestions, and inspect its member segments.");
   } else if (mode === "video-sync") {
     state.baseOverlay.enabled = false;
     setStatus("Video Sync mode: pick a route, paste a YouTube URL, click on the map to add keyframes.");
@@ -10906,6 +11031,1236 @@ async function splitSelectedManualBaseEdge() {
   );
 }
 
+// --- guidance (navigation-way) authoring ------------------------------------
+//
+// The internal segment name stays the editor/build key. This section owns the
+// separate rider-facing identity: a named-way membership, a standalone named
+// feature, or an explicit "intentionally unnamed" classification.
+//
+// Writes go through /api/navigation-ways, which validates and replaces both
+// canonical documents in one digest-checked transaction, because creating a way
+// and assigning its members touches map-source.geojson and navigation-ways.json
+// together. See plans/navigation-way-names/design.md.
+
+const GUIDANCE_KIND_OPTIONS = [
+  ["road", "כביש"],
+  ["cycleway", "שביל אופניים"],
+  ["dirt-road", "דרך עפר"],
+  ["trail", "שביל"],
+  ["promenade", "טיילת"],
+  ["bridge", "גשר"],
+  ["connector", "מקטע מקשר"],
+  ["path", "שביל"],
+  ["other", "אחר"],
+];
+
+async function loadGuidanceRegistry() {
+  if (state.guidance.loading) return;
+  state.guidance.loading = true;
+  try {
+    const response = await fetch("/api/navigation-ways");
+    if (!response.ok) throw new Error(`Failed to load navigation ways: ${response.status}`);
+    const payload = await response.json();
+    state.guidance.registry = payload.registry;
+    state.guidance.review = payload.review;
+    state.guidance.digests = payload.digests;
+    state.guidance.error = null;
+  } catch (error) {
+    state.guidance.error = error instanceof Error ? error.message : String(error);
+  } finally {
+    state.guidance.loading = false;
+    renderGuidanceSection();
+    renderWaysManager();
+  }
+}
+
+async function loadGuidanceSuggestions() {
+  if (state.guidance.suggestionsLoading) return;
+  state.guidance.suggestionsLoading = true;
+  renderGuidanceSuggestions();
+  try {
+    const response = await fetch("/api/navigation-way-suggestions");
+    const payload = await response.json();
+    if (!response.ok) throw new Error(payload.error || `Failed to load suggestions: ${response.status}`);
+    state.guidance.suggestions = payload.artifact;
+  } catch (error) {
+    state.guidance.error = error instanceof Error ? error.message : String(error);
+    state.guidance.suggestions = null;
+  } finally {
+    state.guidance.suggestionsLoading = false;
+    renderGuidanceSuggestions();
+    renderWaysManager();
+  }
+}
+
+function guidanceSuggestionDecisionLabel(status) {
+  if (status === "accepted") return "אושר";
+  if (status === "rejected") return "נדחה";
+  return "ממתין";
+}
+
+function guidanceSuggestionIssueSummary(issue) {
+  if (issue.code === "way-structure-multi-component") {
+    return `${issue.componentCount} רכיבים — יש לבדוק שזו אותה דרך`;
+  }
+  if (issue.code === "way-structure-branching") {
+    return `הסתעפות בדרגה ${issue.maxDegree}`;
+  }
+  return guidanceIssueText(issue);
+}
+
+function suggestionMatchesFilter(group) {
+  const filter = state.guidance.suggestionFilter;
+  if (filter === "warning") {
+    if (group.validator?.verdict === "clear") return false;
+  } else if (filter !== "all" && group.decision !== filter) {
+    return false;
+  }
+  const query = state.guidance.suggestionSearch.trim().toLocaleLowerCase("he");
+  if (!query) return true;
+  return [
+    group.name,
+    group.internalName,
+    group.wayId,
+    group.kind,
+    group.note,
+    ...(group.segmentIds || []).map(String),
+  ].filter(Boolean).join(" ").toLocaleLowerCase("he").includes(query);
+}
+
+function suggestionInput(label, value = "", type = "text") {
+  const wrapper = document.createElement("label");
+  wrapper.className = "guidance-suggestion-field";
+  const caption = document.createElement("span");
+  caption.textContent = label;
+  const input = document.createElement("input");
+  input.className = "text-input";
+  input.type = type;
+  input.value = value || "";
+  wrapper.append(caption, input);
+  return { wrapper, input };
+}
+
+function suggestionKindSelect(value) {
+  const wrapper = document.createElement("label");
+  wrapper.className = "guidance-suggestion-field";
+  const caption = document.createElement("span");
+  caption.textContent = "סוג";
+  const select = document.createElement("select");
+  select.className = "text-input";
+  for (const [kind, label] of GUIDANCE_KIND_OPTIONS) {
+    const option = document.createElement("option");
+    option.value = kind;
+    option.textContent = `${label} (${kind})`;
+    select.append(option);
+  }
+  select.value = value;
+  wrapper.append(caption, select);
+  return { wrapper, select };
+}
+
+async function recordGuidanceSuggestionDecision(id, status) {
+  const response = await fetch("/api/navigation-way-suggestions/decision", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ id, status }),
+  });
+  const payload = await response.json();
+  if (!response.ok) throw new Error(payload.error || "decision save failed");
+  const group = state.guidance.suggestions?.groups?.find((entry) => entry.id === id);
+  if (group) group.decision = status;
+}
+
+async function acceptGuidanceSuggestion(group, edits) {
+  if (state.guidance.suggestions?.binding?.stale) {
+    setAlert("קובץ ההצעות אינו תואם לנתונים הנוכחיים — יש לרענן אותו");
+    return;
+  }
+  const proposed = {
+    ...group,
+    name: edits.name?.trim() || group.name,
+    kind: edits.kind || group.kind,
+    audibleCandidate: edits.audibleCandidate?.trim() || null,
+  };
+  let { source, registry } = applySuggestionGroup(
+    state.source,
+    state.guidance.registry,
+    proposed,
+  );
+  for (const fingerprint of edits.acknowledgedFingerprints || []) {
+    if (proposed.role === "named-way" && proposed.wayId && fingerprint) {
+      registry = acknowledgeStructureIssue(
+        registry,
+        proposed.wayId,
+        fingerprint,
+      );
+    }
+  }
+  if (edits.audibleVerified && proposed.audibleCandidate) {
+    if (proposed.role === "named-way") {
+      const way = registry.ways[proposed.wayId];
+      registry = applyWay(registry, proposed.wayId, {
+        ...way,
+        spokenName: proposed.audibleCandidate,
+      });
+    } else if (proposed.role === "standalone") {
+      for (const segmentId of proposed.segmentIds) {
+        const feature = source.features.find(
+          (candidate) => Number(candidate?.properties?.id) === Number(segmentId),
+        );
+        source = applySegmentGuidance(source, segmentId, {
+          ...feature.properties.guidance,
+          spokenName: proposed.audibleCandidate,
+        });
+      }
+    }
+  }
+  const saved = await saveGuidanceDocuments(
+    source,
+    registry,
+    `הצעה אושרה עבור ${proposed.segmentIds.join(", ")}`,
+  );
+  if (!saved) return;
+  if (proposed.role === "named-way") {
+    state.guidance.selectedWayId = proposed.wayId;
+    state.guidance.previewSegmentIds = [];
+  }
+  await recordGuidanceSuggestionDecision(group.id, "accepted");
+  await loadGuidanceSuggestions();
+}
+
+function renderGuidanceSuggestions() {
+  if (!els.guidanceSuggestionList) return;
+  const artifact = state.guidance.suggestions;
+  els.guidanceSuggestionList.replaceChildren();
+  if (state.guidance.suggestionsLoading) {
+    els.guidanceSuggestionList.textContent = "טוען ומאמת הצעות…";
+    return;
+  }
+  if (!artifact) {
+    els.guidanceSuggestionList.textContent = state.guidance.error || "אין קובץ הצעות";
+    return;
+  }
+  const pending = artifact.groups.filter((group) => group.decision === "pending").length;
+  const blocked = artifact.groups.filter((group) => group.validator?.verdict === "blocked").length;
+  els.guidanceReviewBadge.textContent = `${pending} ממתינות${blocked ? ` · ${blocked} חסומות` : ""}`;
+  els.guidanceSuggestionBinding.className =
+    `guidance-suggestion-binding${artifact.binding?.stale ? " is-stale" : " is-current"}`;
+  els.guidanceSuggestionBinding.textContent = artifact.binding?.stale
+    ? `ההצעות לקריאה בלבד: ${artifact.binding.mismatches.map((entry) => entry.path).join(", ")} השתנו`
+    : `תואם לנתונים · ${artifact.summary.segmentCount} מקטעים ב־${artifact.summary.groupCount} קבוצות`;
+
+  const visible = artifact.groups.filter(suggestionMatchesFilter);
+  if (visible.length === 0) {
+    const empty = document.createElement("div");
+    empty.className = "empty-state";
+    empty.textContent = "אין הצעות במסנן הנוכחי";
+    els.guidanceSuggestionList.append(empty);
+    return;
+  }
+  for (const group of visible) {
+    const card = document.createElement("article");
+    card.className = `guidance-suggestion-card is-${group.validator?.verdict || "clear"}`;
+    const heading = document.createElement("div");
+    heading.className = "guidance-suggestion-heading";
+    const title = document.createElement("strong");
+    title.textContent = group.role === "unnamed"
+      ? `ללא שם · ${guidanceClassLabel(group.kind)}`
+      : group.name || group.internalName || guidanceClassLabel(group.kind);
+    const meta = document.createElement("span");
+    const componentCount = group.sourceProposalIds?.length || 1;
+    meta.textContent = `${group.role} · ביטחון ${group.confidence}`
+      + `${componentCount > 1 ? ` · ${componentCount} רכיבי ראיות מאוחדים` : ""}`
+      + ` · ${guidanceSuggestionDecisionLabel(group.decision)}`;
+    heading.append(title, meta);
+    card.append(heading);
+
+    const segments = document.createElement("div");
+    segments.className = "guidance-suggestion-segments";
+    for (const segmentId of group.segmentIds || []) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "mini-button";
+      button.textContent = `#${segmentId}`;
+      button.addEventListener("click", () => {
+        if (state.workspaceMode === "ways") {
+          state.guidance.previewSegmentIds = [segmentId];
+          updateSelectedSegmentEditSources();
+          fitGuidanceRecords(waysHighlightedRecords());
+        } else {
+          selectSegmentById(segmentId, true);
+        }
+      });
+      segments.append(button);
+    }
+    card.append(segments);
+
+    const fields = document.createElement("div");
+    fields.className = "guidance-suggestion-fields";
+    const nameField = group.role !== "unnamed"
+      ? suggestionInput("שם תצוגה", group.name)
+      : null;
+    const kindField = suggestionKindSelect(group.kind);
+    if (nameField) fields.append(nameField.wrapper);
+    fields.append(kindField.wrapper);
+    let audibleField = null;
+    let verifiedInput = null;
+    if (group.audibleCandidate) {
+      audibleField = suggestionInput("מועמד להקראה", group.audibleCandidate);
+      const verified = document.createElement("label");
+      verified.className = "checkbox-row guidance-audible-verified";
+      verifiedInput = document.createElement("input");
+      verifiedInput.type = "checkbox";
+      verified.append(
+        verifiedInput,
+        document.createTextNode(" נבדק ב־iOS ויש לשמור כשם להקראה"),
+      );
+      fields.append(audibleField.wrapper, verified);
+    }
+    card.append(fields);
+
+    const note = document.createElement("p");
+    note.className = "guidance-suggestion-note";
+    note.textContent = [group.note, group.validatorAdjustment]
+      .filter(Boolean)
+      .join(" · ");
+    card.append(note);
+
+    const issues = [
+      ...(group.validator?.blocking || []),
+      ...(group.validator?.warnings || []),
+    ];
+    if (issues.length > 0) {
+      const issueList = document.createElement("ul");
+      issueList.className = "guidance-suggestion-validator";
+      for (const issue of issues.slice(0, 5)) {
+        const item = document.createElement("li");
+        item.textContent = guidanceSuggestionIssueSummary(issue);
+        issueList.append(item);
+      }
+      card.append(issueList);
+    }
+
+    const actions = document.createElement("div");
+    actions.className = "action-row";
+    const preview = document.createElement("button");
+    preview.type = "button";
+    preview.className = "secondary-button";
+    preview.textContent = "הצגה במפה";
+    preview.addEventListener("click", () => previewGuidanceSuggestion(group));
+    const blockingIssues = group.validator?.blocking || [];
+    const parallelBlockers = blockingIssues.filter(
+      (issue) => issue.code === "parallel-facility-risk" && issue.fingerprint,
+    );
+    const hasOtherBlocker = blockingIssues.some(
+      (issue) => issue.code !== "parallel-facility-risk",
+    );
+    let parallelApprovalInput = null;
+    if (parallelBlockers.length > 0 && !hasOtherBlocker) {
+      const approval = document.createElement("label");
+      approval.className = "checkbox-row guidance-parallel-approval";
+      parallelApprovalInput = document.createElement("input");
+      parallelApprovalInput.type = "checkbox";
+      approval.append(
+        parallelApprovalInput,
+        document.createTextNode(" בדקתי: המקטעים המקבילים הם מתקן אחד"),
+      );
+      card.append(approval);
+    }
+    const accept = document.createElement("button");
+    accept.type = "button";
+    accept.className = "primary-button";
+    accept.textContent = group.decision === "accepted" ? "אושר" : "אישור ושמירה";
+    const updateAcceptDisabled = () => {
+      accept.disabled = artifact.binding?.stale
+        || hasOtherBlocker
+        || (parallelBlockers.length > 0 && parallelApprovalInput?.checked !== true)
+        || group.decision === "accepted"
+        || state.guidance.saving;
+    };
+    updateAcceptDisabled();
+    parallelApprovalInput?.addEventListener("change", updateAcceptDisabled);
+    accept.addEventListener("click", () => acceptGuidanceSuggestion(group, {
+      name: nameField?.input.value,
+      kind: kindField.select.value,
+      audibleCandidate: audibleField?.input.value,
+      audibleVerified: verifiedInput?.checked === true,
+      acknowledgedFingerprints: parallelApprovalInput?.checked
+        ? parallelBlockers.map((issue) => issue.fingerprint)
+        : [],
+    }).catch(showError));
+    const reject = document.createElement("button");
+    reject.type = "button";
+    reject.className = "secondary-button";
+    reject.textContent = group.decision === "rejected" ? "החזרה לבדיקה" : "דחייה";
+    reject.addEventListener("click", async () => {
+      await recordGuidanceSuggestionDecision(
+        group.id,
+        group.decision === "rejected" ? "pending" : "rejected",
+      );
+      renderGuidanceSuggestions();
+    });
+    actions.append(preview, accept, reject);
+    card.append(actions);
+    els.guidanceSuggestionList.append(card);
+  }
+}
+
+function guidanceForSelectedSegment() {
+  return selectedFeature()?.properties?.guidance ?? null;
+}
+
+function populateGuidanceKindOptions() {
+  for (const select of [els.guidanceKind, els.wayEditorKind]) {
+    if (!select || select.options.length > 0) continue;
+    for (const [value, label] of GUIDANCE_KIND_OPTIONS) {
+      const option = document.createElement("option");
+      option.value = value;
+      option.textContent = `${label} (${value})`;
+      select.append(option);
+    }
+  }
+}
+
+function populateGuidanceWayOptions(selectedWayId) {
+  if (!els.guidanceWayId) return;
+  const ways = state.guidance.registry?.ways || {};
+  els.guidanceWayId.replaceChildren();
+  const placeholder = document.createElement("option");
+  placeholder.value = "";
+  placeholder.textContent = "— בחרו דרך —";
+  els.guidanceWayId.append(placeholder);
+  for (const [wayId, way] of Object.entries(ways).sort((a, b) => a[0].localeCompare(b[0]))) {
+    const option = document.createElement("option");
+    option.value = wayId;
+    const memberCount = state.guidance.review?.ways?.find((entry) => entry.wayId === wayId)?.memberCount ?? 0;
+    option.textContent = `${way.name} — ${wayId} (${memberCount})`;
+    els.guidanceWayId.append(option);
+  }
+  els.guidanceWayId.value = selectedWayId || "";
+}
+
+function populateGuidanceWayFields(wayId) {
+  if (els.guidanceOpenWay) {
+    els.guidanceOpenWay.disabled = !(state.guidance.registry?.ways || {})[wayId];
+  }
+}
+
+function selectedGuidanceWay() {
+  return (state.guidance.registry?.ways || {})[state.guidance.selectedWayId] || null;
+}
+
+function fitGuidanceRecords(records) {
+  const bounds = new mapboxgl.LngLatBounds();
+  let coordinateCount = 0;
+  for (const { feature } of records) {
+    for (const coordinate of feature.geometry?.coordinates || []) {
+      if (!Array.isArray(coordinate) || coordinate.length < 2) continue;
+      bounds.extend([coordinate[0], coordinate[1]]);
+      coordinateCount += 1;
+    }
+  }
+  if (coordinateCount > 0) {
+    map.fitBounds(bounds, { padding: 80, maxZoom: 15, duration: 500 });
+  }
+}
+
+function selectGuidanceWay(wayId, { fit = true } = {}) {
+  if (!(state.guidance.registry?.ways || {})[wayId]) return;
+  state.guidance.creatingWay = false;
+  state.guidance.selectedWayId = wayId;
+  state.guidance.previewSegmentIds = [];
+  renderWaysManager();
+  updateSelectedSegmentEditSources();
+  if (fit) fitGuidanceRecords(guidanceWayMemberRecords(wayId));
+}
+
+function selectSegmentInWays(segmentId, { fit = true } = {}) {
+  const record = state.activeFeatures.find(
+    ({ feature }) => Number(feature.properties?.id) === Number(segmentId),
+  );
+  if (!record) return false;
+  const guidance = record.feature.properties?.guidance;
+  state.guidance.previewSegmentIds = [Number(segmentId)];
+  if (
+    guidance?.role === "named-way"
+    && (state.guidance.registry?.ways || {})[guidance.wayId]
+  ) {
+    state.guidance.selectedWayId = guidance.wayId;
+    state.guidance.creatingWay = false;
+  }
+  const selected = selectSegmentById(segmentId, fit);
+  renderWaysManager();
+  return selected;
+}
+
+function previewGuidanceSuggestion(group) {
+  state.guidance.previewSegmentIds = [...(group.segmentIds || [])];
+  if ((state.guidance.registry?.ways || {})[group.wayId]) {
+    state.guidance.selectedWayId = group.wayId;
+  }
+  updateSelectedSegmentEditSources();
+  fitGuidanceRecords(waysHighlightedRecords());
+  setStatus(`Showing ${group.segmentIds.length} proposed segment${group.segmentIds.length === 1 ? "" : "s"} for ${group.name || group.internalName || "the suggestion"}.`);
+}
+
+function renderWayIssues(wayId) {
+  if (!els.wayEditorIssues) return;
+  els.wayEditorIssues.replaceChildren();
+  const issues = (state.guidance.review?.issues || []).filter(
+    (entry) => entry.wayId === wayId,
+  );
+  if (issues.length === 0) {
+    const empty = document.createElement("div");
+    empty.className = "guidance-coverage";
+    empty.textContent = "אין ממצאי אימות לדרך";
+    els.wayEditorIssues.append(empty);
+    return;
+  }
+  for (const entry of issues) {
+    const row = document.createElement("div");
+    row.className = `guidance-issue guidance-issue-${entry.severity}`;
+    const text = document.createElement("span");
+    text.textContent = guidanceIssueText(entry);
+    row.append(text);
+    if (entry.fingerprint && !entry.acknowledged && entry.severity === "warning") {
+      const acknowledge = document.createElement("button");
+      acknowledge.type = "button";
+      acknowledge.className = "mini-button";
+      acknowledge.textContent = "אישור מבנה";
+      acknowledge.addEventListener("click", () => acknowledgeGuidanceIssue(entry));
+      row.append(acknowledge);
+    }
+    els.wayEditorIssues.append(row);
+  }
+}
+
+function populateWaysSegmentWayOptions(selectedWayId = "") {
+  els.waysSegmentWay.replaceChildren();
+  const placeholder = document.createElement("option");
+  placeholder.value = "";
+  placeholder.textContent = "— בחרו דרך —";
+  els.waysSegmentWay.append(placeholder);
+  for (const [wayId, way] of Object.entries(state.guidance.registry?.ways || {})
+    .sort((left, right) =>
+      String(left[1].name).localeCompare(String(right[1].name), "he"))) {
+    const option = document.createElement("option");
+    option.value = wayId;
+    option.textContent = `${way.name} — ${wayId}`;
+    els.waysSegmentWay.append(option);
+  }
+  els.waysSegmentWay.value = selectedWayId || "";
+}
+
+function renderWaysSegmentAssignment() {
+  const query = state.guidance.segmentSearch.trim().toLocaleLowerCase("he");
+  els.waysSegmentResults.replaceChildren();
+  if (query) {
+    const matches = state.activeFeatures
+      .filter(({ feature }) => {
+        const id = String(feature.properties?.id || "");
+        const name = String(feature.properties?.name || "").toLocaleLowerCase("he");
+        return id.includes(query) || name.includes(query);
+      })
+      .slice(0, 30);
+    for (const { feature } of matches) {
+      const segmentId = Number(feature.properties?.id);
+      const guidance = feature.properties?.guidance;
+      const way = guidance?.role === "named-way"
+        ? state.guidance.registry?.ways?.[guidance.wayId]
+        : null;
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = `way-segment-result${segmentId === selectedSegmentId() ? " active" : ""}`;
+      const title = document.createElement("strong");
+      title.textContent = `#${segmentId} · ${feature.properties?.name || "מקטע"}`;
+      const meta = document.createElement("span");
+      meta.textContent = way
+        ? `משויך ל־${way.name}`
+        : guidance?.role === "standalone"
+          ? `מאפיין עצמאי · ${guidance.name}`
+          : guidance?.role === "unnamed"
+            ? "ללא שם"
+            : "לא סווג";
+      button.append(title, meta);
+      button.addEventListener("click", () => selectSegmentInWays(segmentId));
+      els.waysSegmentResults.append(button);
+    }
+    if (matches.length === 0) {
+      const empty = document.createElement("div");
+      empty.className = "empty-state";
+      empty.textContent = "לא נמצאו מקטעים";
+      els.waysSegmentResults.append(empty);
+    }
+  }
+
+  const feature = selectedFeature();
+  const segmentId = selectedSegmentId();
+  const guidance = feature?.properties?.guidance || null;
+  els.waysSelectedSegment.replaceChildren();
+  if (!feature || segmentId === null) {
+    els.waysSelectedSegment.textContent = "בחרו מקטע במפה או בחיפוש";
+    populateWaysSegmentWayOptions(state.guidance.selectedWayId);
+    els.waysSegmentAssign.disabled = true;
+    els.waysSegmentUnassign.disabled = true;
+    return;
+  }
+  const heading = document.createElement("strong");
+  heading.textContent = `#${segmentId} · ${feature.properties?.name || "מקטע"}`;
+  const assignment = document.createElement("span");
+  if (guidance?.role === "named-way") {
+    const way = state.guidance.registry?.ways?.[guidance.wayId];
+    assignment.textContent = `שיוך נוכחי: ${way?.name || guidance.wayId}`;
+  } else if (guidance?.role === "standalone") {
+    assignment.textContent = `סיווג נוכחי: מאפיין עצמאי — ${guidance.name}`;
+  } else if (guidance?.role === "unnamed") {
+    assignment.textContent = "סיווג נוכחי: ללא שם";
+  } else {
+    assignment.textContent = "המקטע אינו מסווג";
+  }
+  els.waysSelectedSegment.append(heading, assignment);
+  populateWaysSegmentWayOptions(
+    guidance?.role === "named-way"
+      ? guidance.wayId
+      : state.guidance.selectedWayId,
+  );
+  els.waysSegmentAssign.disabled =
+    state.guidance.saving || !state.guidance.digests;
+  const isLastNamedMember =
+    guidance?.role === "named-way"
+    && guidanceWayMemberRecords(guidance.wayId).length === 1;
+  els.waysSegmentUnassign.disabled =
+    state.guidance.saving
+    || !guidance
+    || !state.guidance.digests
+    || isLastNamedMember;
+  els.waysSegmentUnassign.title = isLastNamedMember
+    ? "זהו המקטע האחרון; מחקו את הדרך"
+    : "";
+  els.waysSegmentUnassign.textContent =
+    guidance?.role === "named-way" ? "הסרת שיוך" : "מחיקת הסיווג";
+}
+
+function beginCreateGuidanceWay() {
+  if (selectedSegmentId() === null) {
+    setAlert("בחרו תחילה מקטע במפה או בחיפוש; הוא יהיה המקטע הראשון בדרך");
+    return;
+  }
+  state.guidance.creatingWay = true;
+  state.guidance.selectedWayId = null;
+  renderWaysManager();
+}
+
+function renderWaysManager() {
+  if (!els.waysList) return;
+  populateGuidanceKindOptions();
+  const ways = Object.entries(state.guidance.registry?.ways || {})
+    .map(([wayId, way]) => ({
+      wayId,
+      way,
+      members: guidanceWayMemberRecords(wayId),
+    }))
+    .sort((left, right) =>
+      String(left.way.name).localeCompare(String(right.way.name), "he")
+      || left.wayId.localeCompare(right.wayId));
+  const query = state.guidance.waySearch.trim().toLocaleLowerCase("he");
+  const visible = ways.filter(({ wayId, way }) =>
+    !query
+    || [wayId, way.name, way.ref, way.spokenName]
+      .filter(Boolean)
+      .join(" ")
+      .toLocaleLowerCase("he")
+      .includes(query));
+
+  const coverage = state.guidance.review?.coverage;
+  els.waysCoverage.textContent = coverage
+    ? `${ways.length} דרכים · ${coverage.reviewedSegments}/${coverage.activeSegments} מקטעים מסווגים`
+    : `${ways.length} דרכים`;
+  els.waysList.replaceChildren();
+  for (const { wayId, way, members } of visible) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = `way-list-item${wayId === state.guidance.selectedWayId ? " active" : ""}`;
+    const title = document.createElement("strong");
+    title.textContent = way.name;
+    const meta = document.createElement("span");
+    meta.textContent = `${way.ref ? `${way.ref} · ` : ""}${way.kind} · ${members.length} מקטעים`;
+    const id = document.createElement("code");
+    id.textContent = wayId;
+    button.append(title, meta, id);
+    button.addEventListener("click", () => selectGuidanceWay(wayId));
+    els.waysList.append(button);
+  }
+  if (visible.length === 0) {
+    const empty = document.createElement("div");
+    empty.className = "empty-state";
+    empty.textContent = "לא נמצאו דרכים";
+    els.waysList.append(empty);
+  }
+
+  if (
+    state.guidance.selectedWayId
+    && !(state.guidance.registry?.ways || {})[state.guidance.selectedWayId]
+  ) {
+    state.guidance.selectedWayId = null;
+  }
+  renderWaysSegmentAssignment();
+  const selected = selectedGuidanceWay();
+  const creating = state.guidance.creatingWay;
+  els.wayEditor.hidden = !selected && !creating;
+  if (!selected && !creating) return;
+
+  const members = creating
+    ? (selectedRecord() ? [selectedRecord()] : [])
+    : guidanceWayMemberRecords(state.guidance.selectedWayId);
+  els.wayEditorTitle.textContent = creating ? "דרך חדשה" : selected.name;
+  els.wayEditorId.value = creating ? "" : state.guidance.selectedWayId;
+  els.wayEditorId.readOnly = !creating;
+  els.wayEditorName.value = creating ? "" : selected.name || "";
+  els.wayEditorKind.value = creating ? "road" : selected.kind || "road";
+  els.wayEditorRef.value = creating ? "" : selected.ref || "";
+  els.wayEditorSpokenName.value = creating ? "" : selected.spokenName || "";
+  els.wayEditorAudibleVerified.checked = false;
+  els.wayEditorSave.disabled = state.guidance.saving || !state.guidance.digests;
+  els.wayEditorSave.textContent = creating ? "יצירה ושיוך המקטע" : "שמירת שינויים";
+  els.wayEditorFit.hidden = creating;
+  els.wayEditorFit.disabled = members.length === 0;
+  els.wayEditorCancel.hidden = !creating;
+  els.wayEditorDelete.hidden = creating;
+  els.wayEditorMembers.replaceChildren();
+  for (const { feature } of members) {
+    const segmentId = Number(feature.properties?.id);
+    const row = document.createElement("div");
+    row.className = "way-member-row";
+    const open = document.createElement("button");
+    open.type = "button";
+    open.className = "mini-button way-member";
+    open.textContent = `#${segmentId} · ${feature.properties?.name || "מקטע"}`;
+    open.addEventListener("click", async () => {
+      await setWorkspaceMode("overlay");
+      selectSegmentById(segmentId, true);
+    });
+    row.append(open);
+    if (!creating) {
+      const remove = document.createElement("button");
+      remove.type = "button";
+      remove.className = "mini-button danger";
+      remove.textContent = "הסרה";
+      remove.disabled = members.length === 1;
+      remove.title = members.length === 1
+        ? "זהו המקטע האחרון; מחקו את הדרך במקום להשאיר דרך ריקה"
+        : "הסרת המקטע מהדרך";
+      remove.addEventListener("click", () =>
+        removeSegmentFromGuidanceWay(segmentId).catch(showError));
+      row.append(remove);
+    }
+    els.wayEditorMembers.append(row);
+  }
+  if (members.length === 0) {
+    const empty = document.createElement("span");
+    empty.className = "guidance-coverage";
+    empty.textContent = "אין עדיין מקטעים משויכים";
+    els.wayEditorMembers.append(empty);
+  }
+  if (creating) {
+    els.wayEditorIssues.replaceChildren();
+  } else {
+    renderWayIssues(state.guidance.selectedWayId);
+  }
+}
+
+async function saveSelectedGuidanceWay() {
+  const creating = state.guidance.creatingWay;
+  const wayId = creating
+    ? els.wayEditorId.value.trim()
+    : state.guidance.selectedWayId;
+  const existing = selectedGuidanceWay();
+  if (!wayId || (!creating && !existing)) {
+    setAlert("נדרש מזהה דרך יציב");
+    return;
+  }
+  if (creating && (state.guidance.registry?.ways || {})[wayId]) {
+    setAlert("מזהה הדרך כבר קיים");
+    return;
+  }
+  const name = els.wayEditorName.value.trim();
+  if (!name) {
+    setAlert("נדרש שם תצוגה לדרך");
+    return;
+  }
+  const spokenName = els.wayEditorSpokenName.value.trim() || null;
+  if (
+    spokenName
+    && spokenName !== (existing?.spokenName || null)
+    && !els.wayEditorAudibleVerified.checked
+  ) {
+    setAlert("יש לאשר שהשם החדש להקראה נבדק ב־iOS");
+    return;
+  }
+  const ref = els.wayEditorRef.value.trim();
+  const nextRegistry = applyWay(state.guidance.registry, wayId, {
+    ...(existing || {}),
+    name,
+    kind: els.wayEditorKind.value,
+    ...(ref ? { ref } : { ref: undefined }),
+    aliases: existing?.aliases || [],
+    spokenName,
+  });
+  let nextSource = state.source;
+  if (creating) {
+    const segmentId = selectedSegmentId();
+    if (segmentId === null) {
+      setAlert("יש לבחור מקטע ראשון לדרך");
+      return;
+    }
+    const current = selectedFeature()?.properties?.guidance;
+    if (
+      current?.role === "named-way"
+      && guidanceWayMemberRecords(current.wayId).length === 1
+    ) {
+      setAlert("המקטע הוא החבר האחרון בדרך הנוכחית. מחקו את הדרך הנוכחית תחילה.");
+      return;
+    }
+    if (
+      current
+      && !window.confirm("יצירת הדרך תחליף את הסיווג הנוכחי של המקטע. להמשיך?")
+    ) {
+      return;
+    }
+    nextSource = applySegmentGuidance(nextSource, segmentId, {
+      role: "named-way",
+      wayId,
+    });
+  }
+  const saved = await saveGuidanceDocuments(
+    nextSource,
+    nextRegistry,
+    creating ? `הדרך ${name} נוצרה והמקטע הראשון שויך` : `פרטי הדרך ${name} נשמרו`,
+  );
+  if (saved) {
+    state.guidance.creatingWay = false;
+    state.guidance.selectedWayId = wayId;
+    state.guidance.previewSegmentIds = [];
+    renderWaysManager();
+  }
+}
+
+async function assignSelectedSegmentToGuidanceWay() {
+  const segmentId = selectedSegmentId();
+  const wayId = els.waysSegmentWay.value;
+  if (segmentId === null || !wayId) {
+    setAlert("בחרו מקטע ודרך");
+    return;
+  }
+  const feature = selectedFeature();
+  const current = feature?.properties?.guidance;
+  if (
+    current?.role === "named-way"
+    && current.wayId !== wayId
+    && guidanceWayMemberRecords(current.wayId).length === 1
+  ) {
+    setAlert("זהו המקטע האחרון בדרך הנוכחית. מחקו את הדרך או הוסיפו לה מקטע אחר לפני ההעברה.");
+    return;
+  }
+  if (
+    current
+    && (current.role !== "named-way" || current.wayId !== wayId)
+    && !window.confirm("הפעולה תחליף את הסיווג הנוכחי של המקטע. להמשיך?")
+  ) {
+    return;
+  }
+  const nextSource = applySegmentGuidance(state.source, segmentId, {
+    role: "named-way",
+    wayId,
+  });
+  const saved = await saveGuidanceDocuments(
+    nextSource,
+    state.guidance.registry,
+    `מקטע ${segmentId} שויך לדרך`,
+  );
+  if (saved) {
+    state.guidance.selectedWayId = wayId;
+    state.guidance.previewSegmentIds = [];
+    renderWaysManager();
+  }
+}
+
+async function unassignSelectedSegmentGuidance() {
+  const segmentId = selectedSegmentId();
+  const guidance = selectedFeature()?.properties?.guidance;
+  if (segmentId === null || !guidance) return;
+  if (
+    guidance.role === "named-way"
+    && guidanceWayMemberRecords(guidance.wayId).length === 1
+  ) {
+    setAlert("זהו המקטע האחרון בדרך. השתמשו במחיקת הדרך כדי להסיר גם אותה וגם את השיוך.");
+    return;
+  }
+  if (!window.confirm("להסיר את הסיווג מהמקטע? הוא יחזור למצב לא מסווג.")) {
+    return;
+  }
+  const nextSource = applySegmentGuidance(state.source, segmentId, null);
+  const saved = await saveGuidanceDocuments(
+    nextSource,
+    state.guidance.registry,
+    `הסיווג הוסר ממקטע ${segmentId}`,
+  );
+  if (saved) {
+    state.guidance.previewSegmentIds = [segmentId];
+    renderWaysManager();
+  }
+}
+
+async function removeSegmentFromGuidanceWay(segmentId) {
+  if (guidanceWayMemberRecords(state.guidance.selectedWayId).length === 1) {
+    setAlert("לא ניתן להשאיר דרך ללא מקטעים. מחקו את הדרך במקום זאת.");
+    return;
+  }
+  if (!window.confirm(`להסיר את מקטע ${segmentId} מהדרך?`)) return;
+  const nextSource = applySegmentGuidance(state.source, segmentId, null);
+  await saveGuidanceDocuments(
+    nextSource,
+    state.guidance.registry,
+    `מקטע ${segmentId} הוסר מהדרך`,
+  );
+}
+
+async function deleteSelectedGuidanceWay() {
+  const wayId = state.guidance.selectedWayId;
+  const way = selectedGuidanceWay();
+  if (!wayId || !way) return;
+  const members = guidanceWayMemberRecords(wayId);
+  if (
+    !window.confirm(
+      `למחוק את ${way.name}? ${members.length} המקטעים שלה יחזרו למצב לא מסווג.`,
+    )
+  ) {
+    return;
+  }
+  let nextSource = state.source;
+  for (const { feature } of members) {
+    nextSource = applySegmentGuidance(
+      nextSource,
+      Number(feature.properties?.id),
+      null,
+    );
+  }
+  const nextRegistry = applyWay(state.guidance.registry, wayId, null);
+  const saved = await saveGuidanceDocuments(
+    nextSource,
+    nextRegistry,
+    `הדרך ${way.name} נמחקה`,
+  );
+  if (saved) {
+    state.guidance.selectedWayId = null;
+    state.guidance.previewSegmentIds = [];
+    renderWaysManager();
+  }
+}
+
+function renderGuidancePreview(guidance, feature) {
+  if (!els.guidancePreview) return;
+  const registry = state.guidance.registry;
+  const roadType = feature?.properties?.roadType || null;
+  let title;
+  let eyebrow;
+  let fallback = false;
+  if (!guidance) {
+    // Unreviewed reads exactly like intentionally unnamed at runtime: a
+    // facility class, never the internal editor name.
+    title = "—";
+    eyebrow = "לא סווג · יוצג כסוג מתקן";
+    fallback = true;
+  } else if (guidance.role === "named-way") {
+    const way = (registry?.ways || {})[guidance.wayId];
+    title = way?.name || guidance.wayId;
+    eyebrow = way?.kind || "named-way";
+  } else if (guidance.role === "standalone") {
+    title = guidance.name;
+    eyebrow = guidance.kind || "standalone";
+  } else {
+    title = "—";
+    eyebrow = `ללא שם · ${guidance.kind || ""}`;
+    fallback = true;
+  }
+  els.guidancePreview.replaceChildren();
+  const eyebrowNode = document.createElement("div");
+  eyebrowNode.className = "guidance-preview-eyebrow";
+  eyebrowNode.textContent = eyebrow;
+  const titleNode = document.createElement("div");
+  titleNode.className = `guidance-preview-title${fallback ? " is-fallback" : ""}`;
+  titleNode.textContent = title;
+  const internalNode = document.createElement("div");
+  internalNode.className = "guidance-preview-internal";
+  // Shown side by side so it stays obvious that the internal label and the
+  // rider-facing name serve different purposes.
+  internalNode.textContent = `שם פנימי: ${feature?.properties?.name || "—"}`;
+  els.guidancePreview.append(eyebrowNode, titleNode, internalNode);
+  if (guidance?.role === "named-way" && guidance.sectionLabel) {
+    const section = document.createElement("div");
+    section.className = "guidance-preview-section";
+    section.textContent = `קטע: ${guidance.sectionLabel}`;
+    els.guidancePreview.append(section);
+  }
+  if (roadType) {
+    const evidence = document.createElement("div");
+    evidence.className = "guidance-preview-internal";
+    evidence.textContent = `סוג מקור: ${roadType}`;
+    els.guidancePreview.append(evidence);
+  }
+}
+
+function renderGuidanceIssuesFor(segmentId) {
+  if (!els.guidanceIssues) return;
+  els.guidanceIssues.replaceChildren();
+  const review = state.guidance.review;
+  if (!review) return;
+  const wayId = guidanceForSelectedSegment()?.wayId || null;
+  const relevant = review.issues.filter(
+    (entry) => entry.segmentId === segmentId || (wayId && entry.wayId === wayId),
+  );
+  for (const entry of relevant) {
+    const row = document.createElement("div");
+    row.className = `guidance-issue guidance-issue-${entry.severity}`;
+    const text = document.createElement("span");
+    text.textContent = guidanceIssueText(entry);
+    row.append(text);
+    // Multi-component and branching findings are legitimate on real facilities,
+    // so they are acknowledged by exact fingerprint rather than repaired by
+    // splitting the way into several IDs.
+    if (entry.fingerprint && !entry.acknowledged && entry.severity === "warning") {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "mini-button";
+      button.textContent = "אישור מבנה";
+      button.addEventListener("click", () => acknowledgeGuidanceIssue(entry));
+      row.append(button);
+    }
+    els.guidanceIssues.append(row);
+  }
+}
+
+function guidanceIssueText(entry) {
+  switch (entry.code) {
+    case "way-structure-multi-component":
+      return `הדרך מורכבת מ-${entry.componentCount} רכיבים נפרדים — תקין אם זו אותה דרך במציאות`;
+    case "way-structure-branching":
+      return `הסתעפות בדרך (דרגה ${entry.maxDegree}) — תקין ברשת שבילים או בדרך היקפית`;
+    case "parallel-facility-risk":
+      return `מקטעים מקבילים באותה דרך (${entry.segmentIds?.join(", ")}) — הסירו את המתקן השונה או אשרו כדרך אחת`;
+    case "facility-class-conflict":
+      return `סוג המתקן של מקטע ${entry.segmentId} אינו תואם לדרך — לא ניתן לאשר`;
+    case "segment-unreviewed":
+      return "המקטע לא סווג עדיין";
+    default:
+      return `${entry.code}${entry.segmentId ? ` (#${entry.segmentId})` : ""}`;
+  }
+}
+
+function renderGuidanceCoverage() {
+  if (!els.guidanceCoverage) return;
+  const coverage = state.guidance.review?.coverage;
+  if (!coverage) {
+    els.guidanceCoverage.textContent = state.guidance.error || "";
+    return;
+  }
+  const blocking = state.guidance.review.blocking.length;
+  els.guidanceCoverage.textContent =
+    `סווגו ${coverage.reviewedSegments} מתוך ${coverage.activeSegments} מקטעים פעילים` +
+    (blocking > 0 ? ` · ${blocking} חסימות` : "");
+}
+
+function renderGuidanceSection({ preserveFormRole = false } = {}) {
+  if (!els.guidanceRole) return;
+  populateGuidanceKindOptions();
+  const feature = selectedFeature();
+  const guidance = guidanceForSelectedSegment();
+  const segmentId = selectedSegmentId();
+
+  els.guidanceDetails.hidden = !feature;
+  if (!feature) {
+    renderGuidanceCoverage();
+    return;
+  }
+
+  if (!preserveFormRole) {
+    els.guidanceRole.value = guidance?.role || "";
+  }
+  const role = els.guidanceRole.value;
+  els.guidanceNamedWayFields.hidden = role !== "named-way";
+  els.guidanceStandaloneFields.hidden = role !== "standalone";
+  els.guidanceKindField.hidden = role !== "standalone" && role !== "unnamed";
+
+  if (role === "named-way") {
+    const selectedWayId = guidance?.wayId || els.guidanceWayId.value || "";
+    populateGuidanceWayOptions(selectedWayId);
+    populateGuidanceWayFields(selectedWayId);
+    if (!preserveFormRole) {
+      els.guidanceSectionLabel.value = guidance?.sectionLabel || "";
+    }
+  } else if (role === "standalone") {
+    if (!preserveFormRole) {
+      els.guidanceStandaloneName.value = guidance?.name || "";
+      els.guidanceStandaloneSpokenName.value = guidance?.spokenName || "";
+    }
+    els.guidanceKind.value = guidance?.kind || "bridge";
+  } else if (role === "unnamed") {
+    els.guidanceKind.value = guidance?.kind || "connector";
+  }
+
+  els.guidanceSave.disabled = state.guidance.saving || !state.guidance.digests;
+  renderGuidancePreview(guidance, feature);
+  renderGuidanceIssuesFor(segmentId);
+  renderGuidanceCoverage();
+}
+
+function guidanceRecordFromForm() {
+  const role = els.guidanceRole.value;
+  if (!role) return null;
+  if (role === "named-way") {
+    const wayId = els.guidanceWayId.value;
+    if (!wayId) throw new Error("בחרו דרך");
+    const sectionLabel = els.guidanceSectionLabel.value.trim();
+    return { role, wayId, ...(sectionLabel ? { sectionLabel } : {}) };
+  }
+  if (role === "standalone") {
+    const name = els.guidanceStandaloneName.value.trim();
+    if (!name) throw new Error("נדרש שם ציבורי");
+    const spokenName = els.guidanceStandaloneSpokenName.value.trim();
+    return { role, name, kind: els.guidanceKind.value, ...(spokenName ? { spokenName } : {}) };
+  }
+  return { role, kind: els.guidanceKind.value };
+}
+
+function registryFromGuidanceForm(registry, guidanceRecord) {
+  if (
+    guidanceRecord?.role === "named-way"
+    && !(registry?.ways || {})[guidanceRecord.wayId]
+  ) {
+    throw new Error("הדרך שנבחרה אינה קיימת");
+  }
+  // Way-owned fields are edited only in the first-class Ways workspace.
+  // Network owns the segment's role, way assignment, and optional section.
+  return registry;
+}
+
+async function saveGuidanceDocuments(nextSource, nextRegistry, successMessage) {
+  state.guidance.saving = true;
+  renderGuidanceSection();
+  try {
+    const response = await fetch("/api/navigation-ways", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        source: nextSource,
+        registry: nextRegistry,
+        expectedDigests: state.guidance.digests,
+      }),
+    });
+    const payload = await response.json();
+    if (!response.ok) {
+      if (response.status === 409) {
+        // Someone else changed a canonical document. Reload rather than
+        // overwrite: an obsolete response must not clear a newer edit.
+        setAlert("נתוני המקור השתנו — נטען מחדש");
+        await loadSource();
+        await loadGuidanceRegistry();
+        return false;
+      }
+      const first = payload.review?.blocking?.[0];
+      throw new Error(first ? guidanceIssueText(first) : payload.error || "save failed");
+    }
+    state.source = nextSource;
+    state.guidance.registry = nextRegistry;
+    state.guidance.review = payload.review;
+    state.guidance.digests = payload.digests;
+    refreshActiveFeatures();
+    renderAll();
+    setStatus(successMessage);
+    loadGuidanceSuggestions().catch(showError);
+    return true;
+  } catch (error) {
+    setAlert(error instanceof Error ? error.message : String(error));
+    return false;
+  } finally {
+    state.guidance.saving = false;
+    renderGuidanceSection();
+    renderWaysManager();
+  }
+}
+
+async function saveSelectedSegmentGuidance() {
+  const segmentId = selectedSegmentId();
+  if (segmentId === null) return;
+  let record;
+  try {
+    record = guidanceRecordFromForm();
+  } catch (error) {
+    setAlert(error instanceof Error ? error.message : String(error));
+    return;
+  }
+  const nextSource = applySegmentGuidance(state.source, segmentId, record);
+  const nextRegistry = registryFromGuidanceForm(state.guidance.registry, record);
+  await saveGuidanceDocuments(
+    nextSource,
+    nextRegistry,
+    `סיווג נשמר למקטע ${segmentId}`,
+  );
+}
+
+async function createGuidanceWay() {
+  const segmentId = selectedSegmentId();
+  if (state.workspaceMode !== "overlay" || segmentId === null) {
+    setAlert("כדי ליצור דרך יש לבחור תחילה מקטע בלשונית Network");
+    return;
+  }
+  const wayId = window.prompt("מזהה דרך (אנגלית, יציב):");
+  if (!wayId) return;
+  const trimmedId = wayId.trim();
+  if ((state.guidance.registry?.ways || {})[trimmedId]) {
+    setAlert("מזהה כבר קיים");
+    return;
+  }
+  const name = window.prompt("שם תצוגה (נקי, ללא ניקוד):");
+  if (!name) return;
+  const kind = window.prompt(`סוג מתקן (${GUIDANCE_KIND_OPTIONS.map(([value]) => value).join(", ")}):`, "road");
+  if (!kind) return;
+  const nextRegistry = applyWay(state.guidance.registry, trimmedId, {
+    name: name.trim(),
+    kind: kind.trim(),
+    aliases: [],
+    // A suggested or guessed audible form is never canonical: `spokenName`
+    // stays null until a device recording shows the display form is wrong.
+    spokenName: null,
+  });
+  const nextSource = applySegmentGuidance(state.source, segmentId, {
+    role: "named-way",
+    wayId: trimmedId,
+  });
+  const saved = await saveGuidanceDocuments(
+    nextSource,
+    nextRegistry,
+    `נוצרה דרך ${trimmedId} ומקטע ${segmentId} שויך אליה`,
+  );
+  if (saved) {
+    state.guidance.selectedWayId = trimmedId;
+    state.guidance.previewSegmentIds = [];
+    els.guidanceRole.value = "named-way";
+    renderGuidanceSection();
+    populateGuidanceWayOptions(trimmedId);
+  }
+}
+
+async function acknowledgeGuidanceIssue(entry) {
+  if (!entry.wayId || !entry.fingerprint) return;
+  const nextRegistry = acknowledgeStructureIssue(
+    state.guidance.registry,
+    entry.wayId,
+    entry.fingerprint,
+  );
+  await saveGuidanceDocuments(state.source, nextRegistry, "המבנה אושר");
+}
+
 async function loadSource() {
   const response = await fetch("/api/source");
   if (!response.ok) throw new Error(`Failed to load source: ${response.status}`);
@@ -12235,7 +13590,58 @@ async function promoteBuild() {
 }
 
 function wireEvents() {
+  if (els.guidanceRole) {
+    els.guidanceRole.addEventListener("change", () =>
+      renderGuidanceSection({ preserveFormRole: true }));
+    els.guidanceWayId.addEventListener("change", () =>
+      populateGuidanceWayFields(els.guidanceWayId.value));
+    els.guidanceSave.addEventListener("click", () => saveSelectedSegmentGuidance().catch(showError));
+    els.guidanceCreateWay.addEventListener("click", () => createGuidanceWay().catch(showError));
+    els.guidanceOpenWay.addEventListener("click", async () => {
+      const wayId = els.guidanceWayId.value;
+      if (!wayId) return;
+      state.guidance.selectedWayId = wayId;
+      await setWorkspaceMode("ways");
+      selectGuidanceWay(wayId);
+    });
+    els.guidanceSuggestionSearch.addEventListener("input", () => {
+      state.guidance.suggestionSearch = els.guidanceSuggestionSearch.value;
+      renderGuidanceSuggestions();
+    });
+    els.guidanceSuggestionFilter.addEventListener("change", () => {
+      state.guidance.suggestionFilter = els.guidanceSuggestionFilter.value;
+      renderGuidanceSuggestions();
+    });
+    els.guidanceSuggestionRefresh.addEventListener("click", () =>
+      loadGuidanceSuggestions().catch(showError));
+  }
   els.workspaceNetwork.addEventListener("click", () => setWorkspaceMode("overlay").catch(showError));
+  els.workspaceWays.addEventListener("click", () => setWorkspaceMode("ways").catch(showError));
+  els.waysSearch.addEventListener("input", () => {
+    state.guidance.waySearch = els.waysSearch.value;
+    renderWaysManager();
+  });
+  els.waysCreate.addEventListener("click", beginCreateGuidanceWay);
+  els.waysSegmentSearch.addEventListener("input", () => {
+    state.guidance.segmentSearch = els.waysSegmentSearch.value;
+    renderWaysManager();
+  });
+  els.waysSegmentAssign.addEventListener("click", () =>
+    assignSelectedSegmentToGuidanceWay().catch(showError));
+  els.waysSegmentUnassign.addEventListener("click", () =>
+    unassignSelectedSegmentGuidance().catch(showError));
+  els.wayEditorSave.addEventListener("click", () => saveSelectedGuidanceWay().catch(showError));
+  els.wayEditorCancel.addEventListener("click", () => {
+    state.guidance.creatingWay = false;
+    renderWaysManager();
+  });
+  els.wayEditorDelete.addEventListener("click", () =>
+    deleteSelectedGuidanceWay().catch(showError));
+  els.wayEditorFit.addEventListener("click", () => {
+    state.guidance.previewSegmentIds = [];
+    updateSelectedSegmentEditSources();
+    fitGuidanceRecords(guidanceWayMemberRecords(state.guidance.selectedWayId));
+  });
   els.networkFocusCw.addEventListener("click", () => setWorkspaceMode("overlay").catch(showError));
   els.networkFocusBase.addEventListener("click", () => setWorkspaceMode("base").catch(showError));
   els.networkShowContext.addEventListener("change", () => {
@@ -12839,7 +14245,23 @@ function wireEvents() {
     }
     const sourceIndex = event.features[0].properties.sourceIndex;
     const activeIndex = state.activeFeatures.findIndex((record) => record.sourceIndex === sourceIndex);
-    if (activeIndex >= 0) selectFeatureByActiveIndex(activeIndex);
+    if (activeIndex >= 0) {
+      const feature = state.activeFeatures[activeIndex].feature;
+      if (state.workspaceMode === "ways") {
+        const guidance = feature.properties?.guidance;
+        if (
+          guidance?.role === "named-way"
+          && (state.guidance.registry?.ways || {})[guidance.wayId]
+        ) {
+          state.guidance.selectedWayId = guidance.wayId;
+          state.guidance.previewSegmentIds = [];
+        } else {
+          state.guidance.previewSegmentIds = [Number(feature.properties?.id)];
+        }
+      }
+      selectFeatureByActiveIndex(activeIndex);
+      if (state.workspaceMode === "ways") renderWaysManager();
+    }
   });
 
   map.on("click", (event) => {
@@ -16199,6 +17621,10 @@ map.on("load", async () => {
     await addMapLayers();
     wireEvents();
     await loadSource();
+    // Guidance authoring is metadata-only, so it loads alongside the source
+    // without touching the matcher or base topology.
+    await loadGuidanceRegistry();
+    await loadGuidanceSuggestions();
     await setWorkspaceMode(state.workspaceMode);
   } catch (error) {
     showError(error);

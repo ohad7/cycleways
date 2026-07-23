@@ -87,15 +87,25 @@ assert.equal(formatNavigationHorizonMeters(1510), "1.5 קילומטר");
       role: "named-way",
     },
   };
-  const utterance = planner.plan(
-    { kind: "cue", cueType: "turn", phase: "final", cue },
-    { activeCue: { cue, phase: "final", distanceToCueMeters: 20 } },
+  // The long-run confirmation rides on the preview utterance...
+  const preview = planner.plan(
+    { kind: "cue", cueType: "turn", phase: "preview", cue },
+    { activeCue: { cue, phase: "preview", distanceToCueMeters: 200 } },
     1000,
   ).utterance;
   assert.equal(
-    utterance.text,
-    "פנה ימינה אל שביל תל חי, והמשיכו עליו 1.5 קילומטר",
+    preview.text,
+    "בעוד 200 מטרים, פנה ימינה אל שביל תל חי, והמשיכו עליו 1.5 קילומטר",
   );
+
+  // ...and never on the final call, which the rider hears while executing the
+  // maneuver. It names the destination way and stops there.
+  const final = planner.plan(
+    { kind: "cue", cueType: "turn", phase: "final", cue },
+    { activeCue: { cue, phase: "final", distanceToCueMeters: 20 } },
+    60000,
+  ).utterance;
+  assert.equal(final.text, "פנה ימינה אל שביל תל חי");
 }
 
 {
@@ -258,6 +268,29 @@ assert.equal(formatNavigationHorizonMeters(1510), "1.5 קילומטר");
 {
   const planner = createNavigationVoicePlanner({ enabled: false });
   assert.equal(planner.plan(turnPreview, state, 1000).reason, "disabled");
+}
+
+{
+  const planner = createNavigationVoicePlanner();
+  const bridge = planner.plan(
+    {
+      kind: "cue",
+      cueType: "cross-feature",
+      phase: "final",
+      cue: {
+        type: "cross-feature",
+        distanceMeters: 400,
+        guidance: {
+          guidanceIdentity: "standalone:44",
+          name: "גשר עינות ירדן",
+          spokenName: "גֶּשֶׁר עֵינוֹת יַרְדֵּן",
+        },
+      },
+    },
+    { activeCue: { distanceToCueMeters: 20 } },
+    1000,
+  ).utterance;
+  assert.equal(bridge.text, "חצו את גֶּשֶׁר עֵינוֹת יַרְדֵּן");
 }
 
 // --- Compound turns -------------------------------------------------------
@@ -660,6 +693,16 @@ assert.equal(compassWord(null, "he-IL"), null);
     },
     continueOnWayMeters: 1510,
   };
+  // A reviewed crossing carries the longest final-phase copy in the system, so
+  // the preview-only rule matters most here: the final call keeps the safety
+  // instruction and the destination way, and drops the horizon.
+  const directPreview = createNavigationVoicePlanner().plan(
+    { kind: "cue", cueType: "crossing", phase: "preview", cue: directNamedCrossing },
+    { activeCue: { distanceToCueMeters: 200, cue: directNamedCrossing, phase: "preview" } },
+    3000,
+  ).utterance;
+  assert.match(directPreview.text, /והמשיכו על שביל תל חי במשך 1\.5 קילומטר/);
+
   const direct = createNavigationVoicePlanner().plan(
     { kind: "cue", cueType: "crossing", phase: "final", cue: directNamedCrossing },
     { activeCue: { distanceToCueMeters: 10, cue: directNamedCrossing, phase: "final" } },
@@ -667,7 +710,7 @@ assert.equal(compassWord(null, "he-IL"), null);
   ).utterance;
   assert.equal(
     direct.text,
-    "חצו בזהירות לצד השני של הכביש, והמשיכו על שביל תל חי במשך 1.5 קילומטר",
+    "חצו בזהירות לצד השני של הכביש, והמשיכו על שביל תל חי",
   );
 
   const legacyNamedCrossing = {

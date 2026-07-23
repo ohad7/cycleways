@@ -20,7 +20,7 @@ export default {
     { type: "banner", match: "בדרך למסלול", field: "statusText" },
     { type: "acquired" },
     { type: "banner", match: "הניווט התחיל", field: "acquisitionText" },
-    { type: "voice", match: "מזרחה", atLeast: 1 },
+    { type: "voice", match: "דרך הפרדס", atLeast: 1 },
     { type: "arrived" },
   ],
 };

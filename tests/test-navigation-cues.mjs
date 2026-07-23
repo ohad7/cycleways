@@ -123,7 +123,7 @@ function routeFrom(geometry, extra = {}) {
   );
   assert.equal(findType(offset, "turn").length, 1, "junction within 30 m still counts");
 
-  // Span boundaries merge onto turns only — a bend never gets ontoSegmentName.
+  // Internal span boundaries never produce rider-facing wording.
   const total = routeFrom(geometry).distanceMeters;
   const withSpans = buildRouteCues(
     routeFrom(geometry, {
@@ -138,8 +138,8 @@ function routeFrom(geometry, extra = {}) {
   assert.equal(bendWithSpan.ontoSegmentName, undefined, "no segment merge onto a bend");
   assert.equal(
     findType(withSpans, "enter-segment").length,
-    1,
-    "the span boundary at the bend stays its own enter-segment cue",
+    0,
+    "the span boundary at the bend is silent",
   );
 
   // A bend is selectable like any maneuver cue.
@@ -278,7 +278,7 @@ function routeFrom(geometry, extra = {}) {
     ],
   });
   const namedCues = buildRouteCues(namedRoute);
-  assert.equal(findType(namedCues, "turn")[0].ontoSegmentName, "After the turn");
+  assert.equal(findType(namedCues, "turn")[0].ontoSegmentName, undefined);
   assert.equal(
     findType(namedCues, "enter-segment").length,
     0,
@@ -348,7 +348,7 @@ function routeFrom(geometry, extra = {}) {
   );
 }
 
-// --- enter-segment cues + merge ---
+// --- legacy segment names never create production cues ---
 import { buildRouteCues as _brc } from "@cycleways/core/navigation/navigationCues.js";
 {
   // Route whose sharp turn coincides with a new segment boundary.
@@ -367,7 +367,7 @@ import { buildRouteCues as _brc } from "@cycleways/core/navigation/navigationCue
   const cues = _brc(route);
   const turn = cues.find((c) => c.type === "turn");
   assert.ok(turn, "turn cue exists at the bend");
-  assert.equal(turn.ontoSegmentName, "Second", "turn merged with segment entry");
+  assert.equal(turn.ontoSegmentName, undefined, "internal segment name is not attached");
   assert.equal(
     cues.filter((c) => c.type === "enter-segment" && Math.abs(c.distanceMeters - 500) < 20).length,
     0,
@@ -375,7 +375,7 @@ import { buildRouteCues as _brc } from "@cycleways/core/navigation/navigationCue
   );
 }
 {
-  // Segment boundary with no nearby turn -> standalone enter-segment cue.
+  // Segment boundary with no nearby turn stays silent.
   const route = {
     geometry: [
       { lat: 33.1, lng: 35.6, distanceFromStartMeters: 0 },
@@ -388,8 +388,7 @@ import { buildRouteCues as _brc } from "@cycleways/core/navigation/navigationCue
     activeDataPoints: [],
   };
   const cues = _brc(route);
-  assert.ok(cues.some((c) => c.type === "enter-segment" && c.segmentName === "B"),
-    "standalone enter-segment cue for B");
+  assert.equal(cues.some((c) => c.type === "enter-segment"), false);
 }
 
 // A due segment boundary must not be starved by a farther maneuver preview.
@@ -488,6 +487,47 @@ import { buildRouteCues as _brc } from "@cycleways/core/navigation/navigationCue
   const cues = buildRouteCues(route);
   assert.equal(findType(cues, "enter-segment").length, 0, "same-way editorial split is silent");
   assert.deepEqual(cues.map((cue) => cue.type), ["start", "arrive"]);
+}
+
+// A standalone bridge is a real landmark cue. It is final-phase only, uses
+// its audible form, and the class-only kill switch never leaks the proper name.
+{
+  const route = {
+    geometry: [
+      { lat: 33.1, lng: 35.6, distanceFromStartMeters: 0 },
+      { lat: 33.1, lng: 35.61, distanceFromStartMeters: 1000 },
+    ],
+    segmentSpans: [],
+    guidanceMode: "guidance-v1",
+    guidancePresentationPolicy: "named",
+    guidanceSpans: [
+      {
+        startMeters: 0, endMeters: 400, guidanceIdentity: "way:approach",
+        name: "דרך גישה", role: "named-way", kind: "road",
+      },
+      {
+        startMeters: 400, endMeters: 470, guidanceIdentity: "standalone:44",
+        name: "גשר עינות ירדן", spokenName: "גֶּשֶׁר עֵינוֹת יַרְדֵּן",
+        role: "standalone", kind: "bridge",
+      },
+      {
+        startMeters: 470, endMeters: 1000, guidanceIdentity: "way:depart",
+        name: "דרך יציאה", role: "named-way", kind: "road",
+      },
+    ],
+  };
+  const feature = findType(buildRouteCues(route), "cross-feature")[0];
+  assert.equal(feature.guidance.name, "גשר עינות ירדן");
+  assert.equal(feature.guidance.spokenName, "גֶּשֶׁר עֵינוֹת יַרְדֵּן");
+  assert.equal(selectActiveCue([feature], 364), null);
+  assert.equal(selectActiveCue([feature], 365).phase, "final");
+
+  const classOnly = findType(buildRouteCues({
+    ...route,
+    guidancePresentationPolicy: "class-only",
+  }), "cross-feature")[0];
+  assert.equal(classOnly.guidance.name, "גשר");
+  assert.equal(classOnly.guidance.spokenName, "גשר");
 }
 
 // A roundabout on an off-network approach must not borrow the next named way
@@ -756,7 +796,6 @@ import { buildRouteCues as _brc } from "@cycleways/core/navigation/navigationCue
   assert.deepEqual(crossing.thenManeuver, {
     type: "turn",
     direction: "left",
-    ontoSegmentName: "North sideline",
   });
 
   const disabled = buildRouteCues(route, {
@@ -765,7 +804,7 @@ import { buildRouteCues as _brc } from "@cycleways/core/navigation/navigationCue
   assert.equal(findType(disabled, "crossing").length, 0);
   assert.equal(findType(disabled, "turn").length, 1);
   assert.equal(findType(disabled, "turn")[0].direction, "left");
-  assert.equal(findType(disabled, "turn")[0].ontoSegmentName, "North sideline");
+  assert.equal(findType(disabled, "turn")[0].ontoSegmentName, undefined);
 
   const alwaysRoute = {
     ...route,
@@ -834,15 +873,14 @@ import { buildRouteCues as _brc } from "@cycleways/core/navigation/navigationCue
   const crossings = findType(cues, "crossing");
   assert.equal(roundabout.containsReviewedCrossing, true);
   assert.deepEqual(roundabout.containedCrossingIds, ["inside-1", "inside-2"]);
-  assert.equal(roundabout.ontoSegmentName, "שביל אופניים יובלים");
+  assert.equal(roundabout.ontoSegmentName, undefined);
   assert.deepEqual(
     crossings.map((cue) => [cue.compoundPreviousType, cue.compoundPreviousDistanceMeters]),
     [["roundabout", 100], ["roundabout", 100]],
   );
 }
 
-// A crossing whose exit is the start of a named CW segment says where the
-// rider is entering, even without guidance-v1 way-name data.
+// Without guidance-v1 data, a crossing never exposes the internal CW label.
 {
   const geometry = [
     { lat: 33, lng: 35 },
@@ -863,7 +901,7 @@ import { buildRouteCues as _brc } from "@cycleways/core/navigation/navigationCue
       { startMeters: 120, endMeters: baseline.distanceMeters, name: "שביל תל חי" },
     ],
   });
-  assert.equal(findType(buildRouteCues(route), "crossing")[0].ontoSegmentName, "שביל תל חי");
+  assert.equal(findType(buildRouteCues(route), "crossing")[0].ontoSegmentName, undefined);
 }
 
 console.log("navigation cue tests passed");

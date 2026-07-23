@@ -27,5 +27,32 @@ export default {
     { startMeters: 600, endMeters: 640, name: "מעבר קצר", cwSegmentId: 22, onNetwork: true, routeClass: "path" },
     { startMeters: 640, endMeters: 1240, name: "שביל המזרח", cwSegmentId: 23, onNetwork: true, routeClass: "cycleway" },
   ],
+  guidanceMode: "guidance-v1",
+  guidanceSpans: [
+    {
+      startMeters: 0,
+      endMeters: 600,
+      guidanceIdentity: "way:orchard-road",
+      name: "דרך הפרדס",
+      role: "named-way",
+      kind: "cycleway",
+    },
+    {
+      startMeters: 600,
+      endMeters: 640,
+      guidanceIdentity: "standalone:short-passage",
+      name: "מעבר קצר",
+      role: "standalone",
+      kind: "connector",
+    },
+    {
+      startMeters: 640,
+      endMeters: 1240,
+      guidanceIdentity: "way:east-trail",
+      name: "שביל המזרח",
+      role: "named-way",
+      kind: "cycleway",
+    },
+  ],
   distance: 1240,
 };

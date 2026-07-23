@@ -4,6 +4,7 @@ import {
   POI_LABELS,
   POI_WARNING_PRIORITY,
 } from "../data/poiTypes.js";
+import { buildRouteItinerary } from "./routeItinerary.js";
 
 export const ROUTE_SEARCH_PLACEHOLDER = "ישוב/עיר, לדוגמא: דפנה";
 
@@ -73,7 +74,7 @@ export function getRoutePlannerPresentation(
   };
 }
 
-export function getPlannerBuildModel(routeState) {
+export function getPlannerBuildModel(routeState, options = {}) {
   const hasRoute = routeState.geometry.length >= 2;
   const activeDataPoints = Array.isArray(routeState.activeDataPoints)
     ? routeState.activeDataPoints
@@ -90,6 +91,7 @@ export function getPlannerBuildModel(routeState) {
       : [],
     poiCount: activeDataPoints.length,
     warningCount: activeDataPoints.length,
+    itinerary: hasRoute ? buildRouteItinerary(routeState, options) : [],
   };
 }
 

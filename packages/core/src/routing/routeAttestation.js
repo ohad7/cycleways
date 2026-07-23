@@ -203,8 +203,15 @@ export function navigationPlanFingerprint(navigationRoute) {
     junctions: navigationRoute.junctions || null,
     crossings: navigationRoute.crossings || null,
     segmentSpans: navigationRoute.segmentSpans || [],
+    guidanceSpans: navigationRoute.guidanceSpans || [],
+    guidanceMode: navigationRoute.guidanceMode || "legacy",
+    guidancePresentationPolicy:
+      navigationRoute.guidancePresentationPolicy === "class-only"
+        ? "class-only"
+        : "named",
+    guidanceProvenance: navigationRoute.guidanceProvenance || null,
     maneuverGeneratorVersion:
-      navigationRoute.maneuverGeneratorVersion || "navigation-cues-v3",
+      navigationRoute.maneuverGeneratorVersion || "navigation-cues-v4",
     cuePlan: navigationRoute.cuePlan || null,
   });
 }

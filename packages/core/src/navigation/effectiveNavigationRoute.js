@@ -1,5 +1,6 @@
 import { getDistance } from "../utils/distance.js";
 import { buildNavigationGeometry } from "./navigationRoute.js";
+import { fallbackGuidanceKind } from "../data/navigationWays.js";
 import {
   reverseRouteAttestation,
   transformRouteAttestation,
@@ -23,6 +24,68 @@ function cloneJunctions(junctions) {
   return Array.isArray(junctions)
     ? junctions.map((junction) => ({ ...junction }))
     : null;
+}
+
+function reverseTurnDirection(direction) {
+  if (direction === "left") return "right";
+  if (direction === "right") return "left";
+  return direction;
+}
+
+function reverseCrossings(crossings, total) {
+  if (!Array.isArray(crossings)) return null;
+  return crossings
+    .map((crossing) => ({
+      ...crossing,
+      entryMeters: Math.max(0, total - Number(crossing.exitMeters)),
+      exitMeters: Math.max(0, total - Number(crossing.entryMeters)),
+      continuation: crossing.continuation?.type === "turn"
+        ? {
+            ...crossing.continuation,
+            direction: reverseTurnDirection(crossing.continuation.direction),
+          }
+        : crossing.continuation || null,
+    }))
+    .sort((a, b) => a.entryMeters - b.entryMeters);
+}
+
+function transformCrossingsForStart(crossings, offset, total, loop) {
+  if (!Array.isArray(crossings)) return { crossings: null, safe: true };
+  if (offset <= EPSILON_M) {
+    return { crossings: crossings.map((crossing) => ({ ...crossing })), safe: true };
+  }
+  const cursorInsideCrossing = crossings.some(
+    (crossing) =>
+      Number(crossing.entryMeters) < offset - EPSILON_M
+      && Number(crossing.exitMeters) > offset + EPSILON_M,
+  );
+  if (cursorInsideCrossing) return { crossings: null, safe: false };
+  if (!loop) {
+    return {
+      safe: true,
+      crossings: crossings
+        .filter((crossing) => Number(crossing.entryMeters) >= offset - EPSILON_M)
+        .map((crossing) => ({
+          ...crossing,
+          entryMeters: Math.max(0, Number(crossing.entryMeters) - offset),
+          exitMeters: Math.max(0, Number(crossing.exitMeters) - offset),
+        })),
+    };
+  }
+  return {
+    safe: true,
+    crossings: crossings
+      .map((crossing) => {
+        let entryMeters = Number(crossing.entryMeters) - offset;
+        let exitMeters = Number(crossing.exitMeters) - offset;
+        if (entryMeters < 0) {
+          entryMeters += total;
+          exitMeters += total;
+        }
+        return { ...crossing, entryMeters, exitMeters };
+      })
+      .sort((a, b) => a.entryMeters - b.entryMeters),
+  };
 }
 
 function totalMeters(route) {
@@ -99,6 +162,10 @@ export function splitGeometryAtProgress(geometry, progressMeters) {
   return null;
 }
 
+function cloneSpans(spans) {
+  return Array.isArray(spans) ? spans.map((span) => ({ ...span })) : [];
+}
+
 function remapReverseSpans(spans, total) {
   return (Array.isArray(spans) ? spans : [])
     .map((span) => ({
@@ -158,15 +225,61 @@ export function reverseNavigationRoute(route) {
     start: route?.end ? { ...route.end } : null,
     end: route?.start ? { ...route.start } : null,
     activeDataPoints: remapReverseDataPoints(route?.activeDataPoints, total),
-    segmentSpans: remapReverseSpans(route?.segmentSpans, total),
-    // Guidance memberships are direction-scoped. Until reverse construction
-    // can resolve the opposite traversal memberships, fall back conservatively
-    // instead of reversing forward rider-facing identities.
-    guidanceSpans: [],
-    guidanceMode: "legacy",
+    // Reverse swaps the precomputed direction pair rather than reversing
+    // forward rider-facing identities. The opposite projections were resolved
+    // during route construction, where the guidance index and the per-edge
+    // reverse memberships were available; they already sit in the reverse
+    // route's distance frame, so no remap is needed. Their counterparts — the
+    // forward lists — do need remapping, because a second reverse must restore
+    // the original.
+    segmentSpans: oppositeOrRemapped(route?.oppositeSegmentSpans, route?.segmentSpans, total),
+    guidanceSpans: oppositeGuidanceOrFallback(
+      route?.oppositeGuidanceSpans,
+      route?.guidanceSpans,
+      total,
+    ),
+    // The reverse route's own opposite direction is the original forward
+    // direction, and its opposite frame is the original forward frame — so the
+    // pair is carried across unchanged, and a second reverse restores exactly
+    // what the first one started from.
+    oppositeSegmentSpans: cloneSpans(route?.segmentSpans),
+    oppositeGuidanceSpans: cloneSpans(route?.guidanceSpans),
+    guidanceMode: route?.guidanceMode || "legacy",
     junctions: cloneJunctions(route?.junctions),
-    crossings: null,
+    crossings: reverseCrossings(route?.crossings, total),
+    crossingsNeedRecompute: false,
   };
+}
+
+// When the opposite projection is missing — a legacy route state persisted
+// before reverse-ready spans existed — fall back to remapping the forward list.
+// That is safe for exact spans and for symmetric guidance, and an asymmetric
+// membership simply keeps its class fallback rather than reverting to legacy
+// naming.
+function oppositeOrRemapped(oppositeSpans, forwardSpans, total) {
+  if (Array.isArray(oppositeSpans) && oppositeSpans.length > 0) {
+    return oppositeSpans.map((span) => ({ ...span }));
+  }
+  return remapReverseSpans(forwardSpans, total);
+}
+
+function oppositeGuidanceOrFallback(oppositeSpans, forwardSpans, total) {
+  if (Array.isArray(oppositeSpans) && oppositeSpans.length > 0) {
+    return oppositeSpans.map((span) => ({ ...span }));
+  }
+  // An old persisted route has no evidence for asymmetric return membership.
+  // Reusing the outbound proper name would be a confident lie, so retain only
+  // the distance/class context until the route is rebuilt from current assets.
+  return remapReverseSpans(forwardSpans, total).map((span) => ({
+    ...span,
+    guidanceIdentity: null,
+    name: null,
+    spokenName: null,
+    wayId: null,
+    role: null,
+    resolutionStatus: span.networkRole === "segment" ? "unreviewed" : span.resolutionStatus,
+    kind: fallbackGuidanceKind(span.kind, span.routeClass),
+  }));
 }
 
 export function isSafeCircularRoute(route) {
@@ -268,7 +381,16 @@ function withEffectiveCommon(route, geometry, selection, loop) {
     },
   );
   const evidence = validateRouteAttestation(routingValidation, { geometry });
-  const canNavigate = geometry.length >= 2 && route?.canNavigate === true && evidence.ok;
+  const crossingProjection = transformCrossingsForStart(
+    route?.crossings,
+    selection.startProgressMeters,
+    totalMeters(route),
+    loop,
+  );
+  const canNavigate = geometry.length >= 2
+    && route?.canNavigate === true
+    && evidence.ok
+    && crossingProjection.safe;
   return {
     ...route,
     id: derivedId(route, selection.direction, selection.startProgressMeters, loop),
@@ -281,14 +403,16 @@ function withEffectiveCommon(route, geometry, selection, loop) {
     canNavigate,
     unavailableReason: canNavigate
       ? null
-      : route?.unavailableReason || evidence.reason || "invalid-effective-route",
+      : route?.unavailableReason
+        || (!crossingProjection.safe ? "start-inside-reviewed-crossing" : null)
+        || evidence.reason
+        || "invalid-effective-route",
     geometry,
     distanceMeters: distance,
     distanceKm: Math.round((distance / 1000) * 10) / 10,
     junctions: cloneJunctions(route?.junctions),
-    // Crossing intervals are attestation-relative and must be matched again
-    // after reverse/clip/loop transforms; source distances are never remapped.
-    crossings: null,
+    crossings: crossingProjection.crossings,
+    crossingsNeedRecompute: false,
   };
 }
 
@@ -314,6 +438,12 @@ export function buildEffectiveNavigationRoute(sourceRoute, selection = {}) {
         guidanceSpans: Array.isArray(sourceRoute?.guidanceSpans)
           ? sourceRoute.guidanceSpans.map((span) => ({ ...span }))
           : [],
+        oppositeSegmentSpans: Array.isArray(sourceRoute?.oppositeSegmentSpans)
+          ? sourceRoute.oppositeSegmentSpans.map((span) => ({ ...span }))
+          : [],
+        oppositeGuidanceSpans: Array.isArray(sourceRoute?.oppositeGuidanceSpans)
+          ? sourceRoute.oppositeGuidanceSpans.map((span) => ({ ...span }))
+          : [],
       };
   const total = totalMeters(directional);
   const requestedProgress = Math.max(
@@ -335,6 +465,8 @@ export function buildEffectiveNavigationRoute(sourceRoute, selection = {}) {
         activeDataPoints: directional.activeDataPoints.map((point) => ({ ...point })),
         segmentSpans: directional.segmentSpans.map((span) => ({ ...span })),
         guidanceSpans: directional.guidanceSpans.map((span) => ({ ...span })),
+        oppositeSegmentSpans: cloneSpans(directional.oppositeSegmentSpans),
+        oppositeGuidanceSpans: cloneSpans(directional.oppositeGuidanceSpans),
       },
       geometry,
       normalizedSelection,
@@ -402,6 +534,18 @@ export function buildEffectiveNavigationRoute(sourceRoute, selection = {}) {
         requestedProgress,
         closedTotal,
       ),
+      // The reverse-ready pair is rotated by the mirrored offset so a reverse
+      // of this rotated loop still lines up with its own geometry.
+      oppositeSegmentSpans: rotateSpans(
+        directional.oppositeSegmentSpans,
+        closedTotal - requestedProgress,
+        closedTotal,
+      ),
+      oppositeGuidanceSpans: rotateSpans(
+        directional.oppositeGuidanceSpans,
+        closedTotal - requestedProgress,
+        closedTotal,
+      ),
     };
   }
 
@@ -433,6 +577,18 @@ export function buildEffectiveNavigationRoute(sourceRoute, selection = {}) {
     guidanceSpans: clipLinearSpans(
       directional.guidanceSpans,
       requestedProgress,
+      effective.distanceMeters,
+    ),
+    // A clipped route's reverse starts at the clip point and ends at the
+    // original start, so the opposite pair is clipped from its own tail.
+    oppositeSegmentSpans: clipLinearSpans(
+      directional.oppositeSegmentSpans,
+      0,
+      effective.distanceMeters,
+    ),
+    oppositeGuidanceSpans: clipLinearSpans(
+      directional.oppositeGuidanceSpans,
+      0,
       effective.distanceMeters,
     ),
   };

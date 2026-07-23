@@ -227,5 +227,13 @@ export function summarizeMapAssets({
     crossings: Array.isArray(crossingsData?.crossings) ? crossingsData.crossings.length : 0,
     networkJunctionsFile: manifest.networkJunctions || null,
     networkJunctions: Array.isArray(networkJunctionsData?.junctions) ? networkJunctionsData.junctions.length : 0,
+    // Release diagnostics only. An old manifest without a guidance summary
+    // loads normally and simply reports nulls.
+    guidanceSchemaVersion: manifest.guidance?.schemaVersion ?? null,
+    guidanceEnforcement: manifest.guidance?.enforcement ?? null,
+    guidanceReviewedSegments: manifest.guidance?.reviewedSegments ?? null,
+    guidanceActiveSegments: manifest.guidance?.activeSegments ?? null,
+    guidanceCoverageComplete: manifest.guidance?.coverageComplete ?? null,
+    guidanceConflictCount: manifest.guidance?.conflictCount ?? null,
   };
 }

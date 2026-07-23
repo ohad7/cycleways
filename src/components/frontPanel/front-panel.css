@@ -1538,3 +1538,82 @@
   color: #5f6f67;
   font-weight: var(--font-weight-regular);
 }
+
+.route-itinerary {
+  margin-top: 14px;
+}
+
+.route-itinerary__list {
+  display: grid;
+  gap: 6px;
+  margin: 7px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.route-itinerary__row {
+  border: 1px solid #dce4df;
+  border-radius: 10px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.route-itinerary__row.is-selected {
+  border-color: #b5742e;
+  box-shadow: 0 0 0 2px rgba(181, 116, 46, 0.18);
+}
+
+.route-itinerary__sections {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.route-itinerary__sections button {
+  border: 1px solid var(--line, #d8d2c7);
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  padding: 0.2rem 0.55rem;
+  cursor: pointer;
+}
+
+.route-itinerary__row > summary {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 10px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.route-itinerary__row > summary::-webkit-details-marker {
+  display: none;
+}
+
+.route-itinerary__name {
+  overflow: hidden;
+  font-weight: var(--font-weight-bold);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.route-itinerary__distance,
+.route-itinerary__warning {
+  color: #5f6f67;
+  font-size: var(--text-caption-size);
+}
+
+.route-itinerary__warning {
+  color: #a26516;
+}
+
+.route-itinerary__details {
+  display: grid;
+  gap: 3px;
+  border-top: 1px solid #edf1ee;
+  padding: 8px 36px 9px 10px;
+  color: #5f6f67;
+  font-size: var(--text-caption-size);
+}

@@ -1,0 +1,402 @@
+{
+  "comment": "Shared validator fixtures. Both packages/core/src/data/navigationWayValidation.js and processing/navigation_ways.py run every case and must produce the same issue codes, severities, and affected IDs. See plans/navigation-way-names/design.md.",
+  "registryCases": [
+    {
+      "name": "valid pilot registry",
+      "registry": {
+        "schemaVersion": 1,
+        "enforcement": "migration",
+        "ways": {
+          "road-99": { "name": "כביש 99", "kind": "road", "ref": "99", "aliases": [], "spokenName": null }
+        }
+      },
+      "expectedIssues": []
+    },
+    {
+      "name": "unsupported schema version stops validation",
+      "registry": { "schemaVersion": 2, "enforcement": "migration", "ways": {} },
+      "expectedIssues": [{ "code": "registry-schema-unsupported", "severity": "error" }]
+    },
+    {
+      "name": "invalid enforcement mode",
+      "registry": { "schemaVersion": 1, "enforcement": "always", "ways": {} },
+      "expectedIssues": [{ "code": "registry-enforcement-invalid", "severity": "error" }]
+    },
+    {
+      "name": "display name may not carry pronunciation marks",
+      "registry": {
+        "schemaVersion": 1,
+        "enforcement": "migration",
+        "ways": {
+          "patrol-road": { "name": "דֶּרֶךְ הַפַּטְרוֹלִים", "kind": "dirt-road", "aliases": [] }
+        }
+      },
+      "expectedIssues": [
+        { "code": "way-display-name-has-pronunciation-marks", "severity": "error", "wayId": "patrol-road" }
+      ]
+    },
+    {
+      "name": "spoken name may carry pronunciation marks",
+      "registry": {
+        "schemaVersion": 1,
+        "enforcement": "migration",
+        "ways": {
+          "patrol-road": {
+            "name": "דרך הפטרולים",
+            "kind": "dirt-road",
+            "aliases": [],
+            "spokenName": "דֶּרֶךְ הַפַּטְרוֹלִים"
+          }
+        }
+      },
+      "expectedIssues": []
+    },
+    {
+      "name": "spoken name identical to display text is redundant",
+      "registry": {
+        "schemaVersion": 1,
+        "enforcement": "migration",
+        "ways": {
+          "ami-promenade": {
+            "name": "טיילת עמי",
+            "kind": "promenade",
+            "aliases": [],
+            "spokenName": "טיילת עמי"
+          }
+        }
+      },
+      "expectedIssues": [
+        { "code": "way-spoken-name-redundant", "severity": "warning", "wayId": "ami-promenade" }
+      ]
+    },
+    {
+      "name": "unknown kind is rejected",
+      "registry": {
+        "schemaVersion": 1,
+        "enforcement": "migration",
+        "ways": { "x": { "name": "X", "kind": "boardwalk", "aliases": [] } }
+      },
+      "expectedIssues": [{ "code": "way-kind-invalid", "severity": "error", "wayId": "x" }]
+    },
+    {
+      "name": "duplicate aliases are rejected",
+      "registry": {
+        "schemaVersion": 1,
+        "enforcement": "migration",
+        "ways": { "x": { "name": "X", "kind": "road", "aliases": ["a", "a"] } }
+      },
+      "expectedIssues": [{ "code": "way-alias-duplicate", "severity": "error", "wayId": "x" }]
+    },
+    {
+      "name": "duplicate visible names across way IDs are allowed",
+      "registry": {
+        "schemaVersion": 1,
+        "enforcement": "migration",
+        "ways": {
+          "road-918-north": { "name": "כביש 918", "kind": "road", "aliases": [] },
+          "road-918-jordan": { "name": "כביש 918", "kind": "road", "aliases": [] }
+        }
+      },
+      "expectedIssues": []
+    },
+    {
+      "name": "broad structure waivers are rejected in favour of exact fingerprints",
+      "registry": {
+        "schemaVersion": 1,
+        "enforcement": "migration",
+        "ways": {
+          "x": {
+            "name": "X",
+            "kind": "trail",
+            "aliases": [],
+            "structureReview": { "allowBranching": true }
+          }
+        }
+      },
+      "expectedIssues": [
+        { "code": "way-structure-review-broad-waiver", "severity": "error", "wayId": "x" }
+      ]
+    },
+    {
+      "name": "exact fingerprint acknowledgements are accepted",
+      "registry": {
+        "schemaVersion": 1,
+        "enforcement": "migration",
+        "ways": {
+          "x": {
+            "name": "X",
+            "kind": "trail",
+            "aliases": [],
+            "structureReview": { "acknowledgedIssueFingerprints": ["way-structure-branching|x|branchNodes=1|maxDegree=3"] }
+          }
+        }
+      },
+      "expectedIssues": []
+    }
+  ],
+  "segmentCases": [
+    {
+      "name": "named-way member with a section label",
+      "segmentId": 174,
+      "internalName": "כביש 99 קריית שמונה",
+      "knownWayIds": ["road-99"],
+      "guidance": { "role": "named-way", "wayId": "road-99", "sectionLabel": "שאר ישוב–בריכות הדגים" },
+      "expectedIssues": [],
+      "expectedReviewed": true
+    },
+    {
+      "name": "absent record is unreviewed, not invalid",
+      "segmentId": 888,
+      "internalName": "שדות דפנה צפון",
+      "knownWayIds": ["road-99"],
+      "guidance": null,
+      "expectedIssues": [],
+      "expectedReviewed": false
+    },
+    {
+      "name": "unknown way reference is rejected",
+      "segmentId": 12,
+      "internalName": "גשר חולתה",
+      "knownWayIds": ["road-99"],
+      "guidance": { "role": "named-way", "wayId": "road-999" },
+      "expectedIssues": [{ "code": "way-unknown", "severity": "error", "segmentId": 12 }],
+      "expectedReviewed": true
+    },
+    {
+      "name": "named-way member may not carry standalone-only fields",
+      "segmentId": 13,
+      "internalName": "גשר חיל ההנדסה ירדן",
+      "knownWayIds": ["road-99"],
+      "guidance": { "role": "named-way", "wayId": "road-99", "name": "גשר" },
+      "expectedIssues": [{ "code": "segment-role-field-invalid", "severity": "error", "segmentId": 13 }],
+      "expectedReviewed": true
+    },
+    {
+      "name": "standalone requires name and kind",
+      "segmentId": 14,
+      "internalName": "גשר עינות ירדן",
+      "knownWayIds": [],
+      "guidance": { "role": "standalone", "name": "גשר עינות ירדן", "kind": "bridge" },
+      "expectedIssues": [],
+      "expectedReviewed": true
+    },
+    {
+      "name": "standalone rejects a way reference",
+      "segmentId": 14,
+      "internalName": "גשר עינות ירדן",
+      "knownWayIds": ["road-99"],
+      "guidance": { "role": "standalone", "name": "גשר עינות ירדן", "kind": "bridge", "wayId": "road-99" },
+      "expectedIssues": [{ "code": "segment-role-field-invalid", "severity": "error", "segmentId": 14 }],
+      "expectedReviewed": true
+    },
+    {
+      "name": "unnamed requires a kind and rejects a name",
+      "segmentId": 65,
+      "internalName": "כביש גישה אגמון החולה",
+      "knownWayIds": [],
+      "guidance": { "role": "unnamed", "kind": "connector", "name": "כביש גישה" },
+      "expectedIssues": [{ "code": "segment-role-field-invalid", "severity": "error", "segmentId": 65 }],
+      "expectedReviewed": true
+    },
+    {
+      "name": "unnamed connector is valid",
+      "segmentId": 65,
+      "internalName": "כביש גישה אגמון החולה",
+      "knownWayIds": [],
+      "guidance": { "role": "unnamed", "kind": "connector" },
+      "expectedIssues": [],
+      "expectedReviewed": true
+    },
+    {
+      "name": "unknown role is rejected",
+      "segmentId": 7,
+      "internalName": "שביל הבניאס",
+      "knownWayIds": [],
+      "guidance": { "role": "maybe-named" },
+      "expectedIssues": [{ "code": "segment-role-invalid", "severity": "error", "segmentId": 7 }],
+      "expectedReviewed": false
+    },
+    {
+      "name": "copied split-child section label is flagged for review",
+      "segmentId": 210,
+      "internalName": "כביש 99 תל דן צומת רגר",
+      "knownWayIds": ["road-99"],
+      "guidance": {
+        "role": "named-way",
+        "wayId": "road-99",
+        "sectionLabel": "תל דן",
+        "sectionLabelNeedsReview": true
+      },
+      "expectedIssues": [
+        { "code": "way-member-section-label-needs-review", "severity": "warning", "segmentId": 210 }
+      ],
+      "expectedReviewed": true
+    }
+  ],
+  "structureCases": [
+    {
+      "name": "a plain chain is clean",
+      "wayId": "patrol-road",
+      "wayKind": "dirt-road",
+      "memberIds": [16, 18, 19],
+      "adjacency": { "16": [18], "18": [16, 19], "19": [18] },
+      "expectedIssues": [],
+      "expectedComponentCount": 1,
+      "expectedMaxDegree": 2
+    },
+    {
+      "name": "a ring is clean",
+      "wayId": "sovev-dafna",
+      "wayKind": "dirt-road",
+      "memberIds": [243, 246, 247],
+      "adjacency": { "243": [246, 247], "246": [243, 247], "247": [243, 246] },
+      "expectedIssues": [],
+      "expectedComponentCount": 1,
+      "expectedMaxDegree": 2
+    },
+    {
+      "name": "two components warn instead of forcing an ID split",
+      "wayId": "road-99",
+      "wayKind": "road",
+      "memberIds": [58, 60, 211, 212],
+      "adjacency": { "58": [60], "60": [58], "211": [212], "212": [211] },
+      "expectedIssues": [
+        { "code": "way-structure-multi-component", "severity": "warning", "acknowledged": false }
+      ],
+      "expectedComponentCount": 2,
+      "expectedMaxDegree": 1
+    },
+    {
+      "name": "an acknowledged multi-component way passes",
+      "wayId": "road-99",
+      "wayKind": "road",
+      "memberIds": [58, 60, 211, 212],
+      "adjacency": { "58": [60], "60": [58], "211": [212], "212": [211] },
+      "acknowledgedIssueFingerprints": ["way-structure-multi-component|road-99|components=211.212,58.60"],
+      "expectedIssues": [
+        { "code": "way-structure-multi-component", "severity": "warning", "acknowledged": true }
+      ],
+      "expectedComponentCount": 2,
+      "expectedMaxDegree": 1
+    },
+    {
+      "name": "a degree-four trail network warns and keeps one identity",
+      "wayId": "agmon-hahula",
+      "wayKind": "promenade",
+      "memberIds": [2, 147, 149, 265, 266],
+      "adjacency": {
+        "265": [2, 147, 149, 266],
+        "2": [265],
+        "147": [265],
+        "149": [265],
+        "266": [265]
+      },
+      "expectedIssues": [
+        { "code": "way-structure-branching", "severity": "warning", "acknowledged": false }
+      ],
+      "expectedComponentCount": 1,
+      "expectedMaxDegree": 4
+    },
+    {
+      "name": "an empty way is an error",
+      "wayId": "orphan",
+      "wayKind": "road",
+      "memberIds": [],
+      "adjacency": {},
+      "expectedIssues": [{ "code": "way-empty", "severity": "error" }],
+      "expectedComponentCount": 0,
+      "expectedMaxDegree": 0
+    },
+    {
+      "name": "a roadway member inside a cycleway way is a non-waivable blocker",
+      "wayId": "cycleway-99",
+      "wayKind": "cycleway",
+      "memberIds": [97, 174],
+      "adjacency": { "97": [174], "174": [97] },
+      "memberEvidence": { "97": { "routeClass": "cycleway" }, "174": { "routeClass": "secondary" } },
+      "expectedIssues": [
+        { "code": "facility-class-conflict", "severity": "error", "segmentId": 174, "waivable": false }
+      ],
+      "expectedComponentCount": 1,
+      "expectedMaxDegree": 1
+    },
+    {
+      "name": "a facility-class conflict cannot be acknowledged away",
+      "wayId": "cycleway-99",
+      "wayKind": "cycleway",
+      "memberIds": [97, 174],
+      "adjacency": { "97": [174], "174": [97] },
+      "memberEvidence": { "97": { "routeClass": "cycleway" }, "174": { "routeClass": "secondary" } },
+      "acknowledgedIssueFingerprints": ["facility-class-conflict|cycleway-99|segmentId=174"],
+      "expectedIssues": [
+        { "code": "facility-class-conflict", "severity": "error", "segmentId": 174, "waivable": false },
+        { "code": "structure-acknowledgement-unmatched", "severity": "warning" }
+      ],
+      "expectedComponentCount": 1,
+      "expectedMaxDegree": 1
+    },
+    {
+      "name": "a dirt road inside a road way is compatible: surface is not a facility class",
+      "wayId": "patrol-road",
+      "wayKind": "dirt-road",
+      "memberIds": [16, 18],
+      "adjacency": { "16": [18], "18": [16] },
+      "memberEvidence": { "16": { "routeClass": "track" }, "18": { "routeClass": "residential" } },
+      "expectedIssues": [],
+      "expectedComponentCount": 1,
+      "expectedMaxDegree": 1
+    },
+    {
+      "name": "a bridge member carries its enclosing facility",
+      "wayId": "cycleway-99",
+      "wayKind": "cycleway",
+      "memberIds": [94, 280],
+      "adjacency": { "94": [280], "280": [94] },
+      "memberEvidence": { "94": { "routeClass": "cycleway" }, "280": { "facilityClass": "neutral" } },
+      "expectedIssues": [],
+      "expectedComponentCount": 1,
+      "expectedMaxDegree": 1
+    },
+    {
+      "name": "a material parallel pair blocks even when the members touch at one end",
+      "wayId": "road-99",
+      "wayKind": "road",
+      "memberIds": [174, 97],
+      "adjacency": { "174": [97], "97": [174] },
+      "parallelPairs": [{ "a": 174, "b": 97, "overlapMeters": 800, "separationMeters": 12 }],
+      "expectedIssues": [
+        { "code": "parallel-facility-risk", "severity": "error", "acknowledged": false }
+      ],
+      "expectedComponentCount": 1,
+      "expectedMaxDegree": 1
+    },
+    {
+      "name": "a dual carriageway can be approved as one facility by exact fingerprint",
+      "wayId": "road-90",
+      "wayKind": "road",
+      "memberIds": [159, 172],
+      "adjacency": { "159": [172], "172": [159] },
+      "parallelPairs": [{ "a": 159, "b": 172, "overlapMeters": 800, "separationMeters": 18 }],
+      "acknowledgedIssueFingerprints": ["parallel-facility-risk|road-90|overlapMeters=800|pair=159,172"],
+      "expectedIssues": [
+        { "code": "parallel-facility-risk", "severity": "warning", "acknowledged": true }
+      ],
+      "expectedComponentCount": 1,
+      "expectedMaxDegree": 1
+    },
+    {
+      "name": "an acknowledgement does not survive a membership change",
+      "wayId": "road-99",
+      "wayKind": "road",
+      "memberIds": [58, 60, 211, 212, 999],
+      "adjacency": { "58": [60], "60": [58], "211": [212], "212": [211], "999": [] },
+      "acknowledgedIssueFingerprints": ["way-structure-multi-component|road-99|components=211.212,58.60"],
+      "expectedIssues": [
+        { "code": "way-structure-multi-component", "severity": "warning", "acknowledged": false },
+        { "code": "structure-acknowledgement-unmatched", "severity": "warning" }
+      ],
+      "expectedComponentCount": 3,
+      "expectedMaxDegree": 1
+    }
+  ]
+}

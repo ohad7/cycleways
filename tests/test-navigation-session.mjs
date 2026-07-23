@@ -704,9 +704,9 @@ function offRouteRequestedSession() {
       timestamp: 1000,
     },
   });
-  assert.equal(state.cueEvent?.cueType, "enter-segment");
-  assert.equal(state.cueEvent?.cue?.segmentName, "B");
-  assert.equal(state.cueEvent?.phase, "final");
+  assert.equal(state.cueEvent?.cueType, "turn");
+  assert.equal(state.cueEvent?.cue?.segmentName, undefined);
+  assert.equal(state.cueEvent?.phase, "preview");
 }
 
 // --- Initial acquisition carries resolved way and long-run horizon ----------

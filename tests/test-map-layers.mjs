@@ -180,6 +180,11 @@ assert.equal(
 
 {
   assert.equal(
+    getFeatureFlags().guidanceWayNames,
+    true,
+    "named-way presentation is enabled by default",
+  );
+  assert.equal(
     featureFlagStringValue(
       "routeNetworkPresentation",
       ["current", "typed-bold"],
@@ -194,9 +199,15 @@ assert.equal(
       search: "",
     },
     CYCLEWAYS_FEATURE_FLAGS: {
+      guidanceWayNames: false,
       routeNetworkPresentation: "typed-cased",
     },
   };
+  assert.equal(
+    getFeatureFlags().guidanceWayNames,
+    false,
+    "the shared kill switch can freeze class-only guidance",
+  );
   assert.equal(
     getFeatureFlags().routeNetworkPresentation,
     "typed-cased",

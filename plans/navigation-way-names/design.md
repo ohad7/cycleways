@@ -1126,12 +1126,22 @@ condition changes in the background.
 
 ## Editor experience
 
-Add a `הכוונה ושם דרך` section to the selected-segment inspector in the
-existing Network workspace's **CW network** focus. It is not a new top-level
-workspace and does not revive the old separate mapping/direction workflow.
-Switching to **Base network** focus may show the selected way's alignment and
-junction evidence as context, while guidance classification remains owned by
-the logical segment.
+Ways are first-class editorial entities in a top-level **Ways** workspace.
+That workspace owns the registry list, each way's display/audible name, kind,
+reference, active members, validation findings, map highlight, and the
+digest-bound suggestion queue. A way is shown exactly once even when its
+members form several disconnected evidence components.
+
+The existing Network workspace's **CW network** focus retains a compact
+`הכוונה ושם דרך` section on the selected segment. Network owns only the
+segment's role, named-way assignment, and optional `sectionLabel`; a link opens
+the selected entity in Ways. It does not duplicate way-owned display,
+pronunciation, kind, or reference fields.
+
+Because an empty canonical way is invalid, manual way creation starts from a
+selected Network segment and atomically creates the registry entity plus its
+first membership. A suggestion may perform the same combined operation. The
+Ways workspace does not save an empty placeholder entity.
 
 The section has three explicit role choices:
 
@@ -1141,7 +1151,7 @@ The section has three explicit role choices:
 
 For named-way members the editor also provides optional `sectionLabel`.
 
-Named-way management provides:
+The Ways workspace provides:
 
 - name, kind, ref, aliases, and optional spoken-name override;
 - map preview of every active member;
@@ -1150,6 +1160,30 @@ Named-way management provides:
 - bulk assignment by selecting a contiguous start/end chain;
 - an explicit remove/reassign operation;
 - a list of section labels for quick consistency review.
+
+The first-release CRUD workflow is explicit:
+
+- **Create:** select an active segment in the Ways map or segment search, choose
+  `דרך חדשה`, enter the stable ID and way-owned fields, then save. Registry
+  creation and first-member assignment are one validated transaction.
+- **Read:** search the registry, select a way, inspect every member and
+  validation finding, and highlight the full facility on the map.
+- **Update:** edit the selected way's display name, kind, reference, or audible
+  override. A changed audible value requires the iOS verification checkbox.
+- **Delete:** explicitly confirm deletion; the transaction removes the registry
+  record and returns every member to unreviewed. Required enforcement may
+  refuse this until members are reassigned.
+- **Assign/reassign:** select any active segment on the Ways map or through
+  segment search, choose a target way, and confirm replacement when it already
+  has another role or way.
+- **Unassign:** remove the selected segment's classification, or remove an
+  individual member from the selected way. The last member cannot be removed
+  independently because empty canonical ways are invalid; delete the way
+  instead.
+
+The Network inspector offers the same segment-to-way assignment boundary for
+geometry-first work. Both surfaces call the same transaction and validator;
+neither stores a second membership list.
 
 Because the data is spatially sequential, the editor can propose the unique
 contiguous chain between two selected members. It traverses the same reviewed
@@ -1190,7 +1224,16 @@ confidence cannot merge a road with a parallel cycleway. Stale suggestions are
 regenerated or shown as stale. Every group is scored by the shared structural
 validator before review; model confidence and validator findings are distinct.
 
-The first release presents a digest-checked per-group import/review list:
+The suggestion source may record several rows for disconnected evidence
+components. Before presentation, deterministic conceptual-way consolidation
+joins components that are unambiguously one public numbered road or named
+cycleway and targets an existing registry ID when one exists. Thus all proposed
+Road 90 roadway members appear on one `road-90` proposal. Nearby dirt segments
+whose internal labels mention Road 90 remain independent unnamed proposals.
+Informal corridors with equal visible text are not consolidated automatically;
+they remain separate until the curator confirms they are one facility.
+
+The Ways workspace presents a digest-checked per-group import/review list:
 
 - filter/sort by confidence, role, validator status, and stable segment ID;
 - map preview of every proposed member and neighboring alternatives;
@@ -1446,8 +1489,9 @@ Suggested groups are run through the structural validator **before** a curator
 sees them, and each group carries its validator verdict. A suggestion pass built
 on endpoint proximity disagrees with reviewed topology in both directions: it
 splits ways that a published junction connects, and it joins members that no
-reviewed adjacency joins. Reviewing 176 groups twice because the first pass was
-scored on the wrong evidence is the expensive failure mode here.
+reviewed adjacency joins. Reviewing the complete suggestion set twice because
+the first pass was scored on the wrong evidence is the expensive failure mode
+here.
 
 ### Activation gate
 

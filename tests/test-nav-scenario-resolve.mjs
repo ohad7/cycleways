@@ -32,7 +32,7 @@ const base = {
   assert.ok(resolved.fixes.length > 200, "5 m/s over ~1200 m => 240ish fixes");
 }
 
-// The l-turn route produces a merged left-turn cue onto the second segment.
+// The guidance-aware l-turn route names the destination way.
 {
   const { buildRouteCues } = await import(
     "@cycleways/core/navigation/navigationCues.js"
@@ -42,7 +42,8 @@ const base = {
   const turn = cues.find((c) => c.type === "turn");
   assert.ok(turn, "l-turn has a turn cue");
   assert.equal(turn.direction, "left");
-  assert.equal(turn.ontoSegmentName, "שביל הצפון", "segment name merged onto the turn");
+  assert.equal(turn.ontoGuidance.guidanceIdentity, "way:north-trail");
+  assert.equal(turn.ontoGuidance.name, "שביל הצפון");
   assert.ok(
     Math.abs(turn.distanceMeters - 597) < 15,
     `turn at ~597m, got ${turn.distanceMeters}`,

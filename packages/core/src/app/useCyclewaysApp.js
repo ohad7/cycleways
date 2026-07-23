@@ -310,6 +310,10 @@ export function useCyclewaysApp({
 
     async function initializeRouting() {
       try {
+        const guidancePresentationPolicy =
+          getFeatureFlags().guidanceWayNames === false
+            ? "class-only"
+            : "named";
         const shardedSession = state.assets.baseRoutingShardManifestData
           ? await createShardedRouteSession(
               RouteManager,
@@ -328,6 +332,8 @@ export function useCyclewaysApp({
                   state.assets.legacyRoutingCompatibility,
                 routeAnchorCompatibility:
                   state.assets.routeAnchorCompatibilityData,
+                guidanceSchemaVersion:
+                  state.assets.manifest?.guidance?.schemaVersion ?? null,
                 onStatus: (status) => {
                   if (!disposed) {
                     setRoutingShardStatus(status);
@@ -343,9 +349,15 @@ export function useCyclewaysApp({
               state.assets.geoJsonData,
               state.assets.segmentsData,
               state.assets.baseRoutingNetworkData,
+              {
+                guidanceSchemaVersion:
+                  state.assets.manifest?.guidance?.schemaVersion ?? null,
+                guidancePresentationPolicy,
+              },
             );
         if (disposed) return;
 
+        manager.guidancePresentationPolicy = guidancePresentationPolicy;
         shardedRouteSessionRef.current = shardedSession;
         if (!shardedSession) {
           setRoutingShardStatus(
@@ -1408,7 +1420,12 @@ function routeStateFromSnapshot(current, snapshot, options = {}) {
     routeFailure: snapshot.routeFailure || null,
     segmentSpans: snapshot.segmentSpans || [],
     guidanceSpans: snapshot.guidanceSpans || [],
+    guidanceItinerary: snapshot.guidanceItinerary || [],
     guidanceMode: snapshot.guidanceMode || "legacy",
+    guidancePresentationPolicy:
+      snapshot.guidancePresentationPolicy === "class-only"
+        ? "class-only"
+        : "named",
     routingValidation: snapshot.routingValidation || null,
     pendingPoints: preservePending ? current.pendingPoints : [],
     routingPhase:
@@ -1433,7 +1450,9 @@ function clearRouteStateFields() {
     routeFailure: null,
     segmentSpans: [],
     guidanceSpans: [],
+    guidanceItinerary: [],
     guidanceMode: "legacy",
+    guidancePresentationPolicy: "named",
     routingValidation: null,
     pendingPoints: [],
     routingPhase: "idle",

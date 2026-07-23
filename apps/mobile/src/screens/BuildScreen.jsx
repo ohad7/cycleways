@@ -167,6 +167,7 @@ import {
   getPlannerBuildModel,
   getRoutePlannerPresentation,
 } from "@cycleways/core/ui/routePlannerPresentation.js";
+import { sliceRouteGeometryRange } from "@cycleways/core/ui/routeItinerary.js";
 import { routeNetworkPresentation } from "@cycleways/core/map/networkPresentation.js";
 import { paintToRNStyle } from "@cycleways/core/map/paintToRNStyle.js";
 import {
@@ -198,6 +199,13 @@ const ROUTE_TRAVELED_LINE_STYLE = {
   lineColor: "#9aa6ab",
   lineWidth: 5,
   lineOpacity: 0.85,
+  lineJoin: "round",
+  lineCap: "round",
+};
+const ROUTE_ITINERARY_HIGHLIGHT_STYLE = {
+  lineColor: "#b5742e",
+  lineWidth: 8,
+  lineOpacity: 0.9,
   lineJoin: "round",
   lineCap: "round",
 };
@@ -450,6 +458,22 @@ export default function BuildScreen({ navigation, route }) {
     () => buildRouteGeometryFeatureCollection(routeState.geometry),
     [routeState.geometry],
   );
+  const [selectedItineraryRange, setSelectedItineraryRange] = useState(null);
+  const itineraryHighlightGeometry = useMemo(
+    () => buildRouteGeometryFeatureCollection(
+      selectedItineraryRange
+        ? sliceRouteGeometryRange(
+            routeState.geometry,
+            selectedItineraryRange.startMeters,
+            selectedItineraryRange.endMeters,
+          )
+        : [],
+    ),
+    [routeState.geometry, selectedItineraryRange],
+  );
+  useEffect(() => {
+    setSelectedItineraryRange(null);
+  }, [routeState.geometry]);
   const searchHighlight = useMemo(
     () => buildSearchHighlightFeatureCollection(mapUi.searchHighlight),
     [mapUi.searchHighlight],
@@ -848,9 +872,21 @@ export default function BuildScreen({ navigation, route }) {
           : null,
         start: selectedCatalogEntry?.start || null,
         end: selectedCatalogEntry?.end || null,
+        mapVersion: state.assets?.manifest?.version || null,
+        segmentsHash: state.assets?.manifest?.hashes?.segments || null,
       }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [routeState.geometry, shareInfo.param, selectedCatalogSlug, selectedCatalogEntry],
+    [
+      routeState.geometry,
+      routeState.guidanceSpans,
+      routeState.guidanceMode,
+      routeState.guidancePresentationPolicy,
+      shareInfo.param,
+      selectedCatalogSlug,
+      selectedCatalogEntry,
+      state.assets?.manifest?.version,
+      state.assets?.manifest?.hashes?.segments,
+    ],
   );
 
   const [rideIntroVisible, setRideIntroVisible] = useState(false);
@@ -3669,6 +3705,14 @@ export default function BuildScreen({ navigation, route }) {
           ) : null}
           <LineLayer id="route-line" style={routeLineStyles.core} />
         </ShapeSource>
+        {!isNavigating && selectedItineraryRange ? (
+          <ShapeSource id="route-itinerary-highlight" shape={itineraryHighlightGeometry}>
+            <LineLayer
+              id="route-itinerary-highlight-line"
+              style={ROUTE_ITINERARY_HIGHLIGHT_STYLE}
+            />
+          </ShapeSource>
+        ) : null}
         {(rideIntroVisible || rideSettingsVisible || pickOnMapMode) && ridePlan?.effectiveRoute ? (
           <ShapeSource id="ride-setup-preview" shape={setupPreviewGeometry}>
             <LineLayer
@@ -4076,6 +4120,10 @@ export default function BuildScreen({ navigation, route }) {
             onPlanOppositeDirection={handlePlanOppositeDirection}
             onAcceptRouteProposal={handleAcceptRouteProposal}
             onDismissRouteProposal={handleDismissRouteProposal}
+            selectedItineraryId={selectedItineraryRange?.id || null}
+            onItinerarySelect={(range) =>
+              setSelectedItineraryRange((current) =>
+                current?.id === range?.id ? null : range)}
             emptyState={
               <BuildEmptyActions
                 searchQuery={mapUi.searchQuery}
@@ -4195,6 +4243,8 @@ function BuildPanelContent({
   onPlanOppositeDirection,
   onAcceptRouteProposal,
   onDismissRouteProposal,
+  selectedItineraryId,
+  onItinerarySelect,
 }) {
   const buildModel = getPlannerBuildModel(routeState);
   const hasPoints = routePoints.length > 0;
@@ -4293,6 +4343,14 @@ function BuildPanelContent({
             </View>
           ) : null}
 
+          {buildModel.itinerary.length > 0 ? (
+            <NativeRouteItinerary
+              rows={buildModel.itinerary}
+              selectedId={selectedItineraryId}
+              onSelect={onItinerarySelect}
+            />
+          ) : null}
+
           {buildModel.hasRoute ? (
             <View style={styles.directionActions}>
               <ChromeButton
@@ -4354,6 +4412,80 @@ function BuildPanelContent({
       )}
     </View>
   );
+}
+
+function NativeRouteItinerary({ rows, selectedId, onSelect }) {
+  const [expandedId, setExpandedId] = useState(null);
+  return (
+    <View style={styles.itinerary} accessibilityLabel="הדרך במסלול">
+      <Text style={styles.itineraryTitle}>הדרך במסלול</Text>
+      {rows.map((row) => {
+        const expanded = expandedId === row.id;
+        return (
+          <Pressable
+            key={row.id}
+            accessibilityRole="button"
+            accessibilityLabel={`${row.name}, ${(row.distanceMeters / 1000).toFixed(1)} קילומטר`}
+            accessibilityState={{ expanded }}
+            onPress={() => {
+              setExpandedId(expanded ? null : row.id);
+              onSelect?.({
+                id: row.id,
+                startMeters: row.startMeters,
+                endMeters: row.endMeters,
+              });
+            }}
+            style={[
+              styles.itineraryRow,
+              selectedId === row.id ? styles.itineraryRowSelected : null,
+            ]}
+          >
+            <View style={styles.itineraryRowSummary}>
+              <Text style={styles.itineraryIcon}>{nativeItineraryIcon(row.icon)}</Text>
+              <Text style={styles.itineraryName} numberOfLines={1}>{row.name}</Text>
+              <Text style={styles.itineraryDistance}>
+                {(row.distanceMeters / 1000).toFixed(1)} ק״מ
+              </Text>
+              {row.warningCount > 0 ? (
+                <Text style={styles.itineraryWarning}>⚠ {row.warningCount}</Text>
+              ) : null}
+            </View>
+            {expanded ? (
+              <View style={styles.itineraryDetails}>
+                {row.sectionLabels.length > 0 ? (
+                  <Text style={styles.itineraryDetailText}>{row.sectionLabels.join(" · ")}</Text>
+                ) : null}
+                <Text style={styles.itineraryDetailText}>
+                  {row.isFallback ? "שם לפי סוג הדרך" : `סוג: ${row.kind}`}
+                </Text>
+                {row.junctionContexts.map((junction, index) =>
+                  junction.junctionName ? (
+                    <Text
+                      key={`${junction.junctionId || "junction"}-${index}`}
+                      style={styles.itineraryDetailText}
+                    >
+                      דרך {junction.junctionName}
+                    </Text>
+                  ) : null)}
+              </View>
+            ) : null}
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
+function nativeItineraryIcon(icon) {
+  return {
+    road: "🛣️",
+    cycleway: "🚲",
+    "dirt-road": "〰️",
+    trail: "🥾",
+    promenade: "🚶",
+    bridge: "🌉",
+    connector: "↔️",
+  }[icon] || "•";
 }
 
 // Primary route actions, pinned to the bottom of the planner sheet so they stay
@@ -4465,7 +4597,8 @@ function RouteSummaryModal({
   shareUrl,
   visible,
 }) {
-  const hasSegments = routeState.selectedSegments.length > 0;
+  const itinerary = getPlannerBuildModel(routeState).itinerary;
+  const hasSegments = itinerary.length > 0;
   const hasDataPoints = activeDataPoints.length > 0;
   const canShareRoute = Boolean(shareUrl) && shareStatus !== "too_long";
 
@@ -4500,12 +4633,12 @@ function RouteSummaryModal({
             </SummarySection>
             <SummarySection title="דרך המסלול">
               {hasSegments ? (
-                routeState.selectedSegments.map((segmentName, index) => (
+                itinerary.map((row, index) => (
                   <Text
-                    key={`${segmentName}-${index}`}
+                    key={row.id}
                     style={styles.summarySegmentText}
                   >
-                    {index + 1}. {segmentName}
+                    {index + 1}. {row.name} · {(row.distanceMeters / 1000).toFixed(1)} ק״מ
                   </Text>
                 ))
               ) : (
@@ -5488,6 +5621,66 @@ const styles = StyleSheet.create({
   routeProposalHint: {
     ...text.caption,
     color: "#52616f",
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  itinerary: {
+    gap: 7,
+    marginTop: 8,
+  },
+  itineraryTitle: {
+    ...text.bodyStrong,
+    color: palette.ink,
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  itineraryRow: {
+    overflow: "hidden",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: palette.line,
+    borderRadius: 10,
+    backgroundColor: palette.paper,
+  },
+  itineraryRowSelected: {
+    borderColor: "#b5742e",
+    borderWidth: 2,
+    backgroundColor: "rgba(181, 116, 46, 0.08)",
+  },
+  itineraryRowSummary: {
+    minHeight: 46,
+    paddingHorizontal: 10,
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    gap: 8,
+  },
+  itineraryIcon: {
+    fontSize: fontSizes.lg,
+  },
+  itineraryName: {
+    ...text.bodyStrong,
+    flex: 1,
+    color: palette.ink,
+    textAlign: "right",
+    writingDirection: "rtl",
+  },
+  itineraryDistance: {
+    ...text.caption,
+    color: palette.muted,
+  },
+  itineraryWarning: {
+    ...text.caption,
+    color: "#9b651c",
+  },
+  itineraryDetails: {
+    gap: 3,
+    paddingHorizontal: 36,
+    paddingVertical: 8,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: palette.line,
+  },
+  itineraryDetailText: {
+    ...text.caption,
+    color: palette.muted,
     textAlign: "right",
     writingDirection: "rtl",
   },

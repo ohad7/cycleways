@@ -48,7 +48,21 @@ function guidanceSpeechName(guidance) {
   return guidance?.spokenName || guidance?.name || null;
 }
 
-function continueOnWayText(cue, locale) {
+function crossFeatureSuffix(cue, locale) {
+  const name = guidanceSpeechName(cue?.crossFeatureGuidance);
+  if (!name) return "";
+  return locale === "he-IL"
+    ? ` וחצו את ${name}`
+    : ` and cross ${name}`;
+}
+
+// The long-run confirmation is preview-only. In the final phase the rider is
+// executing the maneuver, and the appended clause is several seconds of speech
+// that would still be playing well past the turn — roughly 30 m of travel at
+// 25 km/h. The final call carries the maneuver and its destination way alone.
+// See plans/navigation-way-names/design.md, "Named-way confirmation".
+function continueOnWayText(cue, locale, phase) {
+  if (phase !== "preview") return "";
   const distance = formatNavigationHorizonMeters(cue?.continueOnWayMeters, locale);
   if (!distance || !cue?.continueOnWayGuidance?.guidanceIdentity) return "";
   return locale === "he-IL"
@@ -241,7 +255,7 @@ function cuePhrase(event, state, locale) {
       const then = thenManeuverText(cue.thenManeuver, locale, "crossing");
       const guidanceName = guidanceSpeechName(cue.ontoGuidance);
       const ontoName = guidanceName || cue.ontoSegmentName;
-      const directHorizon = ontoName
+      const directHorizon = ontoName && event.phase === "preview"
         ? formatNavigationHorizonMeters(cue.continueOnWayMeters, locale)
         : "";
       const onto = ontoName
@@ -264,7 +278,7 @@ function cuePhrase(event, state, locale) {
       const thenDestination = thenNeedsDestination
         ? locale === "he-IL" ? ` אל ${ontoName}` : ` onto ${ontoName}`
         : "";
-      return `${prefix}${phrase}${then || onto}${thenDestination}${then ? continueOnWayText(cue, locale) : ""}`;
+      return `${prefix}${phrase}${then || onto}${thenDestination}${crossFeatureSuffix(cue, locale)}${then ? continueOnWayText(cue, locale, event.phase) : ""}`;
     }
     case "turn": {
       const ontoName = guidanceSpeechName(cue.ontoGuidance) || cue.ontoSegmentName;
@@ -287,8 +301,8 @@ function cuePhrase(event, state, locale) {
           : `${prefix}turn ${directionText(cue.direction, locale)} to stay on ${stayName}${then}`;
       }
       return locale === "he-IL"
-        ? `${prefix}פנה ${directionText(cue.direction, locale)}${onto}${then}${continueOnWayText(cue, locale)}`
-        : `${prefix}turn ${directionText(cue.direction, locale)}${onto}${then}${continueOnWayText(cue, locale)}`;
+        ? `${prefix}פנה ${directionText(cue.direction, locale)}${onto}${then}${crossFeatureSuffix(cue, locale)}${continueOnWayText(cue, locale, event.phase)}`
+        : `${prefix}turn ${directionText(cue.direction, locale)}${onto}${then}${crossFeatureSuffix(cue, locale)}${continueOnWayText(cue, locale, event.phase)}`;
     }
     case "roundabout": {
       const phrase = cue.containsReviewedCrossing
@@ -307,11 +321,19 @@ function cuePhrase(event, state, locale) {
         ? locale === "he-IL" ? `, והישארו על ${stayName}` : `, staying on ${stayName}`
         : "";
       return phrase
-        ? `${prefix}${junctionContext}${phrase}${onto}${stay}${then}${continueOnWayText(cue, locale)}`
+        ? `${prefix}${junctionContext}${phrase}${onto}${stay}${then}${crossFeatureSuffix(cue, locale)}${continueOnWayText(cue, locale, event.phase)}`
         : null;
     }
     case "bend":
       return null;
+    case "cross-feature": {
+      if (event.phase !== "final") return null;
+      const featureName = guidanceSpeechName(cue.guidance);
+      if (!featureName) return null;
+      return locale === "he-IL"
+        ? `חצו את ${featureName}`
+        : `Cross ${featureName}`;
+    }
     case "enter-segment":
       if (event.phase !== "final" || !cue.segmentName) return null;
       return locale === "he-IL"
