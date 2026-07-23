@@ -76,6 +76,18 @@
       "kind": "cycleway",
       "aliases": [],
       "spokenName": null
+    },
+    "cycleway-tel-anafa": {
+      "name": "שביל אופניים שדה נחמיה כפר סאלד",
+      "kind": "dirt-road",
+      "aliases": [],
+      "spokenName": null
+    },
+    "cycleway-banias": {
+      "name": "שביל אופניים בניאס",
+      "kind": "dirt-road",
+      "aliases": [],
+      "spokenName": null
     }
   }
 }

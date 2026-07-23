@@ -23712,7 +23712,11 @@
               }
             ]
           }
-        ]
+        ],
+        "guidance": {
+          "role": "named-way",
+          "wayId": "cycleway-banias"
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -24011,7 +24015,11 @@
               }
             ]
           }
-        ]
+        ],
+        "guidance": {
+          "role": "named-way",
+          "wayId": "cycleway-banias"
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -24456,6 +24464,10 @@
           "safety": 3,
           "comfort": 3,
           "scenery": 3
+        },
+        "guidance": {
+          "role": "named-way",
+          "wayId": "cycleway-banias"
         }
       },
       "geometry": {
@@ -24716,6 +24728,10 @@
           "safety": 3,
           "comfort": 3,
           "scenery": 3
+        },
+        "guidance": {
+          "role": "named-way",
+          "wayId": "cycleway-banias"
         }
       },
       "geometry": {
@@ -25260,6 +25276,10 @@
           "safety": 3,
           "comfort": 3,
           "scenery": 3
+        },
+        "guidance": {
+          "role": "named-way",
+          "wayId": "cycleway-tel-anafa"
         }
       },
       "geometry": {
@@ -25912,6 +25932,10 @@
           "safety": 3,
           "comfort": 3,
           "scenery": 3
+        },
+        "guidance": {
+          "role": "named-way",
+          "wayId": "cycleway-tel-anafa"
         }
       },
       "geometry": {
@@ -26132,6 +26156,10 @@
           "safety": 3,
           "comfort": 3,
           "scenery": 3
+        },
+        "guidance": {
+          "role": "named-way",
+          "wayId": "cycleway-tel-anafa"
         }
       },
       "geometry": {
@@ -26561,7 +26589,11 @@
           "scenery": 3
         },
         "splitFrom": 215,
-        "splitFromName": "שביל שדות כפר סאלד נחל רחום"
+        "splitFromName": "שביל שדות כפר סאלד נחל רחום",
+        "guidance": {
+          "role": "named-way",
+          "wayId": "cycleway-tel-anafa"
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -65338,6 +65370,10 @@
           "safety": 3,
           "comfort": 3,
           "scenery": 3
+        },
+        "guidance": {
+          "role": "named-way",
+          "wayId": "cycleway-9779"
         }
       },
       "geometry": {
@@ -65478,7 +65514,11 @@
           "scenery": 3
         },
         "splitFrom": 146,
-        "splitFromName": "רחוב הנרייטה סאלד"
+        "splitFromName": "רחוב הנרייטה סאלד",
+        "guidance": {
+          "role": "named-way",
+          "wayId": "cycleway-9779"
+        }
       },
       "geometry": {
         "type": "LineString",

@@ -5969,7 +5969,7 @@
           }
         }
       },
-      "lifecycleStatus": "active",
+      "lifecycleStatus": "deprecated",
       "migration": {
         "classification": "symmetric_candidate",
         "endpointMatch": {
@@ -5990,9 +5990,9 @@
         "lastOutcomeCode": "exact_safe_reverse",
         "automaticPublication": "bidirectional-authoring"
       },
-      "navigable": true,
+      "navigable": false,
       "segmentId": 53,
-      "segmentName": "כביש 959 גונן",
+      "segmentName": "כביש 959 גונן [split archive 53]",
       "sourceGeometryDigest": "82d56360034d545a544423dd1dd20f6392da018178d629935312d60735e0af36"
     },
     "54": {
@@ -42741,9 +42741,8 @@
       },
       "alignments": {
         "aToB": {
-          "published": null,
-          "draft": {
-            "disposition": "needs_review",
+          "published": {
+            "disposition": "accepted",
             "realization": {
               "type": "explicit",
               "edgeRefs": [
@@ -42777,169 +42776,56 @@
               ]
             },
             "mappingDigest": "e781f6c6589fe544c2cf076465498de67be1b0153cf9e38c3134d67b894af21c",
-            "candidate": {
-              "kind": "automatic-match",
-              "sourceRevision": 1784828755915374
-            },
-            "validation": {
-              "ok": false,
-              "status": "invalid",
-              "reasons": [
-                {
-                  "code": "directed_ownership_conflict",
-                  "edgeId": "e30903688_3",
-                  "owner": {
-                    "segmentId": 53,
-                    "segmentName": "כביש 959 גונן",
-                    "alignmentKey": "aToB"
-                  }
-                },
-                {
-                  "code": "directed_ownership_conflict",
-                  "edgeId": "e30903688_2",
-                  "owner": {
-                    "segmentId": 53,
-                    "segmentName": "כביש 959 גונן",
-                    "alignmentKey": "aToB"
-                  }
-                },
-                {
-                  "code": "directed_ownership_conflict",
-                  "edgeId": "e30903688_1",
-                  "owner": {
-                    "segmentId": 53,
-                    "segmentName": "כביש 959 גונן",
-                    "alignmentKey": "aToB"
-                  }
-                }
-              ],
-              "traversalStates": {
-                "0:e30903688_3": "allowed",
-                "1:e30903688_2": "allowed",
-                "2:e30903688_1": "allowed"
-              },
-              "policyPrecedence": [],
-              "terminals": {
-                "start": [
-                  35.6540762,
-                  33.1254646
-                ],
-                "end": [
-                  35.6483645,
-                  33.1208368
-                ]
-              },
-              "endpointDistancesMeters": {
-                "start": 3.044282828771675,
-                "end": 0.1774840194654876
-              }
+            "review": {
+              "reviewer": "editor-automatic",
+              "reviewedAt": "2026-07-23",
+              "batchId": "network-authoring-372-888888",
+              "rationale": "Previously completed path revalidated after its ownership blocker was released",
+              "acceptanceBasis": "automatic-bidirectional-evidence",
+              "automated": true,
+              "graphDigest": "e384308aad9c33e911798f376978dc9866408b18281cfa2bc8732b2f30eaf26f",
+              "policyDigest": "9a8bbb7bdf928deb390f9446260665ac01ac56f208305e3ee2e664aa30bd0a2c",
+              "sourceGeometryDigest": "e09955f0deba0c997f335b9087a31b73678c12ca3c0fa27ebd5fee46ab1c3860",
+              "mappingDigest": "e781f6c6589fe544c2cf076465498de67be1b0153cf9e38c3134d67b894af21c",
+              "evidenceDigest": "df1c098a76cd4df331f7c93ac6f458bef9e9ea4477ac6067296a1dbac5fb0145"
             }
-          }
+          },
+          "draft": null
         },
         "bToA": {
-          "published": null,
-          "draft": {
-            "disposition": "needs_review",
+          "published": {
+            "disposition": "accepted",
             "realization": {
-              "type": "explicit",
-              "edgeRefs": [
-                {
-                  "edgeId": "e30903688_1",
-                  "source": "osm",
-                  "direction": "forward",
-                  "sequenceIndex": 0,
-                  "fromFraction": 0,
-                  "toFraction": 1,
-                  "osmWayId": 30903688
-                },
-                {
-                  "edgeId": "e30903688_2",
-                  "source": "osm",
-                  "direction": "forward",
-                  "sequenceIndex": 1,
-                  "fromFraction": 0,
-                  "toFraction": 1,
-                  "osmWayId": 30903688
-                },
-                {
-                  "edgeId": "e30903688_3",
-                  "source": "osm",
-                  "direction": "forward",
-                  "sequenceIndex": 2,
-                  "fromFraction": 0,
-                  "toFraction": 1,
-                  "osmWayId": 30903688
-                }
-              ]
+              "type": "reverseOf",
+              "alignmentKey": "aToB",
+              "referencedMappingDigest": "e781f6c6589fe544c2cf076465498de67be1b0153cf9e38c3134d67b894af21c"
             },
-            "mappingDigest": "977001c8b7203d096d5b1e1ddcd7bdd0a7233df7f8f1b19c57e024911e73be2b",
-            "candidate": {
-              "kind": "exact-reverse",
-              "sourceRevision": 1784828755915374
-            },
-            "validation": {
-              "ok": false,
-              "status": "invalid",
-              "reasons": [
-                {
-                  "code": "directed_ownership_conflict",
-                  "edgeId": "e30903688_1",
-                  "owner": {
-                    "segmentId": 53,
-                    "segmentName": "כביש 959 גונן",
-                    "alignmentKey": "bToA"
-                  }
-                },
-                {
-                  "code": "directed_ownership_conflict",
-                  "edgeId": "e30903688_2",
-                  "owner": {
-                    "segmentId": 53,
-                    "segmentName": "כביש 959 גונן",
-                    "alignmentKey": "bToA"
-                  }
-                },
-                {
-                  "code": "directed_ownership_conflict",
-                  "edgeId": "e30903688_3",
-                  "owner": {
-                    "segmentId": 53,
-                    "segmentName": "כביש 959 גונן",
-                    "alignmentKey": "bToA"
-                  }
-                }
-              ],
-              "traversalStates": {
-                "0:e30903688_1": "allowed",
-                "1:e30903688_2": "allowed",
-                "2:e30903688_3": "allowed"
-              },
-              "policyPrecedence": [],
-              "terminals": {
-                "start": [
-                  35.6483645,
-                  33.1208368
-                ],
-                "end": [
-                  35.6540762,
-                  33.1254646
-                ]
-              },
-              "endpointDistancesMeters": {
-                "start": 0.1774840194654876,
-                "end": 3.044282828771675
-              }
+            "mappingDigest": "fea09ec6d6b2b28cc559559105b195234471a52774c624506e11ea73d2cb8970",
+            "review": {
+              "reviewer": "editor-automatic",
+              "reviewedAt": "2026-07-23",
+              "batchId": "network-authoring-372-888888",
+              "rationale": "Previously completed path revalidated after its ownership blocker was released",
+              "acceptanceBasis": "automatic-bidirectional-evidence",
+              "automated": true,
+              "graphDigest": "e384308aad9c33e911798f376978dc9866408b18281cfa2bc8732b2f30eaf26f",
+              "policyDigest": "9a8bbb7bdf928deb390f9446260665ac01ac56f208305e3ee2e664aa30bd0a2c",
+              "sourceGeometryDigest": "e09955f0deba0c997f335b9087a31b73678c12ca3c0fa27ebd5fee46ab1c3860",
+              "mappingDigest": "fea09ec6d6b2b28cc559559105b195234471a52774c624506e11ea73d2cb8970",
+              "evidenceDigest": "524ec597ab9d272c659795f10686ce8e2802dca88010da7f3704e69309854416"
             }
-          }
+          },
+          "draft": null
         }
       },
       "migration": {
-        "classification": "unresolved",
+        "classification": "symmetric_candidate",
         "sourceSchemaVersion": 2,
         "sourceMappingOrigin": "network-authoring-v2",
         "authoringRevision": 1784828755915374,
-        "lastOutcome": "needs-decision",
-        "lastOutcomeCode": "directed_ownership_conflict"
+        "lastOutcome": "apply",
+        "lastOutcomeCode": "exact_safe_reverse",
+        "automaticPublication": "bidirectional-evidence"
       }
     },
     "373": {
@@ -42972,9 +42858,8 @@
       },
       "alignments": {
         "aToB": {
-          "published": null,
-          "draft": {
-            "disposition": "needs_review",
+          "published": {
+            "disposition": "accepted",
             "realization": {
               "type": "explicit",
               "edgeRefs": [
@@ -42990,111 +42875,56 @@
               ]
             },
             "mappingDigest": "749d813e18462bef066db46e18c63c9e1df569a156bdfc8fa8ae2fd167271175",
-            "candidate": {
-              "kind": "automatic-match",
-              "sourceRevision": 1784828755915375
-            },
-            "validation": {
-              "ok": false,
-              "status": "invalid",
-              "reasons": [
-                {
-                  "code": "directed_ownership_conflict",
-                  "edgeId": "e189026378_8",
-                  "owner": {
-                    "segmentId": 53,
-                    "segmentName": "כביש 959 גונן",
-                    "alignmentKey": "aToB"
-                  }
-                }
-              ],
-              "traversalStates": {
-                "0:e189026378_8": "allowed"
-              },
-              "policyPrecedence": [],
-              "terminals": {
-                "start": [
-                  35.6483645,
-                  33.1208368
-                ],
-                "end": [
-                  35.6456533,
-                  33.1114537
-                ]
-              },
-              "endpointDistancesMeters": {
-                "start": 0.1774840194654876,
-                "end": 1.3180320884090466
-              }
+            "review": {
+              "reviewer": "editor-automatic",
+              "reviewedAt": "2026-07-23",
+              "batchId": "network-authoring-373-888888",
+              "rationale": "Previously completed path revalidated after its ownership blocker was released",
+              "acceptanceBasis": "automatic-bidirectional-evidence",
+              "automated": true,
+              "graphDigest": "e384308aad9c33e911798f376978dc9866408b18281cfa2bc8732b2f30eaf26f",
+              "policyDigest": "9a8bbb7bdf928deb390f9446260665ac01ac56f208305e3ee2e664aa30bd0a2c",
+              "sourceGeometryDigest": "958c3c0995a94e61841277402402df19fa11d48cfb2e0dce74fb4acd32bfb269",
+              "mappingDigest": "749d813e18462bef066db46e18c63c9e1df569a156bdfc8fa8ae2fd167271175",
+              "evidenceDigest": "536b54d3bab52bbf89bf07c92c7066fff730e8b100e2e1964fa0666556793a48"
             }
-          }
+          },
+          "draft": null
         },
         "bToA": {
-          "published": null,
-          "draft": {
-            "disposition": "needs_review",
+          "published": {
+            "disposition": "accepted",
             "realization": {
-              "type": "explicit",
-              "edgeRefs": [
-                {
-                  "edgeId": "e189026378_8",
-                  "source": "osm",
-                  "direction": "reverse",
-                  "sequenceIndex": 0,
-                  "fromFraction": 0,
-                  "toFraction": 1,
-                  "osmWayId": 189026378
-                }
-              ]
+              "type": "reverseOf",
+              "alignmentKey": "aToB",
+              "referencedMappingDigest": "749d813e18462bef066db46e18c63c9e1df569a156bdfc8fa8ae2fd167271175"
             },
-            "mappingDigest": "27dbcc73a7c7001bf454837531c516d1669bb00ef4252694459a1d1e9b940894",
-            "candidate": {
-              "kind": "exact-reverse",
-              "sourceRevision": 1784828755915375
-            },
-            "validation": {
-              "ok": false,
-              "status": "invalid",
-              "reasons": [
-                {
-                  "code": "directed_ownership_conflict",
-                  "edgeId": "e189026378_8",
-                  "owner": {
-                    "segmentId": 53,
-                    "segmentName": "כביש 959 גונן",
-                    "alignmentKey": "bToA"
-                  }
-                }
-              ],
-              "traversalStates": {
-                "0:e189026378_8": "allowed"
-              },
-              "policyPrecedence": [],
-              "terminals": {
-                "start": [
-                  35.6456533,
-                  33.1114537
-                ],
-                "end": [
-                  35.6483645,
-                  33.1208368
-                ]
-              },
-              "endpointDistancesMeters": {
-                "start": 1.3180320884090466,
-                "end": 0.1774840194654876
-              }
+            "mappingDigest": "40c109e52a8e61706b278baca778cd11ae10ee6656e56d551d52761d73351eb3",
+            "review": {
+              "reviewer": "editor-automatic",
+              "reviewedAt": "2026-07-23",
+              "batchId": "network-authoring-373-888888",
+              "rationale": "Previously completed path revalidated after its ownership blocker was released",
+              "acceptanceBasis": "automatic-bidirectional-evidence",
+              "automated": true,
+              "graphDigest": "e384308aad9c33e911798f376978dc9866408b18281cfa2bc8732b2f30eaf26f",
+              "policyDigest": "9a8bbb7bdf928deb390f9446260665ac01ac56f208305e3ee2e664aa30bd0a2c",
+              "sourceGeometryDigest": "958c3c0995a94e61841277402402df19fa11d48cfb2e0dce74fb4acd32bfb269",
+              "mappingDigest": "40c109e52a8e61706b278baca778cd11ae10ee6656e56d551d52761d73351eb3",
+              "evidenceDigest": "3a66002c6755a294038c73c4b39768eae2cec81c3b5fe1b7a3683b558a3e49fe"
             }
-          }
+          },
+          "draft": null
         }
       },
       "migration": {
-        "classification": "unresolved",
+        "classification": "symmetric_candidate",
         "sourceSchemaVersion": 2,
         "sourceMappingOrigin": "network-authoring-v2",
         "authoringRevision": 1784828755915375,
-        "lastOutcome": "needs-decision",
-        "lastOutcomeCode": "directed_ownership_conflict"
+        "lastOutcome": "apply",
+        "lastOutcomeCode": "exact_safe_reverse",
+        "automaticPublication": "bidirectional-evidence"
       }
     }
   }
