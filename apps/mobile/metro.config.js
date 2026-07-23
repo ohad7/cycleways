@@ -4,6 +4,9 @@
 // ("@cycleways/core/utils/...", "@cycleways/core/route-manager.js") work.
 const { getDefaultConfig } = require("expo/metro-config");
 const path = require("path");
+const {
+  productionDevStubFor,
+} = require("./metro-production-stubs.cjs");
 
 const projectRoot = __dirname;
 const workspaceRoot = path.resolve(projectRoot, "../..");
@@ -16,25 +19,6 @@ const nativePlatformModules = new Set([
   "location",
   "storage",
 ]);
-const devHarnessModules = new Set([
-  "@cycleways/core/navigation/scenarios/index.js",
-  "@cycleways/core/navigation/scenarios/resolve.js",
-  "@cycleways/core/navigation/scenarios/journeySchema.js",
-  "@cycleways/core/navigation/scenarioConnector.js",
-  "../navigation/journeyPlaybackSource.js",
-  "../navigation/journeyHarnessState.js",
-  "../planner/DevScenarioPicker.jsx",
-  "../planner/DevCameraOverlay.jsx",
-  "../planner/DevJourneyControls.jsx",
-  "../dev/demoCaptureClient.js",
-  "../dev/demoCaptureLaunch.js",
-  "./src/dev/demoCaptureLaunch.js",
-  "../navigation/mediaClockPlaybackSource.js",
-  "../navigation/demoCaptureEvents.js",
-  "../navigation/useDemoCaptureSession.js",
-  "../planner/DevDemoCaptureSlate.jsx",
-]);
-
 config.watchFolders = [workspaceRoot];
 config.resolver.nodeModulesPaths = [
   path.resolve(projectRoot, "node_modules"),
@@ -43,17 +27,13 @@ config.resolver.nodeModulesPaths = [
 config.resolver.unstable_enablePackageExports = true;
 config.resolver.assetExts = [...config.resolver.assetExts, "cwb"];
 config.resolver.resolveRequest = (context, moduleName, platform) => {
-  if (context.dev === false && devHarnessModules.has(moduleName)) {
-    if (moduleName.includes("demoCapture") || moduleName.includes("mediaClockPlaybackSource")) {
-      return context.resolveRequest(
-        context,
-        path.resolve(projectRoot, "src/dev/emptyDemoCapture.js"),
-        platform,
-      );
-    }
+  const productionDevStub = context.dev === false
+    ? productionDevStubFor(moduleName)
+    : null;
+  if (productionDevStub) {
     return context.resolveRequest(
       context,
-      path.resolve(projectRoot, "src/dev/emptyDevHarness.js"),
+      path.resolve(projectRoot, "src/dev", productionDevStub),
       platform,
     );
   }

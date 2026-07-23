@@ -1,11 +1,57 @@
 import assert from "node:assert/strict";
+import { createRequire } from "node:module";
 import { readFile } from "node:fs/promises";
 
-const metro = await readFile("apps/mobile/metro.config.js", "utf8");
-for (const module of ["demoCaptureClient", "demoCaptureLaunch", "mediaClockPlaybackSource", "demoCaptureEvents"]) {
-  assert.match(metro, new RegExp(module), `${module} must be production-replaced`);
+const require = createRequire(import.meta.url);
+const {
+  demoCaptureModules,
+  devHarnessModules,
+  productionDevStubFor,
+} = require("../apps/mobile/metro-production-stubs.cjs");
+
+for (const moduleName of demoCaptureModules) {
+  assert.equal(
+    productionDevStubFor(moduleName),
+    "emptyDemoCapture.js",
+    `${moduleName} must retain the empty demo-capture API in production`,
+  );
 }
-assert.match(metro, /emptyDemoCapture/);
+for (const moduleName of devHarnessModules) {
+  assert.ok(
+    productionDevStubFor(moduleName),
+    `${moduleName} must be production-replaced`,
+  );
+}
+assert.equal(
+  productionDevStubFor("../navigation/useDemoCaptureSession.js"),
+  "emptyDemoCapture.js",
+  "BuildScreen's demo-capture hook must remain callable in production",
+);
+assert.equal(
+  productionDevStubFor("../navigation/notADevHarness.js"),
+  null,
+  "ordinary navigation modules must not be replaced",
+);
+const emptyDemoCapture = await import(
+  "../apps/mobile/src/dev/emptyDemoCapture.js"
+);
+assert.equal(
+  typeof emptyDemoCapture.useDemoCaptureSession,
+  "function",
+  "the production replacement must preserve BuildScreen's hook API",
+);
+assert.deepEqual(
+  emptyDemoCapture.useDemoCaptureSession(),
+  {
+    active: false,
+    phase: "inactive",
+    scenario: null,
+    source: null,
+    error: null,
+    eventSink: null,
+  },
+  "the production hook must return an inactive capture session",
+);
 
 const app = await readFile("apps/mobile/App.js", "utf8");
 assert.match(app, /Open debugger to view warnings/, "the React Native debugger warning must not enter a capture");
