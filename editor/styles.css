@@ -3365,6 +3365,19 @@ button.direction-review-queue-item {
   gap: 4px;
 }
 
+.ways-seg-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.ways-seg-swatch {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex: none;
+}
+
 .guidance-suggestion-fields {
   display: grid;
   gap: 6px;

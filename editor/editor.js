@@ -2948,6 +2948,7 @@ function updateWorkspaceLayerVisibility() {
     "ways-candidate-layer",
     "ways-member-layer",
     "ways-preview-layer",
+    "ways-preview-label",
     "ways-hover-layer",
   ]) {
     setLayerVisibility(layerId, state.workspaceMode === "ways");
@@ -11291,14 +11292,27 @@ function focusQueueItemOnMap(item) {
 function queueSegmentChips(item) {
   const row = document.createElement("div");
   row.className = "guidance-suggestion-segments";
+  const colors = waysPreviewColorMap();
+  const multi = item.segmentIds.length > 1;
   for (const segmentId of item.segmentIds) {
     const button = document.createElement("button");
     button.type = "button";
-    button.className = "mini-button";
-    button.textContent = `#${segmentId}`;
+    button.className = "mini-button ways-seg-chip";
+    if (multi) {
+      // The swatch matches the segment's colour on the map, so the chip and the
+      // line are obviously the same #321.
+      const swatch = document.createElement("i");
+      swatch.className = "ways-seg-swatch";
+      swatch.style.background = colors.get(segmentId) || WAYS_PREVIEW_SINGLE;
+      button.append(swatch);
+    }
+    button.append(document.createTextNode(`#${segmentId}`));
     button.addEventListener("click", () => {
       selectSegmentInWays(segmentId, { fit: true });
     });
+    // Pointing at a chip flashes just that segment, for the moment the colours
+    // alone are not enough.
+    if (multi) bindWaysRowHover(button, segmentId);
     row.append(button);
   }
   return row;
@@ -12384,6 +12398,39 @@ function renderWaysManager() {
  * Tag every active segment with the role it plays for the current selection,
  * so one source drives the member / candidate / taken / preview layers.
  */
+// A categorical palette for telling apart the several segments a suggestion
+// groups into one road. Chosen to read on the outdoors basemap and to stay
+// clear of the other Ways colours (member teal, hover orange, taken purple).
+const WAYS_PREVIEW_PALETTE = [
+  "#1c7ed6", // blue
+  "#d6336c", // pink
+  "#f59f00", // gold
+  "#7048e8", // indigo
+  "#0ca678", // emerald
+  "#e8590c", // burnt orange
+];
+// A lone preview keeps the established amber highlight: with one segment there
+// is nothing to disambiguate, so nothing new should appear.
+const WAYS_PREVIEW_SINGLE = "#f2c94c";
+
+/**
+ * Assign each previewed segment a stable colour by its order in the group, so
+ * a suggestion's #321 and #322 are two different colours on the map and on the
+ * card chips instead of one indistinguishable blob.
+ */
+function waysPreviewColorMap() {
+  const ids = [...new Set((state.guidance.previewSegmentIds || []).map(Number))];
+  const colors = new Map();
+  if (ids.length <= 1) {
+    for (const id of ids) colors.set(id, WAYS_PREVIEW_SINGLE);
+    return colors;
+  }
+  ids.forEach((id, index) => {
+    colors.set(id, WAYS_PREVIEW_PALETTE[index % WAYS_PREVIEW_PALETTE.length]);
+  });
+  return colors;
+}
+
 function waysContextFeatureCollection() {
   const model = state.guidance.model;
   if (!model || state.workspaceMode !== "ways") return EMPTY_FEATURE_COLLECTION;
@@ -12392,6 +12439,8 @@ function waysContextFeatureCollection() {
     model.candidates.map((candidate) => [candidate.segmentId, candidate]),
   );
   const previewIds = new Set((state.guidance.previewSegmentIds || []).map(Number));
+  const previewColors = waysPreviewColorMap();
+  const labelPreview = previewColors.size > 1;
   const features = [];
   for (const { feature, sourceIndex } of state.activeFeatures) {
     const segmentId = Number(feature.properties?.id);
@@ -12409,10 +12458,12 @@ function waysContextFeatureCollection() {
       waysRole = "other-way";
     }
     if (!waysRole) continue;
-    features.push({
-      ...feature,
-      properties: { ...feature.properties, sourceIndex, waysRole },
-    });
+    const properties = { ...feature.properties, sourceIndex, waysRole };
+    if (waysRole === "preview") {
+      properties.previewColor = previewColors.get(segmentId) || WAYS_PREVIEW_SINGLE;
+      if (labelPreview) properties.previewLabel = `#${segmentId}`;
+    }
+    features.push({ ...feature, properties });
   }
   return { type: "FeatureCollection", features };
 }
@@ -15827,9 +15878,36 @@ async function addMapLayers() {
       filter: ["==", ["get", "waysRole"], "preview"],
       layout: { "line-join": "round", "line-cap": "round", visibility: "none" },
       paint: {
-        "line-color": "#f2c94c",
+        // Each segment of a multi-segment suggestion gets its own colour;
+        // a lone preview falls back to the amber highlight.
+        "line-color": ["coalesce", ["get", "previewColor"], "#f2c94c"],
         "line-width": 8,
         "line-opacity": 0.95,
+      },
+    });
+  }
+
+  // The segment id, drawn on the line in its own colour, so a curator can read
+  // "#321 is this one" straight off the map. Only set when a suggestion groups
+  // more than one segment.
+  if (!map.getLayer("ways-preview-label")) {
+    map.addLayer({
+      id: "ways-preview-label",
+      type: "symbol",
+      source: "ways-context",
+      filter: ["==", ["get", "waysRole"], "preview"],
+      layout: {
+        "symbol-placement": "line-center",
+        "text-field": ["get", "previewLabel"],
+        "text-size": 13,
+        "text-font": ["Open Sans Bold", "Arial Unicode MS Bold"],
+        "text-allow-overlap": true,
+        visibility: "none",
+      },
+      paint: {
+        "text-color": ["coalesce", ["get", "previewColor"], "#8a6d00"],
+        "text-halo-color": "#ffffff",
+        "text-halo-width": 2.5,
       },
     });
   }

@@ -224,6 +224,7 @@ for (const layerId of [
   "ways-member-layer",
   "ways-preview-layer",
   "ways-hover-layer",
+  "ways-preview-label",
 ]) {
   assert.ok(editor.includes(`id: "${layerId}"`), `map layer ${layerId} is missing`);
 }
@@ -259,6 +260,25 @@ assert.ok(
 assert.ok(
   editor.includes("function revealHoveredSegment(segmentId)"),
   "a hovered segment hidden behind the chrome must be brought into view",
+);
+// The several segments a suggestion groups into one road get distinct colours
+// on the map, on-map id labels, and matching chip swatches.
+assert.ok(
+  editor.includes("function waysPreviewColorMap()"),
+  "each previewed segment must get its own colour",
+);
+assert.ok(
+  editor.includes('["coalesce", ["get", "previewColor"], "#f2c94c"]'),
+  "the preview line colour must be data-driven per segment",
+);
+assert.ok(
+  editor.includes('"text-field": ["get", "previewLabel"]'),
+  "a multi-segment suggestion must label each segment on the map",
+);
+assert.ok(
+  editor.includes('swatch.style.background = colors.get(segmentId)')
+  || editor.includes("swatch.style.background = colors.get(segmentId) || WAYS_PREVIEW_SINGLE"),
+  "queue chips must carry the segment's map colour",
 );
 assert.ok(
   editor.includes("document.addEventListener(\"keydown\", handleWaysKeydown)"),
