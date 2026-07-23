@@ -1,16 +1,16 @@
 {
   "schemaVersion": 1,
   "slug": "kovshey-hagolan",
-  "generatedAt": "2026-07-22T16:47:52.963Z",
+  "generatedAt": "2026-07-23T09:02:51.103Z",
   "source": {
     "routeTokenHash": "sha256:a0ee06fea7634c16b7cc666d9b51064e985cb22a0ca98fea74336e441af1a533",
     "routeFormat": "compact_route",
-    "mapVersion": "5ff4620a381b",
+    "mapVersion": "c99ac7f21a80",
     "assetHashes": {
       "bikeRoads": "d7ff624f3c80034bc87c5307df7eedbd7aec6764f10d70a145137fcbbf88b6ca",
       "segments": "fc73dcfa9c1a863b58768b535d4b64632890038786195f7b7de17a3a0ead5d5d",
       "cwBaseIndex": "8bd30442bb74fac71856262b98e3d20ed83bdccd1b6a3fad9ced7a1bccf78357",
-      "baseRoutingShards": "072309fcbd6f8dba1069d2f3bfa7c93c8137330b391ce686c0669aec331fe916"
+      "baseRoutingShards": "f95117b13702e6f9fde2b5939b27d7969445b8fc8b0d0fbc82808123c8a771ac"
     }
   },
   "route": {

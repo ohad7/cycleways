@@ -1,24 +1,38 @@
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 import { buildLiveDecodeRoute } from "../../editor/server.mjs";
 import { stableDemoBundleString } from "../../packages/core/src/navigation/demoBundle.js";
+import { buildRouteAttestation } from "../../packages/core/src/routing/routeAttestation.js";
+import { crossingsOnRoute } from "../../packages/core/src/routing/crossingsOnRoute.js";
 import { junctionsNearRoute } from "../../packages/core/src/routing/junctionsNearRoute.js";
 import { roundaboutsOnRoute } from "../../packages/core/src/routing/roundaboutsOnRoute.js";
 import { joinRoundaboutReviews } from "../../editor/lib/roundaboutReview.mjs";
 import { loadBaseNetworkAroundGeometry } from "./base-network.mjs";
 import { loadRouteStateForSlug } from "./featuredRouteSnapshotBuilder.mjs";
 
+function rebuildRouteAttestation(routeState, geometry) {
+  const attestation = routeState?.routingValidation;
+  if (!attestation) return null;
+  return buildRouteAttestation({
+    validationContext: attestation.validationContext,
+    traversalSlices: attestation.traversalSlices,
+    waypointOccurrences: attestation.waypointOccurrences,
+    legBoundaries: attestation.legBoundaries,
+    geometry,
+    reverseConstraint: attestation.reverseConstraint,
+    derivation: attestation.derivation,
+  });
+}
+
 function roundedRouteState(routeState) {
-  // Geometry is rounded for a reproducible fixture, so any attestation tied to
-  // the unrounded geometry must be rebuilt by the scenario resolver.
-  const { routingValidation: _discardedRoutingValidation, ...portableRouteState } = routeState;
   const geometry = (routeState.geometry || []).map((point) => ({
     ...point,
     lat: Math.round(Number(point.lat) * 1e6) / 1e6,
     lng: Math.round(Number(point.lng) * 1e6) / 1e6,
   }));
   return {
-    ...portableRouteState,
+    ...routeState,
     points: Array.isArray(routeState.points) && routeState.points.length >= 2
       ? routeState.points
       : [{ id: "start", ...geometry[0] }, { id: "end", ...geometry.at(-1) }],
@@ -28,7 +42,22 @@ function roundedRouteState(routeState) {
       startMeters: Math.round(Number(span.startMeters) * 100) / 100,
       endMeters: Math.round(Number(span.endMeters) * 100) / 100,
     })),
+    // Route evidence fingerprints include geometry. Rebuild them against the
+    // reproducibly rounded fixture while preserving the real directed edges;
+    // replacing them with a synthetic edge prevents crossing matching.
+    routingValidation: rebuildRouteAttestation(routeState, geometry),
   };
+}
+
+function publishedCrossingArtifact() {
+  const manifestPath = "public-data/map-manifest.json";
+  if (!existsSync(manifestPath)) return null;
+  const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
+  if (!manifest.crossings) return null;
+  const crossingPath = join(dirname(manifestPath), manifest.crossings);
+  return existsSync(crossingPath)
+    ? JSON.parse(readFileSync(crossingPath, "utf8"))
+    : null;
 }
 
 function reviewedRoundabouts() {
@@ -67,9 +96,17 @@ export async function buildNavigationRouteSnapshot({ catalogSlug, routeToken, na
   }
   if (!state?.geometry || state.geometry.length < 2) throw new Error("route did not decode to navigable geometry");
   const rounded = roundedRouteState(state);
+  const crossingArtifact = publishedCrossingArtifact();
   return {
     ...rounded,
     junctions: navigationJunctions(rounded.geometry),
+    crossings: crossingArtifact
+      ? crossingsOnRoute(
+        crossingArtifact,
+        rounded.routingValidation,
+        rounded.geometry,
+      )
+      : null,
   };
 }
 

@@ -79,6 +79,8 @@ assert.match(page, /Review ride and app together/);
 assert.match(page, /Set start here/);
 assert.match(page, /Add another showcase here/);
 assert.match(page, /Capture another take/);
+assert.match(page, /Edit selection &amp; recapture|Edit selection & recapture/);
+assert.match(page, /recapture-notice/);
 assert.match(page, /source-quality/);
 assert.match(page, /trim-modal/);
 assert.match(page, /Production workflow/);
@@ -101,10 +103,13 @@ assert.match(reviewScript, /clip-span/);
 assert.match(reviewScript, /route-mismatch-band/);
 assert.match(reviewScript, /retryFrom/);
 assert.match(reviewScript, /earlier take is preserved/);
+assert.match(reviewScript, /editingInputs/);
+assert.match(reviewScript, /Extend the showcase, save it, then validate and capture again/);
 const reviewCss = await (await fetch(`${service.url.split("?")[0]}review.css`)).text();
 assert.match(reviewCss, /height: clamp\(310px, 52vh, 560px\)/);
 assert.match(reviewCss, /\.stage-cards::before/);
 assert.match(reviewCss, /repeating-linear-gradient/);
+assert.match(reviewCss, /recapture-option/);
 const blockedDecision = await fetch(`${service.url.split("?")[0]}api/decision?token=review-token`, {
   method: "POST",
   headers: { "content-type": "application/json" },

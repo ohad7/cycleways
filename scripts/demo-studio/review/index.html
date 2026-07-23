@@ -87,6 +87,9 @@
           <span class="step">PICK THE BEST PARTS</span>
           <h2>Build your showcase</h2>
           <p class="intro">Play or scrub the ride. Mark each compelling stretch; the final video will join them with a clear transition.</p>
+          <div id="recapture-notice" class="quality recapture-note" hidden>
+            You are changing an already captured selection. Earlier captures stay in history; saving will require validation and a new app capture.
+          </div>
 
           <div id="editing-label" class="editing-label">Editing showcase 1</div>
 
@@ -168,6 +171,10 @@
         <div class="button-row modal-actions">
           <button id="trim-cancel" class="secondary" type="button">Cancel</button>
           <button id="trim-save" type="submit">Save trim</button>
+        </div>
+        <div class="recapture-option">
+          <span>Need footage outside these bounds?</span>
+          <button id="edit-selection-recapture" class="text-button" type="button">Edit selection &amp; recapture</button>
         </div>
       </form>
     </dialog>

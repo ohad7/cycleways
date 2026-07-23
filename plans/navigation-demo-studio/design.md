@@ -79,6 +79,12 @@ immutable and the new attempt records it as its predecessor. Rendering may be
 retried from the accepted capture and saved edit decision. The Studio never
 claims it can append to a partially encoded capture safely.
 
+Post-capture editing distinguishes two operator intents. **Save trim** may only
+move cuts inside the immutable app recording. **Edit selection & recapture**
+returns to the full source editor when the operator needs earlier or later
+footage, explains that validation and capture must run again, and preserves all
+earlier captures in history. It is disabled while a capture job is active.
+
 Starting app capture also owns its local development prerequisites: it selects
 an already booted Simulator or boots the configured device, starts Metro on
 localhost when it is absent, verifies the CycleWays development app, and runs

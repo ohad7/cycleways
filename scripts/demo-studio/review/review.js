@@ -18,6 +18,7 @@ let activeSourceId = null;
 let pendingGlobalSeekMs = null;
 let restoringRevision = null;
 let statePoll = null;
+let editingInputs = false;
 
 function sourceClips() {
   return (state?.media?.sources || []).map((clip, index) => {
@@ -506,6 +507,11 @@ function openTrimModal(showcaseId) {
   $("#trim-end-range").max = trimAllowedBounds.max;
   $("#trim-start-text").value = time(showcase.inMs);
   $("#trim-end-text").value = time(showcase.outMs);
+  const activeCaptureJob = state.jobs?.find((job) => job.kind === "capture" && ["running", "cancelling"].includes(job.state));
+  $("#edit-selection-recapture").disabled = Boolean(activeCaptureJob);
+  $("#edit-selection-recapture").textContent = activeCaptureJob
+    ? `${activeCaptureJob.id} is still running`
+    : "Edit selection & recapture";
   updateTrimUi();
   $("#source-video").pause();
   $("#trim-modal").showModal();
@@ -532,6 +538,7 @@ function renderAttempt() {
   const { attempt, meta } = selectedAttemptDetails();
   renderReviewMode(attempt ? meta : null);
   if (!attempt || !state.media.attempts[selectedAttempt]) {
+    video.pause();
     setMapVisible(true);
     $("#secondary-label").textContent = "GPS TRACK";
     return;
@@ -569,6 +576,14 @@ function renderAttempt() {
 
 function renderAttempts() {
   const attempts = Object.values(state.project.attempts).flat().filter((attempt) => state.media.attempts[attempt.id]);
+  const hasCapturedVideo = attempts.some((attempt) => attempt.id.startsWith("capture-"));
+  $("#recapture-notice").hidden = !editingInputs || !hasCapturedVideo;
+  if (editingInputs) {
+    $("#attempt-panel").hidden = true;
+    selectedAttempt = null;
+    renderAttempt();
+    return;
+  }
   $("#attempt-panel").hidden = attempts.length === 0;
   if (!attempts.length) {
     selectedAttempt = null;
@@ -637,7 +652,17 @@ function currentWorkflowStep() {
 function activateWorkflowStep(step) {
   if (!step) return;
   const stage = state.project.stages[step.id];
-  if (step.review || (stage?.state === "needs-review" && stage?.attemptId)) {
+  if (step.review) {
+    editingInputs = true;
+    selectedAttempt = null;
+    renderAttempts();
+    updateSelection();
+    if (activeShowcase()) seekSourceGlobal(activeShowcase().inMs);
+    $("#review-workspace").scrollIntoView({ behavior: "smooth", block: "start" });
+    return;
+  }
+  if (stage?.state === "needs-review" && stage?.attemptId) {
+    editingInputs = false;
     if (stage?.attemptId && state.media.attempts[stage.attemptId]) {
       selectedAttempt = stage.attemptId;
       renderAttempts();
@@ -853,6 +878,19 @@ $("#retry-capture").addEventListener("click", () => {
   const retryFrom = $("#retry-capture").dataset.attemptId;
   if (retryFrom) startJob("capture", { retryFrom });
 });
+$("#edit-selection-recapture").addEventListener("click", () => {
+  if ($("#edit-selection-recapture").disabled) return;
+  const showcaseId = trimShowcaseId;
+  closeTrimModal();
+  editingInputs = true;
+  selectedAttempt = null;
+  activeShowcaseId = showcaseId;
+  renderAttempts();
+  updateSelection();
+  if (activeShowcase()) seekSourceGlobal(activeShowcase().inMs);
+  $("#review-workspace").scrollIntoView({ behavior: "smooth", block: "start" });
+  toast("Extend the showcase, save it, then validate and capture again. Earlier captures are kept.");
+});
 
 function openProjectModal() {
   $("#project-error").hidden = true;
@@ -872,6 +910,7 @@ $("#project-picker").addEventListener("change", async () => {
       body: JSON.stringify({ id: $("#project-picker").value }),
     });
     state = result.state;
+    editingInputs = false;
     activeSourceId = null;
     seekToShowcaseOnLoad = true;
     resetDraft();
@@ -896,6 +935,7 @@ $("#project-form").addEventListener("submit", async (event) => {
       }),
     });
     state = result.state;
+    editingInputs = false;
     activeSourceId = null;
     seekToShowcaseOnLoad = true;
     resetDraft();

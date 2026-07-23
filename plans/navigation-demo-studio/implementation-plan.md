@@ -183,6 +183,10 @@ navigation engine.
 - [x] Offer Capture another take directly in capture review, preserving the
   current attempt and launching a bounded `--retry-from capture-NNN` job
   without requiring an Accept or Reject decision.
+- [x] Distinguish in-bounds post-capture trimming from expanding a showcase:
+  offer Edit selection & recapture from the trim modal, return to the full
+  selection editor, show invalidation guidance, and guard the transition while
+  another capture job is active.
 
 ### C. Reversibility and proportional invalidation — implemented
 
