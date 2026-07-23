@@ -88,6 +88,24 @@
       "kind": "dirt-road",
       "aliases": [],
       "spokenName": null
+    },
+    "cycleway-snir": {
+      "name": "שביל אופניים חצבאני",
+      "kind": "cycleway",
+      "aliases": [],
+      "spokenName": null
+    },
+    "paved-beit-hillel-fence": {
+      "name": "כביש המערכת בית הלל",
+      "kind": "cycleway",
+      "aliases": [],
+      "spokenName": null
+    },
+    "road-9888": {
+      "name": "כביש 9888",
+      "kind": "road",
+      "aliases": [],
+      "spokenName": null
     }
   }
 }

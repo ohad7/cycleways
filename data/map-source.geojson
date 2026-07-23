@@ -42439,6 +42439,10 @@
           "safety": 3,
           "comfort": 3,
           "scenery": 3
+        },
+        "guidance": {
+          "role": "named-way",
+          "wayId": "road-9888"
         }
       },
       "geometry": {
@@ -43425,6 +43429,10 @@
           "safety": 3,
           "comfort": 3,
           "scenery": 3
+        },
+        "guidance": {
+          "role": "named-way",
+          "wayId": "road-9888"
         }
       },
       "geometry": {
@@ -43550,7 +43558,11 @@
           "scenery": 3
         },
         "splitFrom": 57,
-        "splitFromName": "כביש 9888 סדנה"
+        "splitFromName": "כביש 9888 סדנה",
+        "guidance": {
+          "role": "named-way",
+          "wayId": "road-9888"
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -43607,7 +43619,11 @@
           "scenery": 3
         },
         "splitFrom": 57,
-        "splitFromName": "כביש 9888 סדנה"
+        "splitFromName": "כביש 9888 סדנה",
+        "guidance": {
+          "role": "named-way",
+          "wayId": "road-9888"
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -44665,7 +44681,11 @@
             ],
             "description": "דרך שער 2, חוף רחב ומרווח על נחל שניר, עם גישה נוחה למים שמתאימה גם למשפחות, ועצי תות שמטילים צל  על הגדה (ובעונה — גם פינוק מתוק היישר מהענף). מקום מצוין לפרוס מגבת ולשכשך רגלים."
           }
-        ]
+        ],
+        "guidance": {
+          "role": "named-way",
+          "wayId": "cycleway-snir"
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -44862,7 +44882,7 @@
       "type": "Feature",
       "properties": {
         "id": 24,
-        "name": "דרך עפר חצבאני קיאקים כפר בלום",
+        "name": "דרך עפר חצבאני",
         "status": "active",
         "roadType": "dirt",
         "styleUrl": "#sty-94",
@@ -45493,7 +45513,11 @@
             ],
             "description": "אקליפטוס ענק מסמן את הנקודה, וממנו שביל קצר של כשתי דקות מוביל אל גדת הנחל. הטרחה הקטנה משתלמת — המים כאן שקטים יותר, הצל נדיב, והתחושה היא של פינה פרטית."
           }
-        ]
+        ],
+        "guidance": {
+          "role": "named-way",
+          "wayId": "cycleway-snir"
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -63770,7 +63794,11 @@
           "scenery": 3
         },
         "splitFrom": 141,
-        "splitFromName": "רחוב הדולב בית הלל"
+        "splitFromName": "רחוב הדולב בית הלל",
+        "guidance": {
+          "role": "named-way",
+          "wayId": "paved-beit-hillel-fence"
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -63802,6 +63830,47 @@
       "type": "Feature",
       "properties": {
         "id": 139,
+        "name": "גדר המערכת בית הלל [split archive 139]",
+        "status": "deprecated",
+        "roadType": "paved",
+        "styleUrl": "#sty-129",
+        "stroke": "#0288d1",
+        "sourceStroke": "#0288d1",
+        "stroke-opacity": 1,
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        },
+        "originalName": "גדר המערכת בית הלל",
+        "deprecated": true,
+        "routeAnchors": [
+          [
+            35.600366,
+            33.210753
+          ],
+          [
+            35.600308,
+            33.203067
+          ],
+          [
+            35.60475,
+            33.198254
+          ],
+          [
+            35.608465,
+            33.199384
+          ]
+        ]
+      },
+      "geometry": null
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": 374,
         "name": "גדר המערכת בית הלל",
         "status": "active",
         "roadType": "paved",
@@ -63876,7 +63945,13 @@
             ],
             "description": "מטעי פקאן רחבי ידיים, שבהם שורות העצים הגבוהים יוצרות מסדרון מוצל ונעים.  האור חודר בין העלים והשקט כמעט מוחלט — פינה ירוקה ורגועה לעצור ולהנות מהיופי והצל. המטעים הם רכוש המושב ופרנסת החקלאים, אנא כבדו את המקום, וכמובן לא לקטוף"
           }
-        ]
+        ],
+        "splitFrom": 139,
+        "splitFromName": "גדר המערכת בית הלל",
+        "guidance": {
+          "role": "named-way",
+          "wayId": "paved-beit-hillel-fence"
+        }
       },
       "geometry": {
         "type": "LineString",
@@ -64452,8 +64527,40 @@
             82
           ],
           [
-            35.60755975118752,
-            33.19946632875882,
+            35.60756683689911,
+            33.199413252442696,
+            82
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": 375,
+        "name": "כביש גישה קייאקי כפר בלום",
+        "status": "active",
+        "roadType": "paved",
+        "styleUrl": "#sty-129",
+        "stroke": "#0288d1",
+        "sourceStroke": "#0288d1",
+        "stroke-opacity": 1,
+        "stroke-width": 5,
+        "quality": {
+          "overall": 3,
+          "safety": 3,
+          "comfort": 3,
+          "scenery": 3
+        },
+        "splitFrom": 139,
+        "splitFromName": "גדר המערכת בית הלל"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.6076302565894,
+            33.19946149578347,
             82
           ],
           [
@@ -64477,8 +64584,8 @@
             83
           ],
           [
-            35.608898,
-            33.199486,
+            35.608917723529316,
+            33.19949334275009,
             83
           ],
           [
@@ -100715,6 +100822,10 @@
           "safety": 3,
           "comfort": 3,
           "scenery": 3
+        },
+        "guidance": {
+          "role": "named-way",
+          "wayId": "paved-beit-hillel-fence"
         }
       },
       "geometry": {

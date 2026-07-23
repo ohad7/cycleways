@@ -8906,6 +8906,8 @@ function renderSegmentSelectionState() {
     renderForm();
     stage = "segment routing";
     renderNetworkSegmentRouting();
+    stage = "segment guidance";
+    renderGuidanceSection();
     stage = "segment data";
     renderDataList();
     stage = "base overlay panel";
@@ -10978,6 +10980,11 @@ async function splitSelectedSegment() {
   state.selectedVertexIndex = -1;
   state.selectedDataIndex = -1;
   clearSegmentMatchResult(originalId);
+  // The archived parent still owns its published directed base-edge intervals
+  // until the V2 lifecycle record is reconciled. Queue that release in the
+  // same authoring run as the two child matches, so the metadata phase retires
+  // the parent before either child is validated against current ownership.
+  queueNetworkMetadataFeature(feature);
   queueChangedSegment(firstProperties.id);
   queueChangedSegment(secondProperties.id);
   markDirty();

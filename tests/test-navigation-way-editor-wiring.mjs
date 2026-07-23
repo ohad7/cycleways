@@ -93,6 +93,7 @@ const inspectorStart = html.indexOf('id="network-selection-panel"');
 const inspectorEnd = html.indexOf('id="base-graph-panel"');
 const guidanceSummaryAt = html.indexOf('id="segment-guidance-summary"');
 const guidanceAt = html.indexOf('id="segment-guidance-details"');
+const routingAt = html.indexOf('id="network-segment-routing"');
 const qualityAt = html.indexOf('class="segment-quality-details"');
 assert.ok(
   inspectorStart < guidanceAt && guidanceAt < inspectorEnd,
@@ -101,9 +102,10 @@ assert.ok(
 assert.ok(
   inspectorStart < guidanceSummaryAt
   && guidanceSummaryAt < guidanceAt
+  && routingAt < guidanceSummaryAt
   && guidanceAt < qualityAt
   && qualityAt < inspectorEnd,
-  "compact way attribution must be visible above its editor, with Quality last",
+  "routing must be followed by compact way attribution and its editor, with Quality last",
 );
 assert.equal(
   html.slice(guidanceAt, html.indexOf(">", guidanceAt) + 1).includes(" open"),
@@ -151,6 +153,12 @@ for (const key of [
 ]) {
   assert.ok(editor.includes(key), `editor element map is missing ${key}`);
 }
+
+assert.match(
+  editor,
+  /function renderSegmentSelectionState\(\)[\s\S]{0,650}renderNetworkSegmentRouting\(\)[\s\S]{0,180}renderGuidanceSection\(\)/,
+  "fresh segment selection must unhide and populate navigation-way configuration",
+);
 assert.ok(editor.includes("renderGuidanceSection();"), "guidance is not rendered");
 assert.ok(editor.includes("await loadGuidanceRegistry();"), "registry is not loaded at startup");
 assert.equal(

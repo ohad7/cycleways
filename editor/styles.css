@@ -2664,20 +2664,30 @@ button.direction-review-queue-item {
    alongside the internal editor name so it stays obvious that they differ. */
 .segment-guidance-summary {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
-  margin-top: 8px;
-  border-top: 1px solid rgba(255, 255, 255, 0.12);
-  padding-top: 8px;
+  margin-top: 12px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #f6faf8;
 }
 
 .segment-guidance-summary[hidden] {
   display: none;
 }
 
+.segment-guidance-summary-copy,
 .segment-guidance-summary .guidance-preview {
   flex: 1;
   min-width: 0;
+}
+
+.segment-guidance-title {
+  margin-bottom: 5px;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 800;
 }
 
 .segment-guidance-summary .mini-button {
@@ -2685,7 +2695,7 @@ button.direction-review-queue-item {
 }
 
 .segment-guidance-details {
-  margin-top: 4px;
+  margin: 4px 10px 0;
 }
 
 .segment-guidance-details > summary {

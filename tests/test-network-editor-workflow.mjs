@@ -78,6 +78,31 @@ const segment159Rendering = cwNetworkRenderEdgeRefs({
 assert.equal(segment159Rendering.source, "v2");
 assert.ok(segment159Rendering.edgeRefs.length > 0, "V2-only segment #159 must remain visible");
 
+const splitParent139 = directionOverlay.segments["139"];
+const splitChild374 = directionOverlay.segments["374"];
+const splitChild375 = directionOverlay.segments["375"];
+assert.equal(splitParent139.lifecycleStatus, "deprecated");
+assert.equal(splitParent139.navigable, false, "split parent #139 must release directed ownership");
+for (const child of [splitChild374, splitChild375]) {
+  assert.equal(child.lifecycleStatus, "active");
+  assert.equal(child.navigable, true);
+  assert.equal(child.alignments.aToB.draft, null);
+  assert.equal(child.alignments.bToA.draft, null);
+  assert.equal(child.alignments.aToB.published?.disposition, "accepted");
+  assert.equal(child.alignments.bToA.published?.disposition, "accepted");
+}
+const child374ForwardEdges = splitChild374.alignments.aToB.published.realization.edgeRefs
+  .map((ref) => ref.edgeId);
+const child375ForwardEdges = splitChild375.alignments.aToB.published.realization.edgeRefs
+  .map((ref) => ref.edgeId);
+assert.equal(child374ForwardEdges.length, 8);
+assert.deepEqual(child375ForwardEdges, ["e79114025_2"]);
+assert.deepEqual(
+  child374ForwardEdges.filter((edgeId) => child375ForwardEdges.includes(edgeId)),
+  [],
+  "split children #374 and #375 must own disjoint base edges",
+);
+
 const sharedEdgeRendering = cwNetworkRenderEdgeRefs({
   directionSegment: {
     navigable: true,
@@ -132,6 +157,11 @@ assert.match(
   editor,
   /function updateSelectedProperties\(\)[\s\S]{0,900}queueNetworkMetadataFeature\(feature\)/,
   "metadata edits must not rematch directional paths",
+);
+assert.match(
+  editor,
+  /async function splitSelectedSegment\(\)[\s\S]{0,5200}status: "deprecated"[\s\S]{0,1800}queueNetworkMetadataFeature\(feature\)[\s\S]{0,300}queueChangedSegment\(firstProperties\.id\)[\s\S]{0,200}queueChangedSegment\(secondProperties\.id\)/,
+  "splitting a mapped segment must release the archived parent before reconciling its children",
 );
 assert.match(editor, /Saving and checking its rideable path automatically/);
 assert.match(editor, /Saving geometry/);

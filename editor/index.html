@@ -279,11 +279,22 @@
 
             </form>
 
+            <div class="edge-pick-edit-controls" id="edge-pick-edit-controls" hidden>
+              <button id="edit-segment-edges" class="mini-button" type="button">Add/remove edges</button>
+              <button id="split-segment-edge" class="mini-button" type="button">Split at edge boundary</button>
+            </div>
+
+            <div id="network-segment-routing" class="network-segment-routing" aria-live="polite"></div>
+
             <!-- Guidance classification. The internal name above stays the
                  editor/build key; this section owns the rider-facing identity.
-                 See plans/navigation-way-names/design.md. -->
+                 It follows routing so Quality remains the final, low-priority
+                 control. See plans/navigation-way-names/design.md. -->
             <div id="segment-guidance-summary" class="segment-guidance-summary" dir="rtl">
-              <div id="guidance-preview" class="guidance-preview" aria-live="polite"></div>
+              <div class="segment-guidance-summary-copy">
+                <div class="segment-guidance-title">דרך ניווט</div>
+                <div id="guidance-preview" class="guidance-preview" aria-live="polite"></div>
+              </div>
               <button id="guidance-open-way" class="mini-button" type="button" hidden>
                 פתיחת הדרך ב־Ways
               </button>
@@ -328,13 +339,6 @@
                 <div id="guidance-coverage" class="guidance-coverage" aria-live="polite"></div>
               </div>
             </details>
-
-            <div class="edge-pick-edit-controls" id="edge-pick-edit-controls" hidden>
-              <button id="edit-segment-edges" class="mini-button" type="button">Add/remove edges</button>
-              <button id="split-segment-edge" class="mini-button" type="button">Split at edge boundary</button>
-            </div>
-
-            <div id="network-segment-routing" class="network-segment-routing" aria-live="polite"></div>
 
             <details class="segment-quality-details">
               <summary>Quality</summary>

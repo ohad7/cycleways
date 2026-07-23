@@ -2713,7 +2713,7 @@
       },
       "navigable": true,
       "segmentId": 24,
-      "segmentName": "דרך עפר חצבאני קיאקים כפר בלום",
+      "segmentName": "דרך עפר חצבאני",
       "sourceGeometryDigest": "4c83d34995e8a260814748af6207795ca411da32c5e41d437508cc38afa034aa"
     },
     "25": {
@@ -15078,7 +15078,7 @@
           "zoneMeters": 30
         }
       },
-      "lifecycleStatus": "active",
+      "lifecycleStatus": "deprecated",
       "migration": {
         "classification": "symmetric_candidate",
         "endpointMatch": {
@@ -15095,9 +15095,9 @@
         "sourceMappingStatus": "accepted_auto_match",
         "sourceSchemaVersion": 1
       },
-      "navigable": true,
+      "navigable": false,
       "segmentId": 139,
-      "segmentName": "גדר המערכת בית הלל",
+      "segmentName": "גדר המערכת בית הלל [split archive 139]",
       "sourceGeometryDigest": "cadabd7446d5727e37e0217a8265af4c8f606e4bf450246939c31b70fa895859"
     },
     "140": {
@@ -42922,6 +42922,267 @@
         "sourceSchemaVersion": 2,
         "sourceMappingOrigin": "network-authoring-v2",
         "authoringRevision": 1784828755915375,
+        "lastOutcome": "apply",
+        "lastOutcomeCode": "exact_safe_reverse",
+        "automaticPublication": "bidirectional-evidence"
+      }
+    },
+    "374": {
+      "segmentId": 374,
+      "segmentName": "גדר המערכת בית הלל",
+      "lifecycleStatus": "active",
+      "navigable": true,
+      "sourceGeometryDigest": "8a660b5638a5bbea1ca4ddaae68497fa070fafff46ef305c7328d0375361b3a1",
+      "endpoints": {
+        "a": {
+          "coordinate": [
+            35.60181755346346,
+            33.214562598403035
+          ],
+          "zoneMeters": 30,
+          "labels": {
+            "key": "A"
+          }
+        },
+        "b": {
+          "coordinate": [
+            35.60756683689911,
+            33.199413252442696
+          ],
+          "zoneMeters": 30,
+          "labels": {
+            "key": "B"
+          }
+        }
+      },
+      "alignments": {
+        "aToB": {
+          "published": {
+            "disposition": "accepted",
+            "realization": {
+              "type": "explicit",
+              "edgeRefs": [
+                {
+                  "edgeId": "e53815529_2",
+                  "source": "osm",
+                  "direction": "forward",
+                  "sequenceIndex": 0,
+                  "fromFraction": 0,
+                  "toFraction": 1,
+                  "osmWayId": 53815529
+                },
+                {
+                  "edgeId": "e1165357825_1",
+                  "source": "osm",
+                  "direction": "forward",
+                  "sequenceIndex": 1,
+                  "fromFraction": 0,
+                  "toFraction": 1,
+                  "osmWayId": 1165357825
+                },
+                {
+                  "edgeId": "e79113248_2",
+                  "source": "osm",
+                  "direction": "reverse",
+                  "sequenceIndex": 2,
+                  "fromFraction": 0,
+                  "toFraction": 1,
+                  "osmWayId": 79113248
+                },
+                {
+                  "edgeId": "e79113248_1",
+                  "source": "osm",
+                  "direction": "reverse",
+                  "sequenceIndex": 3,
+                  "fromFraction": 0,
+                  "toFraction": 1,
+                  "osmWayId": 79113248
+                },
+                {
+                  "edgeId": "e79113669_1",
+                  "source": "osm",
+                  "direction": "forward",
+                  "sequenceIndex": 4,
+                  "fromFraction": 0,
+                  "toFraction": 1,
+                  "osmWayId": 79113669
+                },
+                {
+                  "edgeId": "e79113669_2",
+                  "source": "osm",
+                  "direction": "forward",
+                  "sequenceIndex": 5,
+                  "fromFraction": 0,
+                  "toFraction": 1,
+                  "osmWayId": 79113669
+                },
+                {
+                  "edgeId": "e79113669_3",
+                  "source": "osm",
+                  "direction": "forward",
+                  "sequenceIndex": 6,
+                  "fromFraction": 0,
+                  "toFraction": 1,
+                  "osmWayId": 79113669
+                },
+                {
+                  "edgeId": "e79113704_1",
+                  "source": "osm",
+                  "direction": "forward",
+                  "sequenceIndex": 7,
+                  "fromFraction": 0,
+                  "toFraction": 1,
+                  "osmWayId": 79113704
+                }
+              ]
+            },
+            "mappingDigest": "2f3e8f4070f39e0d229394f9816f0d388ddbf90b7ad24b8735b1e4a5499b1f70",
+            "review": {
+              "reviewer": "editor-automatic",
+              "reviewedAt": "2026-07-23",
+              "batchId": "network-authoring-374-1900000000000139",
+              "rationale": "Previously completed path revalidated after its ownership blocker was released",
+              "acceptanceBasis": "automatic-bidirectional-evidence",
+              "automated": true,
+              "graphDigest": "e384308aad9c33e911798f376978dc9866408b18281cfa2bc8732b2f30eaf26f",
+              "policyDigest": "9a8bbb7bdf928deb390f9446260665ac01ac56f208305e3ee2e664aa30bd0a2c",
+              "sourceGeometryDigest": "8a660b5638a5bbea1ca4ddaae68497fa070fafff46ef305c7328d0375361b3a1",
+              "mappingDigest": "2f3e8f4070f39e0d229394f9816f0d388ddbf90b7ad24b8735b1e4a5499b1f70",
+              "evidenceDigest": "826e398ada8d4c60c605f62f6ba5d51723f10bcf706779fff33f38d933d6639c"
+            }
+          },
+          "draft": null
+        },
+        "bToA": {
+          "published": {
+            "disposition": "accepted",
+            "realization": {
+              "type": "reverseOf",
+              "alignmentKey": "aToB",
+              "referencedMappingDigest": "2f3e8f4070f39e0d229394f9816f0d388ddbf90b7ad24b8735b1e4a5499b1f70"
+            },
+            "mappingDigest": "970b96159a405c5cbc1f7540c9b9d45118177ad4fe8535a26f866b00a1da5ef2",
+            "review": {
+              "reviewer": "editor-automatic",
+              "reviewedAt": "2026-07-23",
+              "batchId": "network-authoring-374-1900000000000139",
+              "rationale": "Previously completed path revalidated after its ownership blocker was released",
+              "acceptanceBasis": "automatic-bidirectional-evidence",
+              "automated": true,
+              "graphDigest": "e384308aad9c33e911798f376978dc9866408b18281cfa2bc8732b2f30eaf26f",
+              "policyDigest": "9a8bbb7bdf928deb390f9446260665ac01ac56f208305e3ee2e664aa30bd0a2c",
+              "sourceGeometryDigest": "8a660b5638a5bbea1ca4ddaae68497fa070fafff46ef305c7328d0375361b3a1",
+              "mappingDigest": "970b96159a405c5cbc1f7540c9b9d45118177ad4fe8535a26f866b00a1da5ef2",
+              "evidenceDigest": "3f6cc5e2f5c75468974cc1689735ecc5d23cba2efb955539f5ae6d45ada77835"
+            }
+          },
+          "draft": null
+        }
+      },
+      "migration": {
+        "classification": "symmetric_candidate",
+        "sourceSchemaVersion": 2,
+        "sourceMappingOrigin": "network-authoring-v2",
+        "authoringRevision": 1784836795101379,
+        "lastOutcome": "apply",
+        "lastOutcomeCode": "exact_safe_reverse",
+        "automaticPublication": "bidirectional-evidence"
+      }
+    },
+    "375": {
+      "segmentId": 375,
+      "segmentName": "כביש גישה קייאקי כפר בלום",
+      "lifecycleStatus": "active",
+      "navigable": true,
+      "sourceGeometryDigest": "f1790ebca6e2cc126e26d3e585988196c03fce9c8f1d5314c79ee7c74202f8c4",
+      "endpoints": {
+        "a": {
+          "coordinate": [
+            35.6076302565894,
+            33.19946149578347
+          ],
+          "zoneMeters": 30,
+          "labels": {
+            "key": "A"
+          }
+        },
+        "b": {
+          "coordinate": [
+            35.60933766154946,
+            33.199594762153765
+          ],
+          "zoneMeters": 30,
+          "labels": {
+            "key": "B"
+          }
+        }
+      },
+      "alignments": {
+        "aToB": {
+          "published": {
+            "disposition": "accepted",
+            "realization": {
+              "type": "explicit",
+              "edgeRefs": [
+                {
+                  "edgeId": "e79114025_2",
+                  "source": "osm",
+                  "direction": "forward",
+                  "sequenceIndex": 0,
+                  "fromFraction": 0,
+                  "toFraction": 1,
+                  "osmWayId": 79114025
+                }
+              ]
+            },
+            "mappingDigest": "04011895c8be8ca5a85a73f7118a464c904437eb3924ae163e756ab26696f9cf",
+            "review": {
+              "reviewer": "editor-automatic",
+              "reviewedAt": "2026-07-23",
+              "batchId": "network-authoring-375-1900000000000139",
+              "rationale": "Previously completed path revalidated after its ownership blocker was released",
+              "acceptanceBasis": "automatic-bidirectional-evidence",
+              "automated": true,
+              "graphDigest": "e384308aad9c33e911798f376978dc9866408b18281cfa2bc8732b2f30eaf26f",
+              "policyDigest": "9a8bbb7bdf928deb390f9446260665ac01ac56f208305e3ee2e664aa30bd0a2c",
+              "sourceGeometryDigest": "f1790ebca6e2cc126e26d3e585988196c03fce9c8f1d5314c79ee7c74202f8c4",
+              "mappingDigest": "04011895c8be8ca5a85a73f7118a464c904437eb3924ae163e756ab26696f9cf",
+              "evidenceDigest": "934771845e837473aafb8ec5c1dee6584fb7cd2da602cee35d48289d66e80f56"
+            }
+          },
+          "draft": null
+        },
+        "bToA": {
+          "published": {
+            "disposition": "accepted",
+            "realization": {
+              "type": "reverseOf",
+              "alignmentKey": "aToB",
+              "referencedMappingDigest": "04011895c8be8ca5a85a73f7118a464c904437eb3924ae163e756ab26696f9cf"
+            },
+            "mappingDigest": "27b2dcb533ee39963f40b40eaa4e952d01e987c8dab48d86cdcca28d370eebfe",
+            "review": {
+              "reviewer": "editor-automatic",
+              "reviewedAt": "2026-07-23",
+              "batchId": "network-authoring-375-1900000000000139",
+              "rationale": "Previously completed path revalidated after its ownership blocker was released",
+              "acceptanceBasis": "automatic-bidirectional-evidence",
+              "automated": true,
+              "graphDigest": "e384308aad9c33e911798f376978dc9866408b18281cfa2bc8732b2f30eaf26f",
+              "policyDigest": "9a8bbb7bdf928deb390f9446260665ac01ac56f208305e3ee2e664aa30bd0a2c",
+              "sourceGeometryDigest": "f1790ebca6e2cc126e26d3e585988196c03fce9c8f1d5314c79ee7c74202f8c4",
+              "mappingDigest": "27b2dcb533ee39963f40b40eaa4e952d01e987c8dab48d86cdcca28d370eebfe",
+              "evidenceDigest": "235126487044fe606aa774c163e707697863d0ee385133ede7f9efe6e8d6166d"
+            }
+          },
+          "draft": null
+        }
+      },
+      "migration": {
+        "classification": "symmetric_candidate",
+        "sourceSchemaVersion": 2,
+        "sourceMappingOrigin": "network-authoring-v2",
+        "authoringRevision": 1784836801374381,
         "lastOutcome": "apply",
         "lastOutcomeCode": "exact_safe_reverse",
         "automaticPublication": "bidirectional-evidence"

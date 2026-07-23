@@ -2,10 +2,10 @@
   "schemaVersion": 1,
   "generatedAt": "2026-07-23",
   "sourceDocument": "plans/navigation-way-names/model-suggestions.md",
-  "evidenceSetDigest": "sha256:e1cf87e459473d49b4a30079a56e10c99b1f8bea3a759208368611eff611c445",
+  "evidenceSetDigest": "sha256:5bc9f48c044e5c9fad68085f7ae332ca33f092da66e293124e5c74d4deb55035",
   "boundFiles": {
-    "data/map-source.geojson": "8c9ae2d8c66a06051898094189dbcddaea206e6c0be7427e2291510410450dd9",
-    "data/navigation-ways.json": "1bc442950e3372fe648976f35dd293d8a40d6e330f1663a9a9039dc311fa48fb",
+    "data/map-source.geojson": "057aa40d8adb008b4f20f2a1fa33d5f713ed10efdd8f7a07300641046b897021",
+    "data/navigation-ways.json": "9855ec4e7922858973e0296facafb141e6a97f673d6c7594d46feb7a75872d6c",
     "data/cw-base-overlay.json": "2db09ffef7b4ec38e8f1cec41092f664a61ee0defaf9f41170b0c41367285dd2",
     "data/network-junctions.json": "e23ca87d82adc2c32ea6b3f75e505a55bd86dd18649299f4be60e81b81ed3e28",
     "build/public-data/cw-base-index.json": "8bd30442bb74fac71856262b98e3d20ed83bdccd1b6a3fad9ced7a1bccf78357",
@@ -2449,6 +2449,6 @@
       "unnamed": 54
     }
   },
-  "reboundAt": "2026-07-23T18:49:01.728Z",
+  "reboundAt": "2026-07-23T20:15:33.691Z",
   "reboundReason": "editor-guidance-only-transaction"
 }
