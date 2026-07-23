@@ -20,7 +20,11 @@ const arc = precomputeArcLength(geometry);
 }
 console.log("test-navigation-smoothing OK");
 
-import { shortestAngleLerp, nextSmoothedMeters } from "@cycleways/core/navigation/navigationSmoothing.js";
+import {
+  mediaAlignedProgressMeters,
+  shortestAngleLerp,
+  nextSmoothedMeters,
+} from "@cycleways/core/navigation/navigationSmoothing.js";
 {
   assert.ok(Math.abs(shortestAngleLerp(350, 10, 0.5) - 0) < 1e-6, "wraps 350->10 through 360");
   assert.ok(Math.abs(shortestAngleLerp(10, 20, 0.5) - 15) < 1e-6, "plain midpoint");
@@ -35,3 +39,36 @@ import { shortestAngleLerp, nextSmoothedMeters } from "@cycleways/core/navigatio
   assert.ok(v > 100 && v <= 130, "advances toward target");
 }
 console.log("test-navigation-smoothing policy OK");
+{
+  assert.equal(
+    mediaAlignedProgressMeters({
+      progressMeters: 100,
+      speedMetersPerSecond: 5,
+      fixTimestampMs: 1000,
+      mediaTimeMs: 1600,
+    }),
+    103,
+    "demo position advances from the latest fix using the media clock",
+  );
+  assert.equal(
+    mediaAlignedProgressMeters({
+      progressMeters: 100,
+      speedMetersPerSecond: 5,
+      fixTimestampMs: 1000,
+      mediaTimeMs: 4000,
+    }),
+    106.25,
+    "demo extrapolation is bounded across a GPS gap",
+  );
+  assert.equal(
+    mediaAlignedProgressMeters({
+      progressMeters: 100,
+      speedMetersPerSecond: 5,
+      fixTimestampMs: 2000,
+      mediaTimeMs: 1500,
+    }),
+    100,
+    "demo position never extrapolates backwards",
+  );
+}
+console.log("test-navigation-smoothing media alignment OK");

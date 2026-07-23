@@ -4,10 +4,10 @@
 //   buildRouteCues(navigationRoute)        -> deterministic ordered cue list
 //   selectActiveCue(cues, progressMeters)  -> the upcoming cue + scheduling phase
 //
-// Cues are intentionally conservative (design D4): route start/end, sharp
-// geometry turns (deduped so dense geometry noise does not spam), and on-route
-// hazards/POIs that already carry `routeProgressMeters`. Where cue data is weak
-// the UI falls back to "continue on route".
+// Cues are intentionally conservative (design D4): route start/end and sharp
+// geometry turns (deduped so dense geometry noise does not spam). Route POIs
+// remain visible on the map but are not navigation instructions; their former
+// generic caution card did not contain enough information to be actionable.
 
 import { getDistance } from "../utils/distance.js";
 import { computeBearing } from "../utils/geometry.js";
@@ -30,6 +30,7 @@ const ARRIVAL_PREVIEW_MAX_M = 200; // destination heads-up starts earlier
 const FINAL_MAX_M = 35; // within this, the cue is "final"
 export const CONTINUE_ON_WAY_MIN_HORIZON_M = 300;
 const ROUTE_CHOICE_TYPES = new Set(["turn", "roundabout", "crossing", "arrive"]);
+const DISABLED_INFORMATIONAL_CUE_TYPES = new Set(["hazard", "caution", "poi", "viewpoint"]);
 export const ROUNDABOUT_DIRECTION_THRESHOLDS = { straightMaxDeg: 40, uTurnMaxDeg: 130 };
 export const ROUNDABOUT_SUPPRESSION_PAD_M = 8;
 export const CROSSING_SUPPRESSION_PAD_M = 8;
@@ -479,22 +480,6 @@ export function buildRouteCues(navigationRoute, options = {}) {
   }
   cues.push(...cornerCues);
 
-  // Hazard/POI cues from on-route active data points.
-  const dataPoints = Array.isArray(navigationRoute?.activeDataPoints)
-    ? navigationRoute.activeDataPoints
-    : [];
-  for (const dp of dataPoints) {
-    const distanceMeters = Number(dp?.routeProgressMeters);
-    if (!Number.isFinite(distanceMeters)) continue;
-    if (distanceMeters < 0 || distanceMeters > totalMeters) continue;
-    cues.push({
-      type: dp.type || "poi",
-      distanceMeters,
-      dataPointId: dp.id || null,
-      segmentName: dp.segmentName || null,
-    });
-  }
-
   if (options.includeArrival !== false) {
     cues.push({ type: "arrive", distanceMeters: totalMeters });
   }
@@ -604,6 +589,7 @@ export function selectActiveCue(cues, progressMeters) {
   let selectedPhasePriority = Infinity;
   for (const cue of cues) {
     if (cue.type === "start") continue; // start is informational, not a maneuver
+    if (cue.dataPointId || DISABLED_INFORMATIONAL_CUE_TYPES.has(cue.type)) continue;
     const d = cue.distanceMeters - progressMeters;
     if (d < 0) continue; // already passed
     const previewMax = cue.type === "arrive" ? ARRIVAL_PREVIEW_MAX_M : PREVIEW_MAX_M;

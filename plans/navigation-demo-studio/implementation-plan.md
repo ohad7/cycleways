@@ -1,8 +1,8 @@
 # CycleWays navigation demo studio — implementation plan
 
-Date: 2026-07-22
+Date: 2026-07-23
 
-Status: v1 continuous-proof milestone implemented; Phase 4 editorial variants and Phase 5 physical-iPhone proof remain deferred as designed
+Status: v1 continuous proof and Studio v2 website-first/multi-clip/reversible-workspace foundation implemented; Phase 4 editorial variants and Phase 5 physical-iPhone proof remain deferred as designed
 
 Related design: `plans/navigation-demo-studio/design.md`
 
@@ -13,7 +13,7 @@ timestamped GPS, validate it against a CycleWays route, replay it through the
 real iOS navigation stack, capture clean synchronized app/voice/event stems,
 and render an honest demo film without going on another ride.
 
-The first implementation milestone is deliberately narrow:
+The original implementation milestone was deliberately narrow:
 
 > Produce one repeatable, continuous 2–4 minute proof film from one real ride,
 > with road footage and the actual CycleWays navigation UI synchronized to the
@@ -32,25 +32,44 @@ navigation, capture, privacy, and sync gates. A smaller pre/post-capture review
 workspace is part of v1 because calibration and acceptance require human
 judgment.
 
+The 2026-07-23 Studio v2 increment expands the operator boundary without
+changing the proof's honesty or the shipping navigation authority:
+
+- accept an ordered set of GoPro files as one virtual ride;
+- make `npm run demo:studio` open the complete project dashboard;
+- run doctor, inspection, validation, Simulator capture, rendering, and
+  publishing as persistent local jobs from that dashboard;
+- list and resume recent projects after browser/server closure;
+- save full revision snapshots and restore an earlier decision point by
+  creating a new revision; and
+- fingerprint relevant app/map working-tree changes so a changed native
+  experience cannot silently reuse an older capture.
+
 ## Architecture summary
 
-The implementation has five cooperating parts:
+The implementation has nine cooperating parts:
 
 1. A persistent project/revision model records operator intent, immutable
    attempts, accepted artifacts, dependency digests, staleness, and next steps.
-2. A Node CLI inspects media, extracts GoPro telemetry, normalizes fixes,
+2. A virtual-source layer orders one or more clips, maps local media/GPS time
+   onto one global ride clock, and splits final edits at source seams.
+3. A Node CLI inspects media, extracts GoPro telemetry, normalizes fixes,
    resolves a route snapshot, validates the ride, and writes an immutable demo
    bundle under the ignored `build/demo-studio/` tree.
-3. A loopback-only local server exposes the compiled bundle and a small capture
+4. A loopback-only local server exposes the compiled bundle and a small capture
    control/event protocol to a development iOS build.
-4. A minimal local review workspace handles visual source calibration, proof
-   window selection, capture review, notes, acceptance, and impact previews.
-5. A dev-only capture controller loads the bundle, adapts it to the existing
+5. A website-first project dashboard handles project creation/resume, source
+   ordering, route changes, stage orchestration, visual review, acceptance,
+   history, restoration, and impact previews.
+6. A persistent job runner detaches long operations from the browser/server,
+   stores status and logs under the project, and reconciles interrupted jobs on
+   restart.
+7. A dev-only capture controller loads the bundle, adapts it to the existing
    scenario/navigation interfaces, and injects fixes through an absolute,
    media-clocked location source.
-6. An iOS capture command records the Simulator, collects actual navigation and
+8. An iOS capture command records the Simulator, collects actual navigation and
    speech timing events, and verifies start/end synchronization.
-7. A deterministic `ffmpeg` renderer aligns the GoPro and app stems, renders
+9. A deterministic `ffmpeg` renderer aligns the GoPro and app stems, renders
    voice/captions, produces the proof layout, and strips sensitive metadata.
 
 The shipping navigation session, presentation, camera, route progress, and
@@ -60,9 +79,10 @@ navigation engine.
 
 ## Explicit v1 decisions
 
-- **Input:** one GoPro MP4 containing GPMF GPS, or an already aligned CSV in the
-  repository's existing `time_s,latitude,longitude,altitude_m,speed_mps`
-  format. GPX/FIT import is deferred.
+- **Input:** one or more ordered GoPro MP4 files containing GPMF GPS, or clips
+  with already aligned CSV sidecars in the repository's existing
+  `time_s,latitude,longitude,altitude_m,speed_mps` format. GPX/FIT import is
+  deferred.
 - **Route:** an explicit catalog slug or route token. The tool never silently
   guesses the published route.
 - **Generated workspace:** `build/demo-studio/<demo-id>/`, already covered by
@@ -79,8 +99,9 @@ navigation engine.
 - **First render:** fixed 16:9 proof layout, approximately 68% GoPro and 32%
   app. The v1 review workspace may adjust the split, caption placement, and
   proof in/out points; advanced animation remains deferred.
-- **Operator surface:** guided CLI plus a minimal loopback web review workspace
-  before capture and after capture. The CLI remains the automation authority.
+- **Operator surface:** one loopback web production workspace for the normal
+  journey. The CLI remains a deterministic automation/debug client of the same
+  reducer and pipeline.
 - **Attempt model:** import, capture, voice, and render attempts are immutable;
   acceptance is an explicit project pointer and retries never overwrite it.
 - **Basemap:** Mapbox Outdoors may use network/cache during capture. The output
@@ -121,6 +142,104 @@ navigation engine.
   corrupt the project or change accepted pointers.
 - The CLI prints a human summary and concrete next action by default, plus
   stable exit codes and `--json` output for automation.
+
+## Studio v2 implementation record (2026-07-23)
+
+### A. Virtual multi-clip ride — implemented
+
+- [x] Add `inputs.sources[]` while migrating legacy `inputs.source` projects
+  in memory and retaining the legacy primary-source view for compatibility.
+- [x] Inspect every clip independently, store its hash/probe/trim/GPS cleanup,
+  and write `artifacts/media-timeline.json`.
+- [x] Shift each cleaned clip track onto one monotonically increasing global
+  ride clock and retain `sourceId` on fixes and warnings.
+- [x] Serve every allowlisted source through its own tokenized media URL.
+- [x] Switch source clips transparently while scrubbing or playing the global
+  web timeline.
+- [x] Split a showcase at any clip boundary and construct the `ffmpeg` graph
+  with the correct input/local time for each resulting segment.
+- [x] Check every configured source and aligned CSV in `doctor`.
+
+### B. Website-first orchestration — implemented
+
+- [x] Make bare `npm run demo:studio` start the complete local Studio and open
+  the browser; retain `./studio review` as a compatible project-scoped entry.
+- [x] Add recent-project selection and in-browser project creation with one or
+  more ordered source paths.
+- [x] Add the visible production sequence Footage → Route & map → Showcases →
+  App capture → Final edit → Publish with status and guarded actions.
+- [x] Add in-browser footage ordering, route editing, source/showcase review,
+  capture/render review, acceptance, and publication controls.
+- [x] Run doctor/inspect/validate/capture/render/publish as allowlisted argv-only
+  jobs, never shell strings.
+- [x] Let capture boot/select Simulator, start Metro when absent, and
+  build/install the CycleWays development app when the selected Simulator does
+  not contain it.
+- [x] Persist job state and logs under `jobs/`; detach the runner so closing the
+  tab or restarting the HTTP server does not terminate active production.
+- [x] Reconnect to a live runner by PID and mark a vanished runner interrupted
+  and retryable.
+- [x] Expose safe cancellation and keep complete logs and earlier attempts.
+- [x] Offer Capture another take directly in capture review, preserving the
+  current attempt and launching a bounded `--retry-from capture-NNN` job
+  without requiring an Accept or Reject decision.
+
+### C. Reversibility and proportional invalidation — implemented
+
+- [x] Write `revisions/revision-NNN.json` atomically for every new revision in
+  addition to the append-only history event.
+- [x] Restore an earlier snapshot as a new revision, merging later immutable
+  attempts back into history rather than deleting them.
+- [x] Add History & restore UI with explicit impact copy and current-revision
+  protection.
+- [x] Treat source order, route, showcase, caption, audio, and layout changes
+  according to the existing dependency invalidation graph.
+- [x] Preserve post-capture showcase trimming when it remains inside the
+  immutable capture envelope.
+- [x] Include the relevant dirty working-tree hash with the Git commit in
+  bundle provenance so app/map edits trigger a different validation/capture
+  input digest.
+- [x] Add focused tests for legacy migration, clip-boundary rendering, revision
+  restoration, and interrupted-job recovery.
+
+### D. Recoverable GPS coverage and compact operator hierarchy — implemented
+
+- [x] Recover the largest coherent GPS run when an isolated early outlier
+  causes the normal greedy cleanup pass to retain fewer than two fixes.
+- [x] Record recovery provenance and calculate per-clip usable coverage plus
+  leading, trailing, and sustained GPS-unavailable intervals.
+- [x] Render GPS-unavailable intervals as striped exclusion zones in showcase
+  review and explain why the current selection is blocked.
+- [x] Reject overlapping showcase decisions in the local service as well as in
+  browser controls.
+- [x] Detect sustained route mismatches per source clip, exclude them from
+  showcase authoring, and move an untouched automatic proof window to the
+  longest route-matching GPS coverage.
+- [x] Draw GPS as separate per-clip/per-gap paths, focus the diagnostic map on
+  the active clip, and never invent a line across a source boundary.
+- [x] Mark each source span directly on the main timeline with a compact clip
+  number/name and boundary tick.
+- [x] Replace the tall equal-weight production cards with a compact six-step
+  progress rail, one contextual Continue action, and a secondary Project
+  settings menu.
+- [x] Cover recovery, coverage classification, server-side exclusion, and
+  compact-workflow markup in automated tests.
+
+### Validation expectations
+
+1. `node --test tests/test-demo-studio-v2.mjs` passes.
+2. `npm run test:demo-studio` passes, including loopback server tests when the
+   execution environment permits binding `127.0.0.1`.
+3. Starting `npm run demo:studio`, closing the browser, reopening the URL, and
+   opening the same project shows the same revision and job state.
+4. Terminating the HTTP server during a render does not terminate the detached
+   runner; restarting the Studio shows the job until it completes.
+5. Killing a runner produces an interrupted/retryable job on the next Studio
+   start without changing accepted capture/render pointers.
+6. A showcase crossing from clip 1 into clip 2 produces two filter segments
+   with local source times and one honest transition.
+7. Restoring an earlier revision creates a later revision number and leaves all
+   later attempt media addressable.
 
 ## Planned file map
 
@@ -424,9 +543,10 @@ Human output always contains:
 The v1 web workspace is a local decision surface, not a general video editor.
 It has two modes sharing one synchronized timeline.
 
-**Inputs mode:** source video, route/track plot, raw/clean toggle, route-distance
-graph, GPS gaps, navigation/voice markers, global offset slider, proof-window
-handles, and approve/waive/revise actions.
+**Inputs mode:** source video, route/track plot, one or more numbered showcase
+ranges, per-range GPS feedback, and approve/revise actions. Technical
+calibration and render controls stay hidden from the default operator flow until
+an observed problem makes them relevant.
 
 **Attempt mode:** source/app split playback, frame step, sync markers,
 navigation/voice/caption markers, diagnostics, notes, accept/reject, and an
@@ -731,6 +851,9 @@ route state and digest.
   sustained excursions.
 - [ ] Report metrics for the whole cleaned ride and separately for every visible
   proof/beat window.
+- [x] Gate route fit and GPS continuity on the continuous capture envelope while
+  preserving full-source metrics as non-blocking diagnostics when failures are
+  wholly outside that envelope.
 - [ ] Implement default thresholds from the design as configurable gates, not
   hard-coded navigation behavior.
 - [ ] Make waivers structured: `{ gate, reason, approvedBy, approvedAt }`.
@@ -771,6 +894,8 @@ long-gap, sustained off-route, and loop-seam tracks.
 - [ ] Add gate checks for unexpected `error`/off-route/reroute, missing voice,
   premature arrival, duplicate voice, unusable cue density, and an uninteresting
   proof window.
+- [x] Replay the full source for navigation warm-up, gate navigation health on
+  the capture envelope, and require voice inside the final showcase ranges.
 - [ ] Write `bundle.private.json`, sanitized `bundle.app.json`,
   `navigation-timeline.json`, `validation-report.json`, normalized fixes, and
   source/route provenance atomically.
@@ -805,9 +930,10 @@ long-gap, sustained off-route, and loop-seam tracks.
 - [ ] Implement synchronized source playback, route/track map, route-distance
   graph, raw/clean toggle, GPS gaps, navigation/voice markers, and frame/time
   readout.
-- [ ] Add one global GPS/video offset control with preview-before-save and a
-  required landmark/reason note.
-- [ ] Add proof-window in/out handles, pre-roll warning, and affected gate list.
+- [ ] Keep global GPS/video offset correction available as an expert recovery
+  path, not a default operator control.
+- [ ] Add one-or-more showcase in/out controls, automatic pre-roll, per-segment
+  GPS feedback, and the affected gate list.
 - [ ] Save changes through the shared project reducer and show the downstream
   invalidation impact before confirmation.
 - [ ] Add explicit accept/reject/needs-revision actions for current inputs;
@@ -1302,7 +1428,8 @@ attach this UI to the public site or shipping app.
 
 **Additional capabilities beyond v1:**
 
-- multi-beat hero and vertical decision authoring;
+- richer multi-beat hero and vertical decision authoring (naming, reordering,
+  and layout-specific selections beyond the shared chronological showcases);
 - caption/translation editing and safe-area preview;
 - layout-transition and audio-mix preview;
 - meeting mode with named beat navigation and presentation-safe controls;

@@ -1,8 +1,8 @@
 # CycleWays navigation demo studio — design
 
-Date: 2026-07-22
+Date: 2026-07-23
 
-Status: proposed design
+Status: implemented continuous-proof studio; website-first multi-clip and reversible-workspace revision implemented 2026-07-23
 
 ## Executive decision
 
@@ -29,11 +29,68 @@ The defining promise is:
 > Real road. Real recorded GPS. Real CycleWays navigation. Replayed without
 > staging another ride.
 
-The operator experience is a hybrid: a concise CLI owns durable automation,
-while `review` opens a local web workspace for decisions that require human
-eyes and ears. The studio remembers project state, preserves every attempt, and
-always explains what failed, what became stale, and the smallest next action.
-The operator should not need to remember the pipeline or edit JSON by hand.
+The operator experience is **website first**. `npm run demo:studio` starts one
+local, token-protected production workspace where the operator creates or
+resumes projects, imports footage, runs diagnostics and validation, controls
+Simulator capture, reviews sync, renders, restores revisions, and publishes.
+The CLI remains a supported client of the same project model for automation and
+troubleshooting; it is not a second workflow. The operator should not need to
+remember commands, keep multiple terminals coordinated, or edit JSON by hand.
+
+## 2026-07-23 product decision: one durable production workspace
+
+Three requirements are now part of the core contract rather than later polish:
+
+1. **A ride may contain multiple GoPro files.** The Studio models them as an
+   ordered virtual ride timeline. Each clip retains its own media time, GPS
+   extraction, trim, digest, and offset. Global GPS/navigation time is
+   continuous across clip boundaries. Showcase selections may cross a boundary;
+   the renderer splits such a selection at the seam and reads each half from
+   the correct source file. The final edit uses a visible/audio transition at
+   discontinuities rather than implying that unrelated footage was continuous.
+2. **The website owns the complete operator journey.** A project dashboard
+   presents Footage → Route & map → Showcases → App capture → Final edit →
+   Publish. Long operations run as durable local jobs with live logs,
+   cancellation, and retry. The browser may close without stopping a job.
+   Restarting the Studio reconnects to a live detached job or marks a vanished
+   process interrupted and retryable.
+3. **Every Studio decision is reversible.** Each successful mutation writes a
+   full revision snapshot as well as the append-only history event. Restoring
+   revision N creates a new current revision; it never rewinds or deletes
+   history. Attempts and published files are immutable. Before a destructive-
+   looking edit, the UI explains which derived stages become stale and which
+   expensive artifacts remain reusable.
+4. **GPS quality is a timeline property, not an all-or-nothing import gate.**
+   Inspection first uses the normal auditable cleanup pass. If one isolated
+   outlier would otherwise poison the entire clip, it recovers the largest
+   internally coherent run and records that recovery. Leading, trailing, and
+   sustained GPS-unavailable intervals remain visible as striped exclusion
+   zones. Validation also creates route-mismatch exclusions when coherent
+   telemetry is geographically incompatible with the selected route. The
+   operator may watch all footage, but cannot save a showcase that overlaps
+   either exclusion type; the local service enforces the same rule.
+
+“Resume” has precise semantics. Inspection and validation can be rerun from
+durable inputs. Capture is atomic from the operator's perspective: an
+interrupted Simulator recording becomes a retained failed/interrupted attempt
+and retry creates a new attempt. A completed capture review offers **Capture
+another take** independently of Accept and Reject; the previous attempt remains
+immutable and the new attempt records it as its predecessor. Rendering may be
+retried from the accepted capture and saved edit decision. The Studio never
+claims it can append to a partially encoded capture safely.
+
+Starting app capture also owns its local development prerequisites: it selects
+an already booted Simulator or boots the configured device, starts Metro on
+localhost when it is absent, verifies the CycleWays development app, and runs
+the normal iOS development build/install when necessary. These operations are
+part of the same persistent capture job and log; manual Simulator/Metro setup
+is a troubleshooting escape hatch, not the happy path.
+
+Source-code and map-data edits remain Git's responsibility. The Studio records
+the Git commit plus a relevant working-tree fingerprint in each compiled
+bundle. Revalidating after an app/map change therefore makes the previous
+capture stale and requires a new capture, while retaining footage inspection,
+showcases, and the prior accepted film.
 
 ## Why this is the right design
 
@@ -129,12 +186,14 @@ renders stale. If only a title or caption changes, the expensive app capture
 remains valid and only the affected render becomes stale. This dependency-aware
 invalidation is central to a humane iteration loop.
 
-### CLI principles
+### Website and CLI principles
 
-The CLI is the reliable engine and should feel like a guided production
-assistant rather than a bag of low-level commands.
+The website is the normal production surface. It calls a bounded local service
+which writes the same project actions and starts the same pipeline stages used
+by the CLI. The CLI remains reliable and scriptable and should feel like a
+guided production assistant rather than a bag of low-level commands.
 
-The main surface is:
+The supported automation/debug surface is:
 
 ```text
 demo:studio new <name>                 create a project with a guided prompt
@@ -182,11 +241,18 @@ proof, not deferred until hero editing.
 **Pre-capture review** shows:
 
 - source video with the cleaned GPS position and selected route;
-- raw-versus-cleaned fix diagnostics and gaps;
-- route-distance graph and headless navigation/voice events;
-- a single global GPS/video offset control with landmark comparison;
-- proof-window in/out handles and pre-roll sufficiency;
-- gate warnings, waiver forms, and an explicit “ready for capture” action.
+- one or more clearly numbered showcase ranges;
+- per-showcase GPS continuity feedback;
+- simple start/end-at-playhead actions; and
+- an explicit “ready for capture” action.
+
+Showcase selection supports one to six ordered, non-overlapping source ranges.
+The app capture runs continuously from the first selected start through the last
+selected end so navigation state remains truthful across skipped ride time. The
+final renderer keeps only the selected ranges and adds a brief visible/audio
+fade at every discontinuity; it must never imply that separated ranges were one
+uninterrupted moment. Calibration and render-tuning controls remain internal or
+advanced until an observed problem requires them.
 
 **Post-capture review** shows:
 
@@ -625,6 +691,29 @@ the historically correct route snapshot, fix the underlying route data, choose
 a different ride, or explicitly label the ride as off-route. Do not repair the
 evidence only inside the demo.
 
+### Validation scopes
+
+Validation must distinguish the source from the material that will actually be
+captured and shown:
+
+- **full source diagnostics** inspect the entire cleaned GoPro track and remain
+  visible in the CLI and review workspace, but do not block the demo when an
+  issue is wholly outside the selected edit;
+- **capture-envelope gates** cover first showcase in-point minus pre-roll
+  through the final showcase out-point. Route fit, GPS gaps, forbidden
+  navigation state, and off-route state are blocking here because the app runs
+  continuously across the envelope, including the discarded intervals between
+  showcases;
+- **final-edit gates** cover only the selected showcase ranges. Requirements
+  such as spoken guidance must be satisfied by footage that survives the edit,
+  not by an event in pre-roll or a discarded middle section.
+
+The headless navigation engine still replays the complete track so the capture
+envelope begins with truthful warmed state. Scoping changes which events count
+as publish-blocking evidence; it does not reset or simplify navigation. The
+review map renders the complete source track muted and the capture envelope in
+the active color, with a plain-language note for non-blocking source findings.
+
 ## Reuse the real navigation harness
 
 ### Scenario adapter
@@ -941,7 +1030,7 @@ scenario, featured content, video-sync data, named cycling ways, and camera
 journey coverage. That minimizes unknowns and lets the first film focus on the
 tool and story rather than new route authoring.
 
-Choose one continuous 2–4 minute section containing:
+Choose one or two continuous sections, totaling roughly 2–4 minutes, containing:
 
 - an unmistakable junction or turn visible in the GoPro frame;
 - at least ten seconds of calm lead-in;
@@ -950,9 +1039,10 @@ Choose one continuous 2–4 minute section containing:
 - clean GPS coverage and no unexplained route mismatch;
 - attractive road scenery after the maneuver.
 
-From that section, make the uncut proof first. Once it passes, use the same
-bundle for the hero hook and vertical cut. This sequence establishes truth
-before polish.
+Capture the full first-to-last envelope so the app remains continuous, then use
+explicit transitions between the selected sections in the proof. Once it
+passes, use the same bundle for the hero hook and vertical cut. This sequence
+establishes truth before polish.
 
 ## Repository fit and future work boundary
 

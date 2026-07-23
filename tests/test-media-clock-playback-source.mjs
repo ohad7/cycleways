@@ -16,15 +16,27 @@ const advance = (to) => {
 };
 const fixes = Array.from({ length: 21 }, (_, index) => ({ lat: 33, lng: 35 + index / 10000, timestamp: index * 1000 }));
 const received = [];
-const source = createMediaClockPlaybackSource(fixes, { visibleInMs: 5000, visibleOutMs: 10_000, preRollMs: 2000, now: () => clock, schedule, cancelSchedule });
+let completedAt = null;
+const source = createMediaClockPlaybackSource(fixes, {
+  visibleInMs: 5000,
+  visibleOutMs: 10_500,
+  preRollMs: 2000,
+  now: () => clock,
+  schedule,
+  cancelSchedule,
+  onComplete: () => { completedAt = clock; },
+});
 await source.startWatch({ onFix: (fix, meta) => received.push({ timestamp: fix.timestamp, ...meta }) });
 source.arm();
 assert.equal(source.getDiagnostics().phase, "armed");
 assert.ok(received.every((item) => item.warmup));
 source.beginVisiblePlayback();
 advance(5000);
+assert.equal(source.getDiagnostics().phase, "playing", "capture remains active after the final in-range GPS fix");
+advance(5500);
 assert.equal(source.getDiagnostics().phase, "hold");
 assert.deepEqual(received.filter((item) => !item.warmup).map((item) => item.timestamp), [5000, 6000, 7000, 8000, 9000, 10000]);
 assert.equal(source.getDiagnostics().maxLatenessMs, 0);
+assert.equal(completedAt, 5500, "capture ends at visibleOutMs rather than at the final GPS fix");
 
 console.log("media clock playback source tests passed");

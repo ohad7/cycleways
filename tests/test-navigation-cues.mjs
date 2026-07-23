@@ -148,7 +148,7 @@ function routeFrom(geometry, extra = {}) {
   assert.equal(active.phase, "preview");
 }
 
-// --- Hazard/POI cues from active data points ------------------------------
+// --- Route POIs remain map content, not generic navigation warnings --------
 {
   const withHazard = routeFrom(
     [
@@ -165,11 +165,7 @@ function routeFrom(geometry, extra = {}) {
     },
   );
   const hazards = buildRouteCues(withHazard).filter((c) => c.dataPointId);
-  assert.equal(hazards.length, 1, "only the on-route hazard with progress becomes a cue");
-  assert.equal(hazards[0].dataPointId, "poi-1");
-  assert.equal(hazards[0].type, "caution");
-  assert.equal(hazards[0].segmentName, "Seg A");
-  assert.equal(hazards[0].distanceMeters, 300);
+  assert.equal(hazards.length, 0, "route POIs do not become navigation cues");
 }
 
 // --- selectActiveCue scheduling phases ------------------------------------
@@ -212,7 +208,7 @@ function routeFrom(geometry, extra = {}) {
   assert.equal(active.distanceToCueMeters, 70);
 
   const hazardOnly = selectActiveCue([cues[0]], 400);
-  assert.equal(hazardOnly.cue.type, "caution", "hazard-only case still selects hazard");
+  assert.equal(hazardOnly, null, "legacy hazard cues are ignored");
 }
 
 // --- Geometry cleanup: stable bearings + one physical turn ----------------

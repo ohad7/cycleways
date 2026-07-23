@@ -1,11 +1,14 @@
+import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
-import { resolve } from "node:path";
+import { homedir } from "node:os";
+import { join, resolve } from "node:path";
 import { createInterface } from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
 import { runDoctor } from "./doctor.mjs";
 import { previewDemoProjectMutation } from "./projectState.mjs";
 import { commandResult, formatProjectStatus } from "./status.mjs";
-import { createProjectWorkspace, readProject, updateProject } from "./workspace.mjs";
+import { createProjectWorkspace, listProjectRevisions, readProject, restoreProjectRevision, updateProject } from "./workspace.mjs";
+import { normalizeSourceClips } from "./sources.mjs";
 
 const FLAG_DEFINITIONS = Object.freeze({
   "--project": "value",
@@ -36,6 +39,72 @@ const FLAG_DEFINITIONS = Object.freeze({
   "-h": "boolean",
 });
 
+const ANSI = Object.freeze({
+  reset: "\u001b[0m",
+  bold: "\u001b[1m",
+  dim: "\u001b[2m",
+  red: "\u001b[31m",
+  green: "\u001b[32m",
+  yellow: "\u001b[33m",
+  cyan: "\u001b[36m",
+});
+
+function paint(value, style, enabled) {
+  return enabled ? `${style}${value}${ANSI.reset}` : value;
+}
+
+export function terminalColorsEnabled({ isTTY = output.isTTY, env = process.env } = {}) {
+  if (Object.prototype.hasOwnProperty.call(env, "NO_COLOR")) return false;
+  if (Object.prototype.hasOwnProperty.call(env, "FORCE_COLOR")) return env.FORCE_COLOR !== "0";
+  return isTTY === true;
+}
+
+function stripMatchingQuotes(value) {
+  if (value.length < 2) return value;
+  const quote = value[0];
+  return (quote === "\"" || quote === "'") && value.at(-1) === quote ? value.slice(1, -1) : value;
+}
+
+function expandHome(value) {
+  if (value === "~") return homedir();
+  if (value.startsWith("~/")) return join(homedir(), value.slice(2));
+  return value;
+}
+
+function unescapePastedShellPath(value) {
+  // Terminal drag/drop commonly inserts shell escapes. A readline prompt does
+  // not remove them as a shell would, so try the pasted form as a fallback.
+  return value.replace(/\\([\\\s'"()&;[\]{}!#$`])/g, "$1");
+}
+
+export function resolveOperatorPath(value, { cwd = process.cwd(), pathExists = existsSync } = {}) {
+  const raw = String(value ?? "").trim();
+  if (!raw) throw new Error("path must not be empty");
+  const unquoted = stripMatchingQuotes(raw);
+  const unescaped = unescapePastedShellPath(unquoted);
+  const candidates = [...new Set([raw, unquoted, unescaped].map(expandHome).map((candidate) => resolve(cwd, candidate)))];
+  return candidates.find((candidate) => pathExists(candidate)) || candidates.at(-1);
+}
+
+export function formatDoctorHuman(doctor, { next, unavailable = [], color = false } = {}) {
+  const stateStyles = { ready: ANSI.green, warning: ANSI.yellow, blocked: ANSI.red };
+  const checks = doctor.checks.map((check) => {
+    const state = check.state.padEnd(8);
+    return `${check.name.padEnd(12)} ${paint(state, stateStyles[check.state] || ANSI.dim, color)} ${check.detail}`;
+  });
+  const summary = commandResult({
+    result: doctor.ok ? "Available studio stages are shown above" : `${doctor.blocking.length} inspection prerequisite(s) blocked`,
+    why: unavailable.length ? `Not ready yet: ${unavailable.join(", ")}` : "Inspect, capture, and render prerequisites are ready",
+    next,
+  }).split("\n").map((line) => {
+    const match = /^(RESULT|WHY|NEXT)(\s+)/.exec(line);
+    if (!match) return line;
+    const style = match[1] === "RESULT" ? (doctor.ok ? ANSI.green : ANSI.red) : match[1] === "WHY" ? ANSI.yellow : ANSI.cyan;
+    return `${paint(match[1], `${ANSI.bold}${style}`, color)}${match[2]}${line.slice(match[0].length)}`;
+  });
+  return [...checks, ...summary].join("\n");
+}
+
 export function parseCliArguments(argv) {
   const positional = [];
   const options = {};
@@ -57,7 +126,12 @@ export function parseCliArguments(argv) {
     }
     const value = argv[++index];
     if (value === undefined || value.startsWith("--")) throw new Error(`${arg} requires a value`);
-    options[arg.slice(2)] = value;
+    const key = arg.slice(2);
+    if (["source", "csv"].includes(key) && options[key] !== undefined) {
+      options[key] = Array.isArray(options[key]) ? [...options[key], value] : [options[key], value];
+    } else {
+      options[key] = value;
+    }
   }
   return { positional, options };
 }
@@ -82,7 +156,7 @@ function kindFromAttempt(id) {
 }
 
 async function askMissing(options, nonInteractive) {
-  if (options.source && options.route) return options;
+  if (options.source && (options.route || options["route-token"])) return options;
   if (nonInteractive || !input.isTTY) {
     throw new Error("new requires --source and --route in non-interactive mode");
   }
@@ -91,7 +165,7 @@ async function askMissing(options, nonInteractive) {
     return {
       ...options,
       source: options.source || await prompt.question("GoPro video or aligned CSV path: "),
-      route: options.route || await prompt.question("Catalog route slug: "),
+      route: options.route || options["route-token"] || await prompt.question("Catalog route slug: "),
     };
   } finally {
     prompt.close();
@@ -102,13 +176,14 @@ export function helpText() {
   return `CycleWays Navigation Demo Studio
 
 Operator workflow:
-  new <name> --source <video> [--csv <aligned-gps.csv>] --route <slug>
+  npm run demo:studio                    open the complete local web studio
+  new <name> --source <video> [--source <next-video>] --route <slug>
   doctor | status | inspect | review
   configure <field> <value> --reason <why>
   route set <slug>
   validate | capture proof | render proof
   accept|reject <attempt-id> --note <text>
-  make proof | publish proof | history
+  make proof | publish proof | history | restore <revision>
 
 Expert stages:
   compile --manifest <path> [--out <dir>]
@@ -135,25 +210,54 @@ function launcherNext(project) {
 export async function runCli(argv, io = console) {
   const { positional, options } = parseCliArguments(argv);
   const [command, ...rest] = positional;
-  if (!command || options.help || options.h || command === "help") {
+  if (!command) {
+    const { launchStudio } = await import("./studioServer.mjs");
+    return launchStudio({ options, io });
+  }
+  if (options.help || options.h || command === "help") {
     io.log(helpText());
     return { ok: true, code: "HELP" };
   }
 
   if (command === "new") {
-    if (rest.length !== 1) throw new Error("usage: new <name> --source <path> --route <slug>");
+    if (rest.length !== 1) {
+      const pathHint = rest.length > 1 ? '; wrap paths containing spaces in quotes, for example --source "/path/My Ride.mp4"' : "";
+      throw new Error(`usage: new <name> --source <path> --route <slug>${pathHint}`);
+    }
     const values = await askMissing(options, options["non-interactive"]);
+    const rawSources = Array.isArray(values.source) ? values.source : [values.source];
+    const rawCsv = values.csv === undefined ? [] : Array.isArray(values.csv) ? values.csv : [values.csv];
+    const sourcePaths = rawSources.map((value) => resolveOperatorPath(value));
     const created = await createProjectWorkspace({
       id: rest[0],
-      sourcePath: resolve(values.source),
-      csvPath: values.csv ? resolve(values.csv) : null,
-      routeValue: values.route,
+      sourcePath: sourcePaths[0],
+      csvPath: rawCsv[0] ? resolveOperatorPath(rawCsv[0]) : null,
+      routeValue: values.route || values["route-token"],
     });
-    const acknowledged = await updateProject(created.path, {
+    let acknowledged = await updateProject(created.path, {
       type: "privacy-acknowledged",
       shareExactEndpoints: values["share-endpoints"] === true,
       reason: "project-created",
     });
+    if (values["route-token"]) {
+      acknowledged = await updateProject(created.path, {
+        type: "configure",
+        field: "route.kind",
+        value: "route-token",
+        reason: "route-token-selected",
+      });
+    }
+    if (sourcePaths.length > 1) {
+      acknowledged = await updateProject(created.path, {
+        type: "replace-sources",
+        sources: sourcePaths.map((path, index) => ({
+          path,
+          csvPath: rawCsv[index] ? resolveOperatorPath(rawCsv[index]) : null,
+          kind: rawCsv[index] ? "aligned-csv" : "gopro-mp4",
+        })),
+        reason: "multi-clip-project-created",
+      });
+    }
     return outputResult(io, options, { ok: true, code: "PROJECT_CREATED", project: acknowledged.path }, commandResult({
       result: `Created demo project ${rest[0]}`,
       wrote: acknowledged.path,
@@ -181,20 +285,19 @@ export async function runCli(argv, io = console) {
     const next = doctor.capabilities[desiredCapability]
       ? desiredNext.replace("demo:studio ", "./studio ")
       : `resolve the ${desiredCapability} checks above, then rerun ./studio doctor`;
-    const human = [
-      ...doctor.checks.map((check) => `${check.name.padEnd(12)} ${check.state.padEnd(8)} ${check.detail}`),
-      commandResult({
-        result: doctor.ok ? "Available studio stages are shown above" : `${doctor.blocking.length} inspection prerequisite(s) blocked`,
-        why: unavailable.length ? `Not ready yet: ${unavailable.join(", ")}` : "Inspect, capture, and render prerequisites are ready",
-        next,
-      }),
-    ].join("\n");
+    const human = formatDoctorHuman(doctor, {
+      next,
+      unavailable,
+      color: !options.json && terminalColorsEnabled(),
+    });
     return outputResult(io, options, { ok: doctor.ok, code: doctor.ok ? "DOCTOR_READY" : "DOCTOR_BLOCKED", ...doctor }, human);
   }
   if (command === "configure") {
     if (rest.length !== 2) throw new Error("usage: configure <field> <value> --reason <why>");
     if (!options.reason) throw new Error("configure requires --reason so project history remains understandable");
-    const value = parseValue(rest[1]);
+    const value = ["source.path", "source.csvPath"].includes(rest[0]) && rest[1] !== "null"
+      ? resolveOperatorPath(rest[1])
+      : parseValue(rest[1]);
     const preview = previewDemoProjectMutation(loaded.project, rest[0], value);
     if (!options.yes) {
       const impact = `Would invalidate: ${preview.invalidated.join(", ") || "nothing"}`;
@@ -246,7 +349,58 @@ export async function runCli(argv, io = console) {
     const human = events.length
       ? events.map((event) => `r${event.revision} ${event.at} ${event.type} ${event.reason || ""}`).join("\n")
       : "No project changes recorded.";
-    return outputResult(io, options, { ok: true, code: "HISTORY", events }, human);
+    const revisions = await listProjectRevisions(loaded.path);
+    return outputResult(io, options, { ok: true, code: "HISTORY", events, revisions }, human);
+  }
+  if (command === "restore") {
+    if (rest.length !== 1 || !Number.isInteger(Number(rest[0]))) throw new Error("usage: restore <revision> --yes");
+    if (!options.yes) {
+      return outputResult(io, options, { ok: false, code: "CONFIRMATION_REQUIRED", targetRevision: Number(rest[0]) }, commandResult({
+        result: "Revision was not restored",
+        why: "Restoring changes current decisions but preserves every immutable attempt",
+        next: `rerun ./studio restore ${rest[0]} --yes`,
+      }));
+    }
+    const restored = await restoreProjectRevision(loaded.path, Number(rest[0]), {
+      reason: options.reason || `operator-restored-revision-${rest[0]}`,
+    });
+    return outputResult(io, options, { ok: true, code: "REVISION_RESTORED", revision: restored.project.revision, targetRevision: Number(rest[0]) }, commandResult({
+      result: `Restored project decisions from revision ${rest[0]}`,
+      kept: "All later captures and renders remain in project history",
+      next: launcherNext(restored.project),
+    }));
+  }
+  if (command === "source") {
+    const clips = normalizeSourceClips(loaded.project.inputs);
+    if (rest[0] === "add" && rest.length === 2) {
+      const path = resolveOperatorPath(rest[1]);
+      const updated = await updateProject(loaded.path, {
+        type: "replace-sources",
+        sources: [...clips, { path }],
+        reason: options.reason || "source-clip-added",
+      });
+      return outputResult(io, options, { ok: true, code: "SOURCE_ADDED", sources: updated.project.inputs.sources }, commandResult({
+        result: `Added source clip ${path}`,
+        why: `The virtual ride now contains ${updated.project.inputs.sources.length} clips`,
+        next: "./studio inspect",
+      }));
+    }
+    if (rest[0] === "remove" && rest.length === 2) {
+      const remaining = clips.filter((clip) => clip.id !== rest[1]);
+      if (remaining.length === clips.length) throw new Error(`unknown source clip "${rest[1]}"`);
+      if (!remaining.length) throw new Error("a project must retain at least one source clip");
+      const updated = await updateProject(loaded.path, {
+        type: "replace-sources",
+        sources: remaining,
+        reason: options.reason || "source-clip-removed",
+      });
+      return outputResult(io, options, { ok: true, code: "SOURCE_REMOVED", sources: updated.project.inputs.sources }, commandResult({
+        result: `Removed ${rest[1]} from the current timeline`,
+        kept: "Earlier revisions and their artifacts remain available",
+        next: "./studio inspect",
+      }));
+    }
+    throw new Error("usage: source add <video> | source remove <clip-id>");
   }
 
   if (command === "inspect") {

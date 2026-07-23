@@ -20,6 +20,22 @@ import {
   assert.equal(p.offRoute, false);
 }
 
+// Legacy POI/hazard state must not resurrect the unfinished generic warning.
+{
+  const p = getNavigationPresentation({
+    status: "navigating",
+    offRoute: false,
+    activeCue: {
+      cue: { type: "caution", dataPointId: "legacy-poi" },
+      phase: "final",
+      distanceToCueMeters: 10,
+    },
+    progress: { remainingMeters: 700 },
+  });
+  assert.equal(p.cueText, "המשך במסלול");
+  assert.doesNotMatch(p.cueText, /שים לב/);
+}
+
 // Preview of a left turn 120 m ahead.
 {
   const p = getNavigationPresentation({

@@ -172,6 +172,20 @@ export function validateDemoBundle(value) {
   });
   const capture = object(bundle.capture, label, "capture");
   const proof = validateRange(capture.proof, label, "capture.proof", "inMs", "outMs");
+  const showcases = (capture.showcases === undefined ? [{ inMs: proof.inMs, outMs: proof.outMs }] : capture.showcases);
+  if (!Array.isArray(showcases) || showcases.length < 1 || showcases.length > 6) {
+    fail(label, "capture.showcases", "must contain between one and six segments");
+  }
+  const normalizedShowcases = showcases.map((segment, index) => validateRange(segment, label, `capture.showcases[${index}]`, "inMs", "outMs"));
+  for (let index = 0; index < normalizedShowcases.length; index += 1) {
+    const segment = normalizedShowcases[index];
+    if (segment.inMs < proof.inMs || segment.outMs > proof.outMs) {
+      fail(label, `capture.showcases[${index}]`, "must be contained by capture.proof");
+    }
+    if (index > 0 && segment.inMs < normalizedShowcases[index - 1].outMs) {
+      fail(label, `capture.showcases[${index}]`, "must not overlap the previous segment");
+    }
+  }
   if (fixes[0].timestamp > proof.inMs - (proof.preRollMs ?? 0) || fixes.at(-1).timestamp < proof.outMs) {
     fail(label, "fixes", "must cover the proof window and pre-roll");
   }
@@ -180,7 +194,7 @@ export function validateDemoBundle(value) {
     id: bundle.id,
     routeState,
     fixes,
-    capture: { ...capture, proof },
+    capture: { ...capture, proof, showcases: normalizedShowcases },
     expectations: object(bundle.expectations, label, "expectations"),
     provenance: object(bundle.provenance, label, "provenance"),
   };

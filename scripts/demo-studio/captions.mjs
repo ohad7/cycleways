@@ -78,3 +78,25 @@ export function writeSrt(cues, { originMs = 0 } = {}) {
     "",
   ].join("\n")).join("\n");
 }
+
+export function remapCuesToSegments(cues, segments) {
+  const mapped = [];
+  let outputOffsetMs = 0;
+  for (const [segmentIndex, segment] of (segments || []).entries()) {
+    const inMs = Number(segment.inMs);
+    const outMs = Number(segment.outMs);
+    for (const cue of cues || []) {
+      const clippedStart = Math.max(Number(cue.startMs), inMs);
+      const clippedEnd = Math.min(Number(cue.endMs), outMs);
+      if (clippedEnd <= clippedStart) continue;
+      mapped.push({
+        ...cue,
+        id: `${cue.id}-showcase-${segmentIndex + 1}`,
+        startMs: outputOffsetMs + clippedStart - inMs,
+        endMs: outputOffsetMs + clippedEnd - inMs,
+      });
+    }
+    outputOffsetMs += outMs - inMs;
+  }
+  return mapped;
+}

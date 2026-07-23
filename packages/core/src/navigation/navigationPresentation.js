@@ -15,7 +15,7 @@ const STATUS_TEXT = {
   idle: "",
 };
 
-const HAZARD_FALLBACK = { text: "שים לב", icon: "alert-circle-outline" };
+const CONTINUE_FALLBACK = { text: "המשך במסלול", icon: "navigate-outline" };
 
 const NAVIGATION_SURFACE_STATUSES = new Set([
   "navigating",
@@ -161,7 +161,7 @@ function turnText(cue) {
 }
 
 function cueDisplay(cue) {
-  if (!cue) return { text: "המשך במסלול", icon: "navigate-outline" };
+  if (!cue) return CONTINUE_FALLBACK;
   switch (cue.type) {
     case "turn":
       return {
@@ -195,7 +195,7 @@ function cueDisplay(cue) {
     case "start":
       return { text: "תחילת המסלול", icon: "navigate-outline" };
     default:
-      return HAZARD_FALLBACK;
+      return CONTINUE_FALLBACK;
   }
 }
 

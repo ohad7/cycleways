@@ -32,6 +32,22 @@ assert.equal(formatNavigationHorizonMeters(1510), "1.5 קילומטר");
 
 {
   const planner = createNavigationVoicePlanner();
+  const warning = planner.plan(
+    {
+      kind: "cue",
+      cueType: "caution",
+      phase: "final",
+      cue: { type: "caution", distanceMeters: 100, dataPointId: "legacy-poi" },
+    },
+    {},
+    1000,
+  );
+  assert.equal(warning.utterance, null, "legacy POI warnings remain silent");
+  assert.equal(warning.reason, "no-phrase");
+}
+
+{
+  const planner = createNavigationVoicePlanner();
   const preview = planner.plan(turnPreview, state, 1000).utterance;
   assert.ok(preview, "preview turn speaks");
   assert.equal(preview.language, "he-IL");

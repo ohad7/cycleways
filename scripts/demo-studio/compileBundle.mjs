@@ -6,6 +6,9 @@ import {
 
 export function compileDemoBundle({ project, routeState, fixes, cleanup, toolVersions = {}, gitCommit = "unknown", compiledAt } = {}) {
   const proof = project.inputs.story.proof;
+  const showcases = project.inputs.story.showcases?.length
+    ? project.inputs.story.showcases.map(({ inMs, outMs }) => ({ inMs: Number(inMs), outMs: Number(outMs) }))
+    : [{ inMs: Number(proof.inMs), outMs: Number(proof.outMs) }];
   const bundle = validateDemoBundle({
     schemaVersion: 1,
     id: project.id,
@@ -18,6 +21,7 @@ export function compileDemoBundle({ project, routeState, fixes, cleanup, toolVer
         outMs: Number(proof.outMs),
         preRollMs: Number(proof.preRollMs) || 0,
       },
+      showcases,
     },
     expectations: {
       forbiddenStatuses: ["error"],

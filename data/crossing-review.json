@@ -452,6 +452,125 @@
       ]
     },
     {
+      "id": "manual-crossing-adced33762581564",
+      "kind": "side-change",
+      "representation": "edge-path",
+      "guidancePolicy": "always",
+      "guideline": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            35.622996,
+            33.227198
+          ],
+          [
+            35.622867,
+            33.227247
+          ]
+        ]
+      },
+      "center": {
+        "lat": 33.227246928222,
+        "lng": 35.622866961263995
+      },
+      "bbox": [
+        35.622866961263995,
+        33.2271975248382,
+        35.6229957431184,
+        33.227246928222
+      ],
+      "crossedRoad": {
+        "source": "curated",
+        "sourceIds": [],
+        "name": "מעבר על כביש שמורת נחל שניר",
+        "highway": "road"
+      },
+      "sourceEdgeFingerprint": "sha256:af02e7c756dbd201c024c29356076ce674841501153343b3d0756d6ff7286338",
+      "audit": {
+        "createdAt": "2026-07-23T07:30:03.255Z",
+        "updatedAt": "2026-07-23T07:31:43.008Z"
+      },
+      "warnings": [],
+      "mappings": [
+        {
+          "id": "mapping-adced33762581564-forward",
+          "direction": "forward",
+          "match": {
+            "before": [],
+            "action": [
+              {
+                "edgeShareId": 31095,
+                "fromFractionQ": 965827,
+                "toFractionQ": 40670
+              }
+            ],
+            "after": []
+          },
+          "entry": {
+            "lat": 33.2271975248382,
+            "lng": 35.6229957431184
+          },
+          "exit": {
+            "lat": 33.227246928222,
+            "lng": 35.622866961263995
+          },
+          "geometry": [
+            {
+              "lat": 33.2271975248382,
+              "lng": 35.6229957431184
+            },
+            {
+              "lat": 33.227246928222,
+              "lng": 35.622866961263995
+            }
+          ],
+          "policy": {
+            "state": "allowed",
+            "policyDigest": "9a8bbb7bdf928deb390f9446260665ac01ac56f208305e3ee2e664aa30bd0a2c"
+          },
+          "sourceEdgeFingerprint": "sha256:af02e7c756dbd201c024c29356076ce674841501153343b3d0756d6ff7286338"
+        },
+        {
+          "id": "mapping-adced33762581564-reverse",
+          "direction": "reverse",
+          "match": {
+            "before": [],
+            "action": [
+              {
+                "edgeShareId": 31095,
+                "fromFractionQ": 40670,
+                "toFractionQ": 965827
+              }
+            ],
+            "after": []
+          },
+          "entry": {
+            "lat": 33.227246928222,
+            "lng": 35.622866961263995
+          },
+          "exit": {
+            "lat": 33.2271975248382,
+            "lng": 35.6229957431184
+          },
+          "geometry": [
+            {
+              "lat": 33.227246928222,
+              "lng": 35.622866961263995
+            },
+            {
+              "lat": 33.2271975248382,
+              "lng": 35.6229957431184
+            }
+          ],
+          "policy": {
+            "state": "allowed",
+            "policyDigest": "9a8bbb7bdf928deb390f9446260665ac01ac56f208305e3ee2e664aa30bd0a2c"
+          },
+          "sourceEdgeFingerprint": "sha256:af02e7c756dbd201c024c29356076ce674841501153343b3d0756d6ff7286338"
+        }
+      ]
+    },
+    {
       "id": "manual-crossing-b11ab7291f06f7a4",
       "kind": "side-change",
       "representation": "edge-path",

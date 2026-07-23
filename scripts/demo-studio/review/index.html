@@ -3,53 +3,261 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>CycleWays Navigation Demo Studio</title>
+    <title>CycleWays Demo Studio</title>
     <link rel="stylesheet" href="/review.css">
   </head>
   <body>
     <header>
-      <div><span class="eyebrow">CycleWays</span><h1>Navigation Demo Studio</h1></div>
-      <div id="project-meta" class="meta">Loading project…</div>
+      <div>
+        <span id="page-step" class="eyebrow">CycleWays Demo Studio</span>
+        <h1 id="page-title">Choose your showcases</h1>
+      </div>
+      <div class="header-actions">
+        <select id="project-picker" aria-label="Open project"></select>
+        <button id="new-project" class="secondary">New project</button>
+        <div id="project-meta" class="meta">Loading studio…</div>
+      </div>
     </header>
-    <main>
-      <section class="viewer-card">
+
+    <section id="studio-dashboard" class="studio-dashboard" aria-label="Production workflow">
+      <div class="dashboard-heading">
+        <div>
+          <span class="step">PROJECT WORKSPACE</span>
+          <h2 id="dashboard-title">Resume your production</h2>
+          <p id="dashboard-next" class="intro">The studio is loading the latest durable project state.</p>
+        </div>
+        <div class="dashboard-actions">
+          <button id="continue-action">Continue</button>
+          <details class="project-menu">
+            <summary>Project settings</summary>
+            <div>
+              <button id="edit-route" class="secondary">Edit route</button>
+              <button id="edit-sources" class="secondary">Edit footage</button>
+              <button id="open-history" class="secondary">History & restore</button>
+            </div>
+          </details>
+        </div>
+      </div>
+      <div id="stage-cards" class="stage-cards"></div>
+      <div id="job-panel" class="job-panel" hidden>
+        <div>
+          <strong id="job-title">Working…</strong>
+          <span id="job-state"></span>
+        </div>
+        <pre id="job-log"></pre>
+        <button id="cancel-job" class="secondary" hidden>Cancel safely</button>
+      </div>
+    </section>
+
+    <section id="empty-workspace" class="empty-workspace" hidden>
+      <span class="step">WELCOME</span>
+      <h1>Create your first navigation film</h1>
+      <p>Bring one or more GoPro clips. The studio keeps every revision and guides the complete production from inspection through publishing.</p>
+      <button id="empty-new-project">Create project</button>
+    </section>
+
+    <main id="review-workspace">
+      <section class="viewer-card" aria-label="Ride preview">
         <div class="viewer-grid">
           <div class="video-wrap">
             <video id="source-video" controls playsinline></video>
-            <div class="viewer-label">ROAD SOURCE</div>
+            <div class="viewer-label">RIDE VIDEO</div>
           </div>
           <div class="map-wrap">
-            <svg id="route-map" viewBox="0 0 800 600" role="img" aria-label="Route and recorded GPS"></svg>
+            <svg id="route-map" viewBox="0 0 800 600" role="img" aria-label="Recorded GPS track"></svg>
             <video id="attempt-video" controls playsinline hidden></video>
-            <div id="secondary-label" class="viewer-label">ROUTE / GPS</div>
+            <div id="secondary-label" class="viewer-label">GPS TRACK</div>
           </div>
         </div>
+
         <div class="timeline">
-          <input id="playhead" type="range" min="0" max="1000" value="0">
-          <div><span id="time-readout">00:00.000</span><span id="marker-readout">No marker selected</span></div>
+          <div class="timeline-rail">
+            <div id="selection-bands" class="selection-bands" aria-hidden="true"></div>
+            <input id="playhead" type="range" min="0" max="1000" value="0" aria-label="Video playhead">
+          </div>
+          <div class="timeline-meta">
+            <span id="time-readout">00:00.000</span>
+            <span id="selection-readout">Loading selection…</span>
+          </div>
         </div>
       </section>
+
       <aside>
-        <section class="panel"><h2>Review mode</h2><label>Attempt<select id="attempt-select"><option value="">Inputs: route and GPS</option></select></label><div id="sync-detail" class="impact">Pre-capture input review</div></section>
-        <section class="panel"><h2>Project status</h2><div id="status-list"></div><div id="next-action" class="next"></div></section>
-        <section class="panel"><h2>Calibrate inputs</h2>
-          <label>GPS / video offset <output id="offset-value">0.0 s</output><input id="offset" type="range" min="-10" max="10" step="0.1"></label>
-          <div class="two"><label>Proof in (s)<input id="proof-in" type="number" min="0" step="0.1"></label><label>Proof out (s)<input id="proof-out" type="number" min="0" step="0.1"></label></div>
-          <label>Landmark or edit reason<textarea id="reason" placeholder="Bridge rail aligns with GPS at 00:42"></textarea></label>
-          <div id="impact" class="impact">No unsaved changes</div>
-          <button id="save">Save revision</button><button id="accept-inputs" class="secondary">Accept inputs for capture</button>
+        <section class="panel selection-panel">
+          <span class="step">PICK THE BEST PARTS</span>
+          <h2>Build your showcase</h2>
+          <p class="intro">Play or scrub the ride. Mark each compelling stretch; the final video will join them with a clear transition.</p>
+
+          <div id="editing-label" class="editing-label">Editing showcase 1</div>
+
+          <div class="selection-summary" aria-live="polite">
+            <div><span>Starts</span><strong id="start-value">—</strong></div>
+            <div><span>Ends</span><strong id="end-value">—</strong></div>
+            <div><span>Length</span><strong id="duration-value">—</strong></div>
+          </div>
+
+          <div class="button-row">
+            <button id="set-start" class="secondary">Set start here</button>
+            <button id="set-end" class="secondary">Set end here</button>
+          </div>
+          <div class="text-actions">
+            <button id="jump-start" class="text-button">Go to start</button>
+            <button id="jump-end" class="text-button">Go to end</button>
+          </div>
+
+          <div id="selection-quality" class="quality">Checking GPS in this segment…</div>
+          <div id="source-quality" class="quality source-note" hidden></div>
+          <div id="showcase-list" class="showcase-list" aria-label="Selected showcases"></div>
+          <button id="add-showcase" class="secondary">+ Add another showcase here</button>
+          <button id="save-selection">Save showcases</button>
+          <button id="approve-inputs" class="secondary" hidden>Approve and continue</button>
+          <div id="next-step" class="next">Choose a segment to continue.</div>
         </section>
-        <section class="panel"><h2>Diagnostics</h2><div id="diagnostics"></div></section>
-        <section class="panel"><h2>Attempts</h2><div id="attempts"></div></section>
-        <section class="panel"><h2>Proof edit</h2>
-          <label>Road panel <output id="split-value">68%</output><input id="road-fraction" type="range" min="0.58" max="0.72" step="0.01"></label>
-          <div class="two"><label>Road sound (dB)<input id="ambience-gain" type="number" min="-40" max="6" step="1"></label><label>Voice (dB)<input id="voice-gain" type="number" min="-12" max="12" step="1"></label></div>
-          <label>Caption language<select id="caption-language"><option value="he">Hebrew</option><option value="en">Reviewed English</option></select></label>
-          <div id="translations"></div>
-          <button id="save-edit">Save proof edit</button>
+
+        <section id="attempt-panel" class="panel attempt-panel" hidden>
+          <span id="attempt-step" class="step">SYNC CHECK</span>
+          <h2 id="attempt-title">Review ride and app together</h2>
+          <p id="attempt-intro" class="intro">Play either video. Their playheads stay linked so you can check that navigation matches the ride.</p>
+          <label>Version<select id="attempt-select"></select></label>
+          <div id="review-showcases" class="review-showcases" aria-label="Showcases to review"></div>
+          <div id="sync-detail" class="quality"></div>
+          <div class="button-row">
+            <button id="accept-attempt">Accept</button>
+            <button id="reject-attempt" class="secondary">Reject</button>
+          </div>
+          <button id="retry-capture" class="secondary" hidden>Capture another take</button>
+          <div id="attempt-next" class="next"></div>
         </section>
       </aside>
     </main>
+
+    <dialog id="trim-modal" aria-labelledby="trim-title">
+      <form id="trim-form">
+        <div class="modal-heading">
+          <div>
+            <span class="step">EDIT WITHOUT RECAPTURE</span>
+            <h2 id="trim-title">Trim showcase</h2>
+          </div>
+          <button id="trim-close" class="icon-button" type="button" aria-label="Close">×</button>
+        </div>
+        <p id="trim-intro" class="intro"></p>
+
+        <label class="trim-field">
+          <span>Start</span>
+          <div class="trim-input-row">
+            <input id="trim-start-text" type="text" inputmode="decimal" autocomplete="off" aria-label="Showcase start time">
+            <button id="trim-start-playhead" class="text-button" type="button">Use playhead</button>
+          </div>
+          <input id="trim-start-range" type="range" step="100" aria-label="Adjust showcase start">
+        </label>
+
+        <label class="trim-field">
+          <span>End</span>
+          <div class="trim-input-row">
+            <input id="trim-end-text" type="text" inputmode="decimal" autocomplete="off" aria-label="Showcase end time">
+            <button id="trim-end-playhead" class="text-button" type="button">Use playhead</button>
+          </div>
+          <input id="trim-end-range" type="range" step="100" aria-label="Adjust showcase end">
+        </label>
+
+        <div class="trim-summary">
+          <span id="trim-duration">—</span>
+          <span id="trim-bounds">—</span>
+        </div>
+        <div id="trim-error" class="quality warning" hidden></div>
+        <div class="button-row modal-actions">
+          <button id="trim-cancel" class="secondary" type="button">Cancel</button>
+          <button id="trim-save" type="submit">Save trim</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="project-modal" aria-labelledby="project-modal-title">
+      <form id="project-form">
+        <div class="modal-heading">
+          <div>
+            <span class="step">NEW PRODUCTION</span>
+            <h2 id="project-modal-title">Create a demo project</h2>
+          </div>
+          <button class="icon-button" type="button" data-close-dialog="project-modal" aria-label="Close">×</button>
+        </div>
+        <label>Project name<input id="project-name" required placeholder="northern-ride-demo" pattern="[a-z0-9]+(?:-[a-z0-9]+)*"></label>
+        <label>Route source<select id="project-route-kind"><option value="catalog-slug">Catalog route</option><option value="route-token">Shared/built route token</option></select></label>
+        <label>Route slug or token<input id="project-route" required placeholder="sovev-beit-hillel"></label>
+        <label>GoPro video paths<textarea id="project-sources" required rows="4" placeholder="/Volumes/GoPro/GX010123.MP4&#10;/Volumes/GoPro/GX020123.MP4"></textarea></label>
+        <p class="field-help">One path per line, in ride order. Spaces are supported.</p>
+        <div id="project-error" class="quality warning" hidden></div>
+        <div class="button-row modal-actions">
+          <button class="secondary" type="button" data-close-dialog="project-modal">Cancel</button>
+          <button type="submit">Create and open</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="sources-modal" aria-labelledby="sources-title">
+      <form id="sources-form">
+        <div class="modal-heading">
+          <div>
+            <span class="step">VIRTUAL RIDE</span>
+            <h2 id="sources-title">Edit GoPro footage</h2>
+          </div>
+          <button class="icon-button" type="button" data-close-dialog="sources-modal" aria-label="Close">×</button>
+        </div>
+        <p class="intro">One path per line, in chronological order. Saving creates a revision; earlier captures and renders remain recoverable.</p>
+        <textarea id="sources-paths" required rows="7"></textarea>
+        <div id="sources-impact" class="impact-box">Inspect, validation, capture, and render will need to run again.</div>
+        <div class="button-row modal-actions">
+          <button class="secondary" type="button" data-close-dialog="sources-modal">Cancel</button>
+          <button type="submit">Save as new revision</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="route-modal" aria-labelledby="route-title">
+      <form id="route-form">
+        <div class="modal-heading">
+          <div>
+            <span class="step">ROUTE & MAP</span>
+            <h2 id="route-title">Change the navigation route</h2>
+          </div>
+          <button class="icon-button" type="button" data-close-dialog="route-modal" aria-label="Close">×</button>
+        </div>
+        <label>Route source<select id="route-kind"><option value="catalog-slug">Catalog route</option><option value="route-token">Shared/built route token</option></select></label>
+        <label>Route slug or token<input id="route-value" required></label>
+        <div class="impact-box">Changing the route preserves footage and showcases, but requires validation and a new app capture. Earlier captures remain in history.</div>
+        <div class="button-row modal-actions">
+          <button class="secondary" type="button" data-close-dialog="route-modal">Cancel</button>
+          <button type="submit">Save as new revision</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="history-modal" aria-labelledby="history-title">
+      <div class="modal-heading">
+        <div>
+          <span class="step">REVISION HISTORY</span>
+          <h2 id="history-title">Restore any decision point</h2>
+        </div>
+        <button class="icon-button" type="button" data-close-dialog="history-modal" aria-label="Close">×</button>
+      </div>
+      <p class="intro">Restore creates a new revision. It never deletes later attempts or published files.</p>
+      <div id="history-list" class="history-list"></div>
+    </dialog>
+
+    <dialog id="impact-modal" aria-labelledby="impact-title">
+      <div class="modal-heading">
+        <div>
+          <span class="step">CONFIRM IMPACT</span>
+          <h2 id="impact-title">Restore this revision?</h2>
+        </div>
+      </div>
+      <p id="impact-copy" class="intro"></p>
+      <div class="button-row modal-actions">
+        <button id="impact-cancel" class="secondary" type="button">Cancel</button>
+        <button id="impact-confirm" type="button">Restore revision</button>
+      </div>
+    </dialog>
+
     <div id="toast" role="status" aria-live="polite"></div>
     <script type="module" src="/review.js"></script>
   </body>

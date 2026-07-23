@@ -21,3 +21,21 @@ export function nextSmoothedMeters({
   const frac = Math.max(0, Math.min(1, dtMs / maxCatchupMs));
   return current + delta * frac;
 }
+
+export function mediaAlignedProgressMeters({
+  progressMeters,
+  speedMetersPerSecond,
+  fixTimestampMs,
+  mediaTimeMs,
+  maxExtrapolationMs = 1250,
+}) {
+  const progress = Number(progressMeters);
+  const speed = Number(speedMetersPerSecond);
+  const fixTime = Number(fixTimestampMs);
+  const mediaTime = Number(mediaTimeMs);
+  if (![progress, speed, fixTime, mediaTime].every(Number.isFinite) || speed <= 0) {
+    return Number.isFinite(progress) ? progress : 0;
+  }
+  const elapsedMs = Math.max(0, Math.min(Number(maxExtrapolationMs) || 0, mediaTime - fixTime));
+  return progress + speed * elapsedMs / 1000;
+}

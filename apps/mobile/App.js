@@ -49,6 +49,7 @@ void SplashScreen.preventAutoHideAsync().catch(() => {});
 LogBox.ignoreLogs([
   "SafeAreaView has been deprecated",
   "Invalid size is used for setting the map view",
+  /Open debugger to view warnings/,
 ]);
 
 const navigationRef = createNavigationContainerRef();
@@ -120,6 +121,10 @@ export default function App() {
         return { error, resolved: null };
       }
       if (demoCapture) {
+        // Capture output must contain only the app UI. Warning notifications
+        // are developer chrome; fatal uncaught errors still open full-screen.
+        LogBox.ignoreAllLogs(true);
+        LogBox.clearAllLogs();
         await clearActiveNavigationSession();
         await stopNavigationBackgroundUpdates();
         resetNativeLocationHref();
@@ -132,6 +137,7 @@ export default function App() {
         }
         return { error: null, resolved: demoCapture };
       }
+      LogBox.ignoreAllLogs(false);
       if (!warm) {
         const resumeRecord = await loadActiveNavigationSession();
         if (!mounted || requestId !== launchRequestId) return;

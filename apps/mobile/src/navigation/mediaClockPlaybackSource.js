@@ -26,6 +26,14 @@ export function createMediaClockPlaybackSource(fixes, options = {}) {
     options.onDispatch?.({ fix, warmup, effectsSuppressed: warmup, dispatchLatenessMs, mediaTimeMs: fix.timestamp });
   };
   const hold = () => { clear(); setPhase("hold"); options.onComplete?.(); };
+  const holdAtVisibleEnd = () => {
+    const remainingMs = epoch === null ? 0 : epoch + visibleOutMs - now();
+    if (Number.isFinite(remainingMs) && remainingMs > 0) {
+      timer = schedule(hold, remainingMs);
+      return;
+    }
+    hold();
+  };
   const tick = () => {
     timer = null;
     if (stopped || phase !== "playing") return;
@@ -34,7 +42,7 @@ export function createMediaClockPlaybackSource(fixes, options = {}) {
       dispatch(list[index], false);
       index += 1;
     }
-    if (index >= list.length || list[index].timestamp > visibleOutMs) return hold();
+    if (index >= list.length || list[index].timestamp > visibleOutMs) return holdAtVisibleEnd();
     timer = schedule(tick, Math.max(0, epoch + list[index].timestamp - now()));
   };
 

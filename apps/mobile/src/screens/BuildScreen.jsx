@@ -79,6 +79,7 @@ import {
 } from "@cycleways/core/utils/geometry.js";
 import { getDistance } from "@cycleways/core/utils/distance.js";
 import {
+  mediaAlignedProgressMeters,
   nextSmoothedMeters,
   shortestAngleLerp,
 } from "@cycleways/core/navigation/navigationSmoothing.js";
@@ -225,6 +226,7 @@ const PUCK_GLIDE_MS = 450;
 // adopted — deliberately slower than the puck arrow so map re-orientations
 // read as calm, occasional pans.
 const CAMERA_ROTATE_MS = 800;
+const DEMO_PUCK_CATCHUP_MS = 120;
 
 const ROUTE_POINT_STYLE = {
   circleRadius: [
@@ -385,6 +387,8 @@ export default function BuildScreen({ navigation, route }) {
   const demoCapture = useDemoCaptureSession(demoCaptureParam, {
     readinessRef: demoCaptureReadinessRef,
   });
+  const demoCaptureSourceRef = useRef(null);
+  demoCaptureSourceRef.current = demoCapture.active ? demoCapture.source : null;
   const demoCaptureInstalledRunRef = useRef(null);
   const [routeRestoreAttempt, setRouteRestoreAttempt] = useState(0);
   const [routeRestoreStatus, setRouteRestoreStatus] = useState(
@@ -2528,10 +2532,21 @@ export default function BuildScreen({ navigation, route }) {
         let lat;
         let targetBearing;
         if (onRoute) {
+          const demoSource = demoCaptureSourceRef.current;
+          const demoMediaTimeMs = demoSource?.getDiagnostics?.().mediaTimeMs;
+          const targetProgressMeters = demoSource
+            ? mediaAlignedProgressMeters({
+                progressMeters: progress.progressMeters,
+                speedMetersPerSecond: rawFixRef.current?.speed,
+                fixTimestampMs: rawFixRef.current?.timestamp,
+                mediaTimeMs: demoMediaTimeMs,
+              })
+            : progress.progressMeters ?? 0;
           smoothedMetersRef.current = nextSmoothedMeters({
             current: smoothedMetersRef.current,
-            target: progress.progressMeters ?? 0,
+            target: targetProgressMeters,
             dtMs,
+            maxCatchupMs: demoSource ? DEMO_PUCK_CATCHUP_MS : undefined,
           });
           const { point, bearingDeg } = pointAndBearingAtDistance(
             arcNow,

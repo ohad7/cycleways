@@ -125,3 +125,60 @@ export function normalizeRideFixes(rows, options = {}) {
   if (fixes.length < 2) throw new Error("normalization produced fewer than two usable GPS fixes");
   return { fixes, cleanup, warnings, rejected };
 }
+
+export function largestCoherentGpsRun(rows, options = {}) {
+  const trimInSeconds = Number(options.trimInSeconds) || 0;
+  const trimOutSeconds = Number.isFinite(Number(options.trimOutSeconds)) ? Number(options.trimOutSeconds) : Infinity;
+  const gpsOffsetSeconds = Number(options.gpsOffsetSeconds) || 0;
+  const maxTeleportKmh = Math.max(20, Number(options.maxTeleportKmh) || 200);
+  const eligible = (Array.isArray(rows) ? rows : []).filter((row) => {
+    if (row.measureMode !== undefined && ![2, 3].includes(Number(row.measureMode))) return false;
+    if (![row.timeSeconds, row.latitude, row.longitude].every(finite)) return false;
+    if (Math.abs(Number(row.latitude)) > 90 || Math.abs(Number(row.longitude)) > 180) return false;
+    const mediaSeconds = Number(row.timeSeconds) + gpsOffsetSeconds;
+    return mediaSeconds >= trimInSeconds && mediaSeconds <= trimOutSeconds;
+  });
+  const runs = [];
+  let current = [];
+  for (const row of eligible) {
+    const previous = current.at(-1);
+    if (previous) {
+      const seconds = Number(row.timeSeconds) - Number(previous.timeSeconds);
+      const distance = seconds > 0
+        ? getDistance(
+            { lat: Number(previous.latitude), lng: Number(previous.longitude) },
+            { lat: Number(row.latitude), lng: Number(row.longitude) },
+          )
+        : Infinity;
+      const speedKmh = seconds > 0 ? distance / seconds * 3.6 : Infinity;
+      if (speedKmh > maxTeleportKmh) {
+        if (current.length) runs.push(current);
+        current = [];
+      }
+    }
+    current.push(row);
+  }
+  if (current.length) runs.push(current);
+  return runs.sort((left, right) => right.length - left.length)[0] || [];
+}
+
+export function normalizeRideFixesWithRecovery(rows, options = {}) {
+  try {
+    return { ...normalizeRideFixes(rows, options), recovery: null };
+  } catch (error) {
+    if (!/fewer than two usable GPS fixes/.test(error.message)) throw error;
+    const recoveredRows = largestCoherentGpsRun(rows, options);
+    if (recoveredRows.length < 2) throw error;
+    const normalized = normalizeRideFixes(recoveredRows, options);
+    return {
+      ...normalized,
+      recovery: {
+        kind: "largest-coherent-run",
+        inputRows: Array.isArray(rows) ? rows.length : 0,
+        recoveredRows: recoveredRows.length,
+        fromSeconds: Number(recoveredRows[0].timeSeconds),
+        toSeconds: Number(recoveredRows.at(-1).timeSeconds),
+      },
+    };
+  }
+}

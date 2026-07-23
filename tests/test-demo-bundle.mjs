@@ -26,6 +26,10 @@ const bundle = {
 };
 
 assert.equal(validateDemoBundle(bundle).id, "demo-one");
+assert.deepEqual(validateDemoBundle(bundle).capture.showcases, [{ inMs: 1000, outMs: 9000 }]);
+const multiBundle = validateDemoBundle({ ...bundle, capture: { ...bundle.capture, showcases: [{ inMs: 1000, outMs: 3000 }, { inMs: 7000, outMs: 9000 }] } });
+assert.equal(multiBundle.capture.showcases.length, 2);
+assert.throws(() => validateDemoBundle({ ...bundle, capture: { ...bundle.capture, showcases: [{ inMs: 1000, outMs: 5000 }, { inMs: 4000, outMs: 9000 }] } }), /overlap/);
 assert.throws(() => validateDemoBundle({ ...bundle, schemaVersion: 2 }), /schemaVersion must be 1/);
 assert.throws(() => validateDemoBundle({ ...bundle, fixes: [bundle.fixes[0], bundle.fixes[0]] }), /must be greater/);
 assert.throws(() => validateDemoBundle({ ...bundle, fixes: [{ ...bundle.fixes[0], lat: 100 }, bundle.fixes[1]] }), /fixes\[0\]\.lat/);

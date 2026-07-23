@@ -4,6 +4,7 @@ import { dirname } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 import { toolVersion, spawnChecked } from "./process.mjs";
+import { normalizeSourceClips } from "./sources.mjs";
 
 const voiceRenderer = fileURLToPath(new URL("renderVoice.swift", import.meta.url));
 const mobileEnv = fileURLToPath(new URL("../../apps/mobile/.env", import.meta.url));
@@ -35,23 +36,35 @@ export async function runDoctor({ projectPath, project, platform = process.platf
   }
   const swift = await tool("swift", ["--version"]);
   checks.push({ name: "swift", state: swift.available ? "ready" : "blocked", blocking: false, affects: ["render"], detail: swift.version || swift.error });
-  if (project?.inputs?.source?.path) {
-    try {
-      await access(project.inputs.source.path, constants.R_OK);
-      checks.push({ name: "source", state: "ready", blocking: true, affects: ["inspect"], detail: "readable" });
-    } catch {
-      checks.push({ name: "source", state: "blocked", blocking: true, affects: ["inspect"], detail: "source is not readable" });
+  const sources = normalizeSourceClips(project?.inputs || {});
+  if (sources.length) {
+    const unreadable = [];
+    for (const source of sources) {
+      try { await access(source.path, constants.R_OK); } catch { unreadable.push(source.id); }
     }
+    checks.push({
+      name: "source",
+      state: unreadable.length ? "blocked" : "ready",
+      blocking: true,
+      affects: ["inspect"],
+      detail: unreadable.length ? `unreadable: ${unreadable.join(", ")}` : `${sources.length} readable clip${sources.length === 1 ? "" : "s"}`,
+    });
   } else {
     checks.push({ name: "source", state: "blocked", blocking: true, affects: ["inspect"], detail: "no source selected" });
   }
-  if (project?.inputs?.source?.kind === "aligned-csv") {
-    try {
-      await access(project.inputs.source.csvPath, constants.R_OK);
-      checks.push({ name: "gps-csv", state: "ready", blocking: true, affects: ["inspect"], detail: "readable" });
-    } catch {
-      checks.push({ name: "gps-csv", state: "blocked", blocking: true, affects: ["inspect"], detail: "aligned GPS CSV is not readable" });
+  const csvSources = sources.filter((source) => source.kind === "aligned-csv");
+  if (csvSources.length) {
+    const unreadable = [];
+    for (const source of csvSources) {
+      try { await access(source.csvPath, constants.R_OK); } catch { unreadable.push(source.id); }
     }
+    checks.push({
+      name: "gps-csv",
+      state: unreadable.length ? "blocked" : "ready",
+      blocking: true,
+      affects: ["inspect"],
+      detail: unreadable.length ? `unreadable: ${unreadable.join(", ")}` : `${csvSources.length} readable sidecar${csvSources.length === 1 ? "" : "s"}`,
+    });
   }
   try {
     const disk = await statfs(dirname(projectPath));
@@ -88,7 +101,13 @@ export async function runDoctor({ projectPath, project, platform = process.platf
       const simulators = await run("xcrun", ["simctl", "list", "devices", "booted", "--json"]);
       const parsed = JSON.parse(simulators.stdout);
       const count = Object.values(parsed.devices || {}).flat().filter((device) => device.state === "Booted").length;
-      checks.push({ name: "simulator", state: count === 1 ? "ready" : count === 0 ? "warning" : "blocked", blocking: false, affects: ["capture"], detail: count === 1 ? "1 booted" : count === 0 ? "boot exactly one Simulator before capture" : `${count} booted; shut down all but one` });
+      checks.push({
+        name: "simulator",
+        state: "ready",
+        blocking: false,
+        affects: ["capture"],
+        detail: count ? `${count} booted; capture will use the configured device when available` : "none booted; capture will boot the configured device automatically",
+      });
     } catch (error) {
       checks.push({ name: "simulator", state: "warning", blocking: false, affects: ["capture"], detail: `Simulator unavailable: ${shortError(error)}` });
     }

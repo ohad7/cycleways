@@ -4,6 +4,10 @@ import { createDemoCaptureClient } from "../dev/demoCaptureClient.js";
 import { createDemoCaptureEventRecorder } from "./demoCaptureEvents.js";
 import { createMediaClockPlaybackSource } from "./mediaClockPlaybackSource.js";
 
+// Long enough to survive React Native rendering, Simulator recorder startup,
+// and transient development banners. The renderer removes the entire marker.
+const SYNC_FLASH_DURATION_MS = 1500;
+
 export function useDemoCaptureSession(params, { readinessRef } = {}) {
   const active = Boolean(__DEV__ && params?.baseUrl && params?.token && params?.runId);
   const [state, setState] = useState({ phase: active ? "loading" : "inactive", scenario: null, source: null, error: null });
@@ -87,7 +91,7 @@ export function useDemoCaptureSession(params, { readinessRef } = {}) {
             runtime.recorder.record("sync-flash-end", {}, { mediaTimeMs: runtime.bundle.capture.proof.inMs });
             await runtime.recorder.flush();
             runtime.source.beginVisiblePlayback();
-          }, Math.round(1000 / 30));
+          }, SYNC_FLASH_DURATION_MS);
         }, 200);
       } catch (error) {
         await fail(error);

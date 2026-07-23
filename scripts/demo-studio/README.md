@@ -1,8 +1,9 @@
 # Navigation Demo Studio operator guide
 
-The studio turns an existing GoPro ride into a repeatable CycleWays navigation
-demo. It runs locally: the guided workflow is a CLI, while alignment and
-acceptance happen in a token-protected browser workspace on this Mac.
+The studio turns one or more GoPro files from a ride into a repeatable
+CycleWays navigation demo. It runs locally in a token-protected browser
+workspace on this Mac. The website owns the normal workflow; the CLI remains
+available for automation and troubleshooting.
 
 ## Prerequisites
 
@@ -12,42 +13,49 @@ acceptance happen in a token-protected browser workspace on this Mac.
 - a GoPro video with GPMF GPS, or the video plus an already aligned CSV;
 - enough free space for the source, Simulator capture, and render intermediates.
 
-Run commands from the repository root until the project is created:
+Start the complete Studio from the repository root:
+
+```sh
+npm run demo:studio
+```
+
+Create or resume a project in the browser. Paste one video path per line, in
+ride order. GoPro chapter files become one virtual timeline, while each file
+retains its own GPS extraction and local media clock. The browser then guides:
+
+```text
+Footage → Route & map → Showcases → App capture → Final edit → Publish
+```
+
+Doctor, inspection, validation, Simulator capture, rendering, and publishing
+run as persistent local jobs. It is safe to close the browser. A job continues
+independently and appears again when the Studio is reopened. If a job process
+dies, it becomes interrupted and retryable with its previous log preserved.
+
+For scripted creation, repeat `--source` in ride order:
 
 ```sh
 npm run demo:studio -- new upper-galilee-proof \
-  --source /path/to/ride.mp4 \
+  --source "/path/GX010123.MP4" \
+  --source "/path/GX020123.MP4" \
   --route sovev-beit-hillel
 ```
 
-For an aligned sidecar, keep the video as `--source` and add
-`--csv /path/to/ride.gps.csv`.
+For an aligned sidecar in the CLI, place the matching repeated `--csv` argument
+in the same position as its video. Projects remain under
+`build/demo-studio/<name>/` and contain an executable `studio` launcher.
 
-The project is created under `build/demo-studio/<name>/` and contains an
-executable `studio` launcher. From that directory the normal workflow is:
-
-```sh
-./studio doctor
-./studio inspect
-./studio validate
-./studio review
-./studio capture proof
-./studio review --run capture-001
-./studio accept capture-001 --note "Full ride reviewed at 1x"
-./studio render proof
-./studio review --run render-001
-./studio accept render-001 --note "Captions, sync and audio approved"
-./studio publish proof
-```
-
-`review` starts the local web UI and opens it in the default browser. Keep the
-terminal process running while the page is open; press `Ctrl-C` to close it.
+Before each Simulator capture, the job boots/selects Simulator, starts Metro
+when necessary, builds and installs CycleWays when missing, terminates stale
+app state, and cold-launches the capture deep link. Progress and logs remain
+visible in the browser.
 
 ## Iterating safely
 
 Every capture and render gets a new immutable attempt ID. A failed retry never
-replaces an accepted attempt. Use `./studio status` after any edit; it explains
-what became stale and suggests the smallest next command.
+replaces an accepted attempt. Every Studio decision writes a complete revision
+snapshot. History & restore creates a new revision from an earlier decision
+point; it never erases later attempts or published files.
 
 Configuration changes require a reason and show their impact before saving:
 
@@ -56,11 +64,12 @@ Configuration changes require a reason and show their impact before saving:
   --reason "Bridge railing aligns at 00:42"
 ```
 
-The web workspace exposes the common visual edits: GPS offset, proof in/out,
-road/app split, audio gains, caption language, and reviewed translations. GPS,
-route, or proof-window changes require revalidation and recapture. Layout,
-audio, or caption changes preserve the accepted app capture and require only a
-new render.
+The web workspace shows the impact before common edits. Footage order, GPS,
+route, or capture-window changes require validation and recapture. Layout,
+audio, caption, and post-capture showcase trims preserve the accepted app
+capture and require only a new render. Changes to app/map source code are
+fingerprinted during validation, so they require a new capture while retaining
+the ride preparation.
 
 Reject an attempt when it should remain in history but must not be reused:
 

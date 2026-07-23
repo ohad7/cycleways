@@ -12,6 +12,7 @@ const STAGES = [
 ];
 
 const INVALIDATION = Object.freeze({
+  "sources": ["source", "track", "route", "navigation", "inputs", "capture", "voice", "captions", "render", "publish"],
   "source.path": ["source", "track", "route", "navigation", "inputs", "capture", "voice", "captions", "render", "publish"],
   "source.sha256": ["source", "track", "route", "navigation", "inputs", "capture", "voice", "captions", "render", "publish"],
   "source.csvPath": ["track", "route", "navigation", "inputs", "capture", "voice", "captions", "render", "publish"],
@@ -21,6 +22,7 @@ const INVALIDATION = Object.freeze({
   "route.kind": ["route", "navigation", "inputs", "capture", "voice", "captions", "render", "publish"],
   "route.value": ["route", "navigation", "inputs", "capture", "voice", "captions", "render", "publish"],
   "route.snapshotDigest": ["route", "navigation", "inputs", "capture", "voice", "captions", "render", "publish"],
+  "story.showcases": ["navigation", "inputs", "capture", "voice", "captions", "render", "publish"],
   "story.proof": ["navigation", "inputs", "capture", "voice", "captions", "render", "publish"],
   "captureProfile": ["capture", "voice", "captions", "render", "publish"],
   "captureProfile.voice": ["voice", "captions", "render", "publish"],
@@ -36,6 +38,39 @@ function now(action) {
 
 function clone(value) {
   return structuredClone(value);
+}
+
+function sourceClip(source = {}, index = 0) {
+  return {
+    id: source.id || `clip-${String(index + 1).padStart(3, "0")}`,
+    kind: source.kind || (source.csvPath ? "aligned-csv" : "gopro-mp4"),
+    path: source.path || null,
+    csvPath: source.csvPath || null,
+    sha256: source.sha256 || null,
+    csvSha256: source.csvSha256 || null,
+    trim: {
+      inSeconds: Math.max(0, Number(source.trim?.inSeconds) || 0),
+      outSeconds: source.trim?.outSeconds ?? null,
+    },
+    gpsOffsetSeconds: Number(source.gpsOffsetSeconds) || 0,
+    timeline: source.timeline || null,
+  };
+}
+
+export function migrateDemoProject(project) {
+  if (!project || project.schemaVersion !== 1) throw new Error("demo project schemaVersion must be 1");
+  const migrated = clone(project);
+  migrated.inputs ||= {};
+  migrated.inputs.sources = (Array.isArray(migrated.inputs.sources) && migrated.inputs.sources.length
+    ? migrated.inputs.sources
+    : migrated.inputs.source?.path
+      ? [migrated.inputs.source]
+      : []).map(sourceClip);
+  migrated.inputs.source ||= sourceClip(migrated.inputs.sources[0] || {});
+  migrated.runtime ||= { lastOpenedAt: null };
+  migrated.attempts ||= { capture: [], voice: [], render: [], publish: [] };
+  for (const kind of ["capture", "voice", "render", "publish"]) migrated.attempts[kind] ||= [];
+  return migrated;
 }
 
 function getAtPath(object, path) {
@@ -72,6 +107,7 @@ function assertFiniteRange(value, field, min, max) {
 }
 
 function validateConfigurationValue(field, value) {
+  if (field === "route.kind" && !["catalog-slug", "route-token"].includes(value)) throw new Error("route.kind must be catalog-slug or route-token");
   if (field === "source.gpsOffsetSeconds") assertFiniteRange(value, field, -60, 60);
   if (field === "proofEdit.layout.roadFraction") assertFiniteRange(value, field, 0.58, 0.72);
   if (field === "proofEdit.layout.fps") assertFiniteRange(value, field, 1, 120);
@@ -92,6 +128,48 @@ function validateConfigurationValue(field, value) {
       throw new Error("story.proof must contain increasing finite inMs/outMs and non-negative preRollMs");
     }
   }
+}
+
+export function normalizeShowcaseSelection(project, value) {
+  if (!Array.isArray(value) || value.length < 1 || value.length > 6) {
+    throw new Error("choose between one and six showcase segments");
+  }
+  const trimInMs = Math.round(Math.max(0, Number(project.inputs.source.trim.inSeconds) || 0) * 1000);
+  const trimOutValue = project.inputs.source.trim.outSeconds;
+  const trimOutSeconds = trimOutValue === null || trimOutValue === undefined ? NaN : Number(trimOutValue);
+  const trimOutMs = Number.isFinite(trimOutSeconds) ? Math.round(trimOutSeconds * 1000) : Infinity;
+  const showcases = value.map((segment, index) => {
+    const inMs = Math.round(Number(segment?.inMs));
+    const outMs = Math.round(Number(segment?.outMs));
+    if (!Number.isFinite(inMs) || !Number.isFinite(outMs) || outMs <= inMs) {
+      throw new Error(`showcase ${index + 1} must have an end after its start`);
+    }
+    if (inMs < trimInMs || outMs > trimOutMs) {
+      throw new Error(`showcase ${index + 1} must stay inside the usable ride video`);
+    }
+    return { inMs, outMs };
+  }).sort((left, right) => left.inMs - right.inMs);
+  for (let index = 1; index < showcases.length; index += 1) {
+    if (showcases[index].inMs < showcases[index - 1].outMs) {
+      throw new Error(`showcases ${index} and ${index + 1} overlap; move one boundary before saving`);
+    }
+  }
+  const numbered = showcases.map((segment, index) => ({ id: `showcase-${index + 1}`, ...segment }));
+  const inMs = numbered[0].inMs;
+  const outMs = numbered.at(-1).outMs;
+  return {
+    showcases: numbered,
+    proof: { inMs, outMs, preRollMs: Math.min(8000, Math.max(0, inMs - trimInMs)) },
+  };
+}
+
+function normalizeCaptureWindow(value) {
+  const inMs = Math.round(Number(value?.inMs));
+  const outMs = Math.round(Number(value?.outMs));
+  if (!Number.isFinite(inMs) || !Number.isFinite(outMs) || inMs < 0 || outMs <= inMs) {
+    throw new Error("capture window must contain increasing finite inMs/outMs");
+  }
+  return { inMs, outMs };
 }
 
 function staleStage(project, stage, reason) {
@@ -120,23 +198,21 @@ function eventFor(project, action, details = {}) {
 }
 
 export function createDemoProject({ id, sourcePath = null, csvPath = null, routeValue = null, at } = {}) {
+  const initialSource = sourceClip({
+    kind: csvPath ? "aligned-csv" : "gopro-mp4",
+    path: sourcePath,
+    csvPath,
+  });
   return {
     schemaVersion: 1,
     id,
     revision: 0,
     createdAt: at || new Date().toISOString(),
     inputs: {
-      source: {
-        kind: csvPath ? "aligned-csv" : "gopro-mp4",
-        path: sourcePath,
-        csvPath,
-        sha256: null,
-        csvSha256: null,
-        trim: { inSeconds: 0, outSeconds: null },
-        gpsOffsetSeconds: 0,
-      },
+      source: clone(initialSource),
+      sources: sourcePath ? [clone(initialSource)] : [],
       route: { kind: "catalog-slug", value: routeValue, snapshotDigest: null },
-      story: { proof: { inMs: null, outMs: null, preRollMs: 8000 } },
+      story: { showcases: [], proof: { inMs: null, outMs: null, preRollMs: 8000 } },
       captureProfile: {
         locale: "he-IL",
         appearance: "light",
@@ -157,6 +233,7 @@ export function createDemoProject({ id, sourcePath = null, csvPath = null, route
     attempts: { capture: [], voice: [], render: [], publish: [] },
     accepted: { inputs: null, capture: null, voice: null, render: null },
     attestations: [],
+    runtime: { lastOpenedAt: null },
   };
 }
 
@@ -173,17 +250,45 @@ export function previewDemoProjectMutation(project, field, value) {
 
 export function reduceDemoProject(current, action) {
   if (!current || current.schemaVersion !== 1) throw new Error("demo project schemaVersion must be 1");
-  const project = clone(current);
+  const project = migrateDemoProject(current);
   let details = {};
   let invalidated = [];
 
   switch (action.type) {
+    case "replace-sources": {
+      if (!Array.isArray(action.sources) || action.sources.length < 1) {
+        throw new Error("a demo project needs at least one source clip");
+      }
+      const sources = action.sources.map(sourceClip);
+      if (sources.some((source) => !source.path)) throw new Error("every source clip requires a video path");
+      const ids = new Set(sources.map((source) => source.id));
+      if (ids.size !== sources.length) throw new Error("source clip ids must be unique");
+      const previous = clone(project.inputs.sources);
+      if (JSON.stringify(previous) === JSON.stringify(sources)) {
+        return { project: current, historyEvent: null, invalidated: [] };
+      }
+      project.inputs.sources = sources;
+      project.inputs.source = clone(sources[0]);
+      invalidated = invalidatedFor("sources");
+      for (const stage of invalidated) {
+        staleStage(project, stage, "sources-changed");
+        for (const attempt of project.attempts[stage] || []) {
+          attempt.staleAtRevision = project.revision + 1;
+          attempt.staleReason = "sources-changed";
+        }
+      }
+      details = { previous, value: clone(sources), invalidated };
+      break;
+    }
     case "configure": {
       const preview = previewDemoProjectMutation(project, action.field, action.value);
       if (preview.invalidated.length === 0 && Object.is(preview.previous, action.value)) {
         return { project: current, historyEvent: null, invalidated: [] };
       }
       setAtPath(project.inputs, action.field, action.value);
+      if (action.field.startsWith("source.") && project.inputs.sources.length === 1) {
+        setAtPath(project.inputs.sources[0], action.field.slice("source.".length), clone(action.value));
+      }
       invalidated = preview.invalidated;
       for (const stage of invalidated) {
         staleStage(project, stage, `${action.field}-changed`);
@@ -193,6 +298,76 @@ export function reduceDemoProject(current, action) {
         }
       }
       details = { field: action.field, previous: preview.previous, value: action.value, invalidated };
+      break;
+    }
+    case "select-showcases": {
+      const previous = clone(project.inputs.story.showcases || []);
+      const selection = normalizeShowcaseSelection(project, action.showcases);
+      project.inputs.story.showcases = selection.showcases;
+      project.inputs.story.proof = selection.proof;
+      invalidated = invalidatedFor("story.showcases");
+      for (const stage of invalidated) {
+        staleStage(project, stage, "story.showcases-changed");
+        for (const attempt of project.attempts[stage] || []) {
+          attempt.staleAtRevision = project.revision + 1;
+          attempt.staleReason = "story.showcases-changed";
+        }
+      }
+      details = { previous, value: clone(selection.showcases), proof: clone(selection.proof), invalidated };
+      break;
+    }
+    case "trim-showcases": {
+      const attempt = project.attempts.capture.find((item) => item.id === action.captureAttemptId);
+      if (!attempt || attempt.state !== "completed" || !attempt.artifact) {
+        throw new Error("showcase trims require a completed capture");
+      }
+      if (attempt.staleAtRevision) {
+        throw new Error(`capture "${attempt.id}" is stale because ${attempt.staleReason}`);
+      }
+      if (
+        project.stages.capture.attemptId !== attempt.id &&
+        project.accepted.capture !== attempt.id
+      ) {
+        throw new Error("showcase trims must target the current or accepted capture");
+      }
+      const captureWindow = normalizeCaptureWindow(attempt.captureWindow || action.captureWindow);
+      const proof = normalizeCaptureWindow(project.inputs.story.proof);
+      if (!attempt.captureWindow && (captureWindow.inMs !== proof.inMs || captureWindow.outMs !== proof.outMs)) {
+        throw new Error("legacy capture bounds do not match the recorded proof window");
+      }
+      if (attempt.captureWindow && action.captureWindow) {
+        const supplied = normalizeCaptureWindow(action.captureWindow);
+        if (supplied.inMs !== captureWindow.inMs || supplied.outMs !== captureWindow.outMs) {
+          throw new Error("capture window does not match the immutable recorded bounds");
+        }
+      }
+      const selection = normalizeShowcaseSelection(project, action.showcases);
+      if (selection.showcases.some((showcase) =>
+        showcase.inMs < captureWindow.inMs || showcase.outMs > captureWindow.outMs
+      )) {
+        throw new Error("showcase trims must stay inside the recorded capture");
+      }
+      const previous = clone(project.inputs.story.showcases || []);
+      if (JSON.stringify(previous) === JSON.stringify(selection.showcases)) {
+        return { project: current, historyEvent: null, invalidated: [] };
+      }
+      attempt.captureWindow = captureWindow;
+      project.inputs.story.showcases = selection.showcases;
+      invalidated = ["render", "publish"];
+      for (const stage of invalidated) {
+        staleStage(project, stage, "showcase-trim-changed");
+        for (const candidate of project.attempts[stage] || []) {
+          candidate.staleAtRevision = project.revision + 1;
+          candidate.staleReason = "showcase-trim-changed";
+        }
+      }
+      details = {
+        previous,
+        value: clone(selection.showcases),
+        captureAttemptId: attempt.id,
+        captureWindow,
+        invalidated,
+      };
       break;
     }
     case "privacy-acknowledged":
@@ -238,6 +413,9 @@ export function reduceDemoProject(current, action) {
       attempt.completedAt = now(action);
       attempt.artifact = action.artifact || attempt.artifact || null;
       attempt.digest = action.digest || attempt.digest || null;
+      if (action.kind === "capture" && action.captureWindow) {
+        attempt.captureWindow = normalizeCaptureWindow(action.captureWindow);
+      }
       project.stages[action.kind] = {
         state: action.state === "completed" ? "needs-review" : action.state,
         reason: action.reason || null,
@@ -285,6 +463,36 @@ export function reduceDemoProject(current, action) {
       project.attestations.push({ at: now(action), actor: action.actor || "operator", note: action.note });
       details = { note: action.note };
       break;
+    case "restore-revision": {
+      const target = migrateDemoProject(action.snapshot);
+      if (target.id !== project.id) throw new Error("cannot restore a revision from another project");
+      if (!Number.isInteger(action.targetRevision) || action.targetRevision < 0 || action.targetRevision >= project.revision) {
+        throw new Error("restore target must be an earlier project revision");
+      }
+      const currentAttempts = clone(project.attempts);
+      project.inputs = clone(target.inputs);
+      project.stages = clone(target.stages);
+      project.accepted = clone(target.accepted);
+      for (const kind of Object.keys(currentAttempts)) {
+        const restored = new Map((target.attempts[kind] || []).map((attempt) => [attempt.id, clone(attempt)]));
+        for (const attempt of currentAttempts[kind] || []) {
+          if (restored.has(attempt.id)) continue;
+          restored.set(attempt.id, {
+            ...clone(attempt),
+            staleAtRevision: project.revision + 1,
+            staleReason: `restored-revision-${action.targetRevision}`,
+          });
+        }
+        project.attempts[kind] = [...restored.values()];
+      }
+      invalidated = STAGES.filter((stage) => JSON.stringify(current.stages?.[stage]) !== JSON.stringify(target.stages?.[stage]));
+      details = {
+        targetRevision: action.targetRevision,
+        restoredInputsFromRevision: target.revision,
+        invalidated,
+      };
+      break;
+    }
     default:
       throw new Error(`unknown demo project action "${action.type}"`);
   }
@@ -300,8 +508,15 @@ export function deriveDemoProjectStatus(project) {
   else if (project.stages.source.state !== "ready") next = "demo:studio inspect";
   else if (!["ready", "accepted"].includes(project.stages.navigation.state)) next = "demo:studio validate";
   else if (project.stages.inputs.state !== "accepted") next = "demo:studio review";
-  else if (project.stages.capture.state !== "accepted") next = "demo:studio capture proof";
-  else if (project.stages.render.state !== "accepted") next = "demo:studio render proof";
+  else if (project.stages.capture.state !== "accepted") {
+    next = project.stages.capture.state === "needs-review" && project.stages.capture.attemptId
+      ? `demo:studio review --run ${project.stages.capture.attemptId}`
+      : "demo:studio capture proof";
+  } else if (project.stages.render.state !== "accepted") {
+    next = project.stages.render.state === "needs-review" && project.stages.render.attemptId
+      ? `demo:studio review --run ${project.stages.render.attemptId}`
+      : "demo:studio render proof";
+  }
   else if (project.stages.publish.state !== "completed") next = "demo:studio publish proof";
   return { stages, next, publishable: project.stages.render.state === "accepted" };
 }

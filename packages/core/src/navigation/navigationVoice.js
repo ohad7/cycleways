@@ -335,7 +335,7 @@ function cuePhrase(event, state, locale) {
       return locale === "he-IL" ? "הִגַּעְתָּ לַיַּעַד." : "You have arrived.";
     case "hazard":
     case "caution":
-      return locale === "he-IL" ? `${prefix}שים לב.` : `${prefix}Caution.`;
+      return null;
     default:
       return null;
   }

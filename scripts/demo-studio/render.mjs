@@ -3,7 +3,7 @@ import { copyFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { basename, join, resolve } from "node:path";
 import { stableDemoBundleDigest } from "../../packages/core/src/navigation/demoBundle.js";
-import { captionsFromCaptureEvents, writeSrt } from "./captions.mjs";
+import { captionsFromCaptureEvents, remapCuesToSegments, writeSrt } from "./captions.mjs";
 import { validateProofEdit } from "./editDecision.mjs";
 import { probeMedia } from "./mediaProbe.mjs";
 import { nextAttemptId } from "./projectState.mjs";
@@ -11,6 +11,7 @@ import { writeValidationReport } from "./report.mjs";
 import { spawnChecked } from "./process.mjs";
 import { renderVoiceStem } from "./voiceRender.mjs";
 import { readProject, updateProject, writeJsonAtomic } from "./workspace.mjs";
+import { normalizeSourceClips, sourceTimeline, splitGlobalSegmentsAcrossClips } from "./sources.mjs";
 
 const SENSITIVE_METADATA_PATTERN = /(?:gps|location|latitude|longitude|serial|firmware|camera[_ -]?model|device[_ -]?model)/i;
 
@@ -54,8 +55,16 @@ export function detectFlashFromRgb(buffer, { fps = 30, redMin = 140, greenMin = 
   return { firstFrame: first, lastFrame: last, startMs: first / fps * 1000, endMs: (last + 1) / fps * 1000 };
 }
 
+export function syncFlashScanFilter({ fps = 30, bottomFraction = 0.18 } = {}) {
+  const fraction = Math.max(0.1, Math.min(0.5, Number(bottomFraction) || 0.18));
+  // RN Mapbox is a native surface above most of the React tree. The capture
+  // slate reliably owns the bottom panel, so scan that region instead of
+  // averaging the flash together with the much larger map surface.
+  return `fps=${fps},crop=iw:ih*${fraction}:0:ih*(1-${fraction}),scale=1:1:flags=area,format=rgb24`;
+}
+
 export async function detectSyncFlash(path, { fps = 30, spawnImpl = spawn } = {}) {
-  const child = spawnImpl("ffmpeg", ["-v", "error", "-i", path, "-vf", `fps=${fps},scale=1:1:flags=area,format=rgb24`, "-an", "-f", "rawvideo", "pipe:1"], { shell: false, stdio: ["ignore", "pipe", "pipe"] });
+  const child = spawnImpl("ffmpeg", ["-v", "error", "-i", path, "-vf", syncFlashScanFilter({ fps }), "-an", "-f", "rawvideo", "pipe:1"], { shell: false, stdio: ["ignore", "pipe", "pipe"] });
   const output = [];
   const errors = [];
   child.stdout.on("data", (chunk) => output.push(Buffer.from(chunk)));
@@ -75,45 +84,89 @@ function escapeFilterPath(path) {
   return path.replace(/\\/g, "\\\\").replace(/:/g, "\\:").replace(/'/g, "\\'");
 }
 
-export function buildProofFfmpegArgs({ road, app, voice, captions, output, edit, appStartMs }) {
+export function buildProofFfmpegArgs({ road, roads, app, voice, captions, output, edit, appStartMs }) {
   const width = edit.layout.width;
   const height = edit.layout.height;
   const roadWidth = Math.round(width * edit.layout.roadFraction / 2) * 2;
   const appWidth = width - roadWidth;
-  const sourceStart = edit.source.inMs / 1000;
-  const sourceEnd = edit.source.outMs / 1000;
-  const duration = sourceEnd - sourceStart;
-  const filters = [
-    `[0:v]trim=start=${sourceStart}:end=${sourceEnd},setpts=PTS-STARTPTS,scale=${roadWidth}:${height}:force_original_aspect_ratio=increase,crop=${roadWidth}:${height}[road]`,
-    `[1:v]trim=start=${(appStartMs / 1000).toFixed(6)}:duration=${duration},setpts=PTS-STARTPTS,scale=${appWidth}:${height}:force_original_aspect_ratio=decrease,pad=${appWidth}:${height}:(ow-iw)/2:(oh-ih)/2:color=0x07130f[app]`,
-    `[road][app]hstack=inputs=2[base]`,
+  const roadInputs = roads?.length
+    ? roads
+    : [{ id: edit.source.segments?.[0]?.sourceId || "clip-001", path: road }];
+  const roadIndex = new Map(roadInputs.map((item, index) => [item.id, index]));
+  const segments = edit.source.segments || [{ inMs: edit.source.inMs, outMs: edit.source.outMs }];
+  const appInputIndex = roadInputs.length;
+  const voiceInputIndex = roadInputs.length + 1;
+  const filters = [];
+  const outputs = [];
+  let totalDuration = 0;
+  for (const [index, segment] of segments.entries()) {
+    const sourceStart = Number(segment.sourceInMs ?? segment.inMs) / 1000;
+    const sourceEnd = Number(segment.sourceOutMs ?? segment.outMs) / 1000;
+    const selectedRoadIndex = segment.sourceId ? roadIndex.get(segment.sourceId) : 0;
+    if (!Number.isInteger(selectedRoadIndex)) throw new Error(`proof edit references missing source ${segment.sourceId}`);
+    const duration = sourceEnd - sourceStart;
+    const captureStart = appStartMs / 1000 + (segment.inMs - edit.source.inMs) / 1000;
+    const voiceStart = (segment.inMs - edit.source.inMs) / 1000;
+    const fadeDuration = Math.min(0.25, duration / 4);
+    const videoLabel = `segment-video-${index}`;
+    const audioLabel = `segment-audio-${index}`;
+    filters.push(
+      `[${selectedRoadIndex}:v]trim=start=${sourceStart}:end=${sourceEnd},setpts=PTS-STARTPTS,scale=${roadWidth}:${height}:force_original_aspect_ratio=increase,crop=${roadWidth}:${height}[road-${index}]`,
+      `[${appInputIndex}:v]trim=start=${captureStart.toFixed(6)}:duration=${duration},setpts=PTS-STARTPTS,scale=${appWidth}:${height}:force_original_aspect_ratio=decrease,pad=${appWidth}:${height}:(ow-iw)/2:(oh-ih)/2:color=0x07130f[app-${index}]`,
+      `[road-${index}][app-${index}]hstack=inputs=2[base-${index}]`,
+      segments.length > 1
+        ? `[base-${index}]fade=t=in:st=0:d=${fadeDuration.toFixed(3)},fade=t=out:st=${Math.max(0, duration - fadeDuration).toFixed(3)}:d=${fadeDuration.toFixed(3)}[${videoLabel}]`
+        : `[base-${index}]null[${videoLabel}]`,
+      `[${selectedRoadIndex}:a]atrim=start=${sourceStart}:end=${sourceEnd},asetpts=PTS-STARTPTS,volume=${dbVolume(edit.audio?.ambienceGainDb ?? -14)}[road-a-${index}]`,
+      `[${voiceInputIndex}:a]apad,atrim=start=${voiceStart.toFixed(6)}:end=${(voiceStart + duration).toFixed(6)},asetpts=PTS-STARTPTS,volume=${dbVolume(edit.audio?.voiceGainDb ?? 0)}[voice-a-${index}]`,
+      `[road-a-${index}][voice-a-${index}]amix=inputs=2:duration=first:normalize=0[mix-a-${index}]`,
+      segments.length > 1
+        ? `[mix-a-${index}]afade=t=in:st=0:d=${fadeDuration.toFixed(3)},afade=t=out:st=${Math.max(0, duration - fadeDuration).toFixed(3)}:d=${fadeDuration.toFixed(3)}[${audioLabel}]`
+        : `[mix-a-${index}]anull[${audioLabel}]`,
+    );
+    outputs.push(`[${videoLabel}][${audioLabel}]`);
+    totalDuration += duration;
+  }
+  let stitchedVideo = "segment-video-0";
+  let stitchedAudio = "segment-audio-0";
+  if (segments.length > 1) {
+    stitchedVideo = "stitched-video";
+    stitchedAudio = "stitched-audio";
+    filters.push(`${outputs.join("")}concat=n=${segments.length}:v=1:a=1[${stitchedVideo}][${stitchedAudio}]`);
+  }
+  filters.push(
     captions && edit.captions?.burnIn !== false
-      ? `[base]subtitles='${escapeFilterPath(captions)}':force_style='FontSize=22,Outline=2,Shadow=1,Alignment=2,MarginV=42'[video]`
-      : `[base]null[video]`,
-    `[0:a]atrim=start=${sourceStart}:end=${sourceEnd},asetpts=PTS-STARTPTS,volume=${dbVolume(edit.audio?.ambienceGainDb ?? -14)}[road-a]`,
-    `[2:a]atrim=duration=${duration},asetpts=PTS-STARTPTS,volume=${dbVolume(edit.audio?.voiceGainDb ?? 0)}[voice-a]`,
-    `[road-a][voice-a]amix=inputs=2:duration=first:normalize=0[audio]`,
-  ];
+      ? `[${stitchedVideo}]subtitles='${escapeFilterPath(captions)}':force_style='FontSize=22,Outline=2,Shadow=1,Alignment=2,MarginV=42'[video]`
+      : `[${stitchedVideo}]null[video]`,
+    `[${stitchedAudio}]anull[audio]`,
+  );
   return [
-    "-y", "-i", road, "-i", app, "-i", voice,
+    "-y", ...roadInputs.flatMap((item) => ["-i", item.path]), "-i", app, "-i", voice,
     "-filter_complex", filters.join(";"),
     "-map", "[video]", "-map", "[audio]",
-    "-t", duration.toFixed(3), "-r", String(edit.layout.fps),
+    "-t", totalDuration.toFixed(3), "-r", String(edit.layout.fps),
     "-c:v", "libx264", "-preset", "slow", "-crf", "18", "-pix_fmt", "yuv420p",
     "-c:a", "aac", "-b:a", "192k", "-ar", "48000",
     "-map_metadata", "-1", "-movflags", "+faststart", output,
   ];
 }
 
-function proofEditFromProject(project, bundle, captureRunId) {
+export function proofEditFromProject(project, bundle, captureRunId) {
   const proof = project.inputs.story.proof;
+  const selectedSegments = project.inputs.story.showcases?.length
+    ? project.inputs.story.showcases.map(({ inMs, outMs }) => ({ inMs, outMs }))
+    : bundle.capture.showcases || [{ inMs: proof.inMs, outMs: proof.outMs }];
+  const timeline = sourceTimeline(project);
+  const segments = timeline.length > 1
+    ? splitGlobalSegmentsAcrossClips(selectedSegments, timeline)
+    : selectedSegments;
   const value = project.inputs.proofEdit;
   return validateProofEdit({
     schemaVersion: 1,
     kind: "proof",
     bundleDigest: stableDemoBundleDigest(bundle),
     captureRunId,
-    source: { inMs: proof.inMs, outMs: proof.outMs },
+    source: { inMs: proof.inMs, outMs: proof.outMs, segments },
     layout: value.layout,
     audio: value.audio,
     captions: value.captions,
@@ -147,7 +200,7 @@ export async function renderProject(loaded, context) {
     const eventsDocument = JSON.parse(await readFile(join(current.directory, "attempts", captureId, "capture-events.json"), "utf8"));
     const events = eventsDocument.events || [];
     const cues = captionsFromCaptureEvents(events, { language: edit.captions.language, translations: edit.captions.translations || {} });
-    const srt = writeSrt(cues, { originMs: edit.source.inMs });
+    const srt = writeSrt(remapCuesToSegments(cues, edit.source.segments));
     const captionsPath = join(runDirectory, `${edit.captions.language || "he"}.srt`);
     await writeFile(captionsPath, srt, "utf8");
     const voicePath = join(runDirectory, "voice.wav");
@@ -156,7 +209,11 @@ export async function renderProject(loaded, context) {
     await writeJsonAtomic(join(runDirectory, "edit.json"), edit);
     await writeJsonAtomic(join(runDirectory, "sync.json"), flash);
     await writeJsonAtomic(join(runDirectory, "voice-placement.json"), voice);
-    const args = buildProofFfmpegArgs({ road: current.project.inputs.source.path, app: capture.artifact, voice: voicePath, captions: captionsPath, output, edit, appStartMs: flash.endMs });
+    const clips = sourceTimeline(current.project);
+    const roads = clips.length
+      ? clips.map((clip) => ({ id: clip.id, path: clip.path }))
+      : normalizeSourceClips(current.project.inputs).map((clip) => ({ id: clip.id, path: clip.path }));
+    const args = buildProofFfmpegArgs({ roads, app: capture.artifact, voice: voicePath, captions: captionsPath, output, edit, appStartMs: flash.endMs });
     io.log?.(`Rendering ${runId}; this may take several minutes…`);
     await spawnChecked("ffmpeg", args, { onStderr: (chunk) => { if (process.env.DEMO_STUDIO_DEBUG) io.error?.(chunk); } });
     const media = await probeMedia(output);
