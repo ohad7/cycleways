@@ -207,7 +207,7 @@ function launcherNext(project) {
   return formatProjectStatus(project).status.next.replace("demo:studio ", "./studio ");
 }
 
-export async function runCli(argv, io = console) {
+export async function runCli(argv, io = console, deps = {}) {
   const { positional, options } = parseCliArguments(argv);
   const [command, ...rest] = positional;
   if (!command) {
@@ -233,6 +233,7 @@ export async function runCli(argv, io = console) {
       sourcePath: sourcePaths[0],
       csvPath: rawCsv[0] ? resolveOperatorPath(rawCsv[0]) : null,
       routeValue: values.route || values["route-token"],
+      workspaceRoot: deps.workspaceRoot,
     });
     let acknowledged = await updateProject(created.path, {
       type: "privacy-acknowledged",

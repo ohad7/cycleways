@@ -78,6 +78,7 @@ async function listProjects() {
   const names = await readdir(DEMO_WORKSPACE_ROOT).catch(() => []);
   const projects = [];
   for (const name of names) {
+    if (name.startsWith(".")) continue;
     const path = join(DEMO_WORKSPACE_ROOT, name, "project.json");
     if (!existsSync(path)) continue;
     try {
@@ -278,7 +279,10 @@ export async function createReviewServer({ projectPath = null, selectedRun = nul
       if (request.method === "POST" && url.pathname === "/api/jobs") {
         if (!loaded) throw new Error("open a project first");
         const body = await readJsonBody(request, 16 * 1024);
-        const job = await jobs.start(loaded.path, body.kind, { retryFrom: body.retryFrom || null });
+        const job = await jobs.start(loaded.path, body.kind, {
+          retryFrom: body.retryFrom || null,
+          force: body.force === true,
+        });
         return sendJson(response, 202, { ok: true, job });
       }
       if (request.method === "POST" && url.pathname.startsWith("/api/jobs/") && url.pathname.endsWith("/cancel")) {

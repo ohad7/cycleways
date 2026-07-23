@@ -50,6 +50,16 @@ assert.throws(
   () => studioJobCommand("render", { retryFrom: "capture-001" }, retryProject),
   /only supported for capture/,
 );
+assert.deepEqual(
+  studioJobCommand("publish", { force: true }, retryProject),
+  ["publish", "proof", "--force"],
+  "confirmed replacement is propagated to the guarded publish command",
+);
+assert.deepEqual(
+  studioJobCommand("publish", {}, retryProject),
+  ["publish", "proof"],
+  "ordinary publish remains non-destructive by default",
+);
 
 project.inputs.story.proof = { inMs: 8000, outMs: 13_000, preRollMs: 0 };
 project.inputs.story.showcases = [{ id: "showcase-1", inMs: 8000, outMs: 13_000 }];

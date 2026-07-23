@@ -22,6 +22,7 @@ assert.throws(() => assertNarrowDemoPath("/"), /unsafe/);
 assert.throws(() => assertNarrowDemoPath(process.cwd()), /unsafe/);
 
 const temporary = await mkdtemp(join(tmpdir(), "demo-cli-"));
+const testWorkspaceRoot = join(temporary, "workspace");
 const spacedSource = join(temporary, "GoPro ride with spaces.MP4");
 await writeFile(spacedSource, "fixture");
 assert.equal(resolveOperatorPath(spacedSource), spacedSource);
@@ -37,7 +38,8 @@ const createdWithSpacedSource = await runCli([
   "--route",
   "route",
   "--non-interactive",
-], { log() {} });
+], { log() {} }, { workspaceRoot: testWorkspaceRoot });
+assert.ok(createdWithSpacedSource.project.startsWith(`${testWorkspaceRoot}/`));
 const spacedProject = await readProject(createdWithSpacedSource.project);
 assert.equal(spacedProject.project.inputs.source.path, spacedSource);
 const spacedDoctor = await runDoctor({
@@ -67,7 +69,12 @@ const recoveredHistory = (await (await import("node:fs/promises")).readFile(join
 assert.equal(recoveredHistory[0].id, "recovery-one:r1");
 
 const launcherId = `launcher-${process.pid}`;
-const launcherWorkspace = await createProjectWorkspace({ id: launcherId, sourcePath: "/tmp/ride.mp4", routeValue: "route" });
+const launcherWorkspace = await createProjectWorkspace({
+  id: launcherId,
+  sourcePath: "/tmp/ride.mp4",
+  routeValue: "route",
+  workspaceRoot: testWorkspaceRoot,
+});
 const launcher = await readFile(join(launcherWorkspace.directory, "studio"), "utf8");
 assert.ok(launcher.indexOf(`process.chdir(${JSON.stringify(DEMO_REPOSITORY_ROOT)})`) < launcher.indexOf("await import"));
 

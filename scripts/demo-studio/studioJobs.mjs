@@ -16,6 +16,7 @@ const ALLOWED_JOBS = new Map([
 export function studioJobCommand(kind, options = {}, project = null) {
   const base = ALLOWED_JOBS.get(kind);
   if (!base) throw new Error(`unsupported studio job "${kind}"`);
+  if (kind === "publish" && options.force === true) return [...base, "--force"];
   const retryFrom = options.retryFrom || null;
   if (!retryFrom) return [...base];
   if (kind !== "capture") throw new Error("retryFrom is only supported for capture jobs");

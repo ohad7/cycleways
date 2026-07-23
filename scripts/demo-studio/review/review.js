@@ -626,7 +626,7 @@ function actionLabel(step, stage) {
   if (step.id === "navigation") return ["ready", "accepted"].includes(stage?.state) ? "Validate again" : "Validate";
   if (step.id === "capture") return stage?.state === "accepted" ? "Capture again" : "Run capture";
   if (step.id === "render") return stage?.state === "accepted" ? "Render again" : "Render proof";
-  if (step.id === "publish") return stage?.state === "completed" ? "Publish again" : "Publish";
+  if (step.id === "publish") return stage?.artifact ? "Replace published proof" : "Publish";
   return "Continue";
 }
 
@@ -649,7 +649,17 @@ function currentWorkflowStep() {
   return WORKFLOW_STEPS.find((step) => step.job && next.includes(` ${step.job}`)) || WORKFLOW_STEPS[0];
 }
 
-function activateWorkflowStep(step) {
+function reviewStageAttempt(stage) {
+  const attemptId = stage?.attemptId;
+  if (!attemptId || !state.media.attempts[attemptId]) return false;
+  editingInputs = false;
+  selectedAttempt = attemptId;
+  renderAttempts();
+  $("#review-workspace").scrollIntoView({ behavior: "smooth", block: "start" });
+  return true;
+}
+
+function activateWorkflowStep(step, { fromStageCard = false } = {}) {
   if (!step) return;
   const stage = state.project.stages[step.id];
   if (step.review) {
@@ -661,13 +671,32 @@ function activateWorkflowStep(step) {
     $("#review-workspace").scrollIntoView({ behavior: "smooth", block: "start" });
     return;
   }
+  if (fromStageCard && ["capture", "render"].includes(step.id) && stage?.artifact) {
+    if (!reviewStageAttempt(stage)) toast("The existing attempt is unavailable. Use the main workflow action to create a new one.");
+    return;
+  }
   if (stage?.state === "needs-review" && stage?.attemptId) {
-    editingInputs = false;
-    if (stage?.attemptId && state.media.attempts[stage.attemptId]) {
-      selectedAttempt = stage.attemptId;
-      renderAttempts();
-    }
-    $("#review-workspace").scrollIntoView({ behavior: "smooth", block: "start" });
+    reviewStageAttempt(stage);
+    return;
+  }
+  if (
+    fromStageCard &&
+    ["source", "navigation"].includes(step.id) &&
+    ["ready", "accepted", "completed"].includes(stage?.state)
+  ) {
+    const confirmed = window.confirm(
+      `${actionLabel(step, stage)}? This can make later captures and final edits out of date. `
+      + "Existing attempts remain available in project history.",
+    );
+    if (!confirmed) return;
+  }
+  if (step.id === "publish" && stage?.artifact) {
+    const confirmed = window.confirm(
+      "Replace the previously published proof with the currently accepted render? "
+      + "The earlier render and capture remain available in project history.",
+    );
+    if (!confirmed) return;
+    startJob(step.job, { force: true });
     return;
   }
   if (step.job) startJob(step.job);
@@ -1048,7 +1077,7 @@ $("#stage-cards").addEventListener("click", (event) => {
   const button = event.target.closest("[data-workflow-step]");
   if (!button) return;
   const step = WORKFLOW_STEPS.find((item) => item.id === button.dataset.workflowStep);
-  activateWorkflowStep(step);
+  activateWorkflowStep(step, { fromStageCard: true });
 });
 $("#continue-action").addEventListener("click", () => {
   activateWorkflowStep(WORKFLOW_STEPS.find((step) => step.id === $("#continue-action").dataset.workflowStep));

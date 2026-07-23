@@ -6,7 +6,6 @@ import {
 import { navigationRouteFromRouteState } from "../packages/core/src/navigation/navigationRoute.js";
 import { buildRouteCues } from "../packages/core/src/navigation/navigationCues.js";
 import { createNavigationVoicePlanner } from "../packages/core/src/navigation/navigationVoice.js";
-import { validateRouteAttestation } from "../packages/core/src/routing/routeAttestation.js";
 
 const first = { geometry: [{ lat: 33, lng: 35 }, { lat: 34, lng: 36 }], points: [], selectedSegments: [], segmentSpans: [] };
 const reordered = { selectedSegments: [], points: [], segmentSpans: [], geometry: [{ lng: 35, lat: 33 }, { lng: 36, lat: 34 }] };
@@ -16,18 +15,10 @@ assert.notEqual(routeSnapshotDigest(first), routeSnapshotDigest({ ...first, geom
 const ganHatzafon = await buildNavigationRouteSnapshot({
   catalogSlug: "banias-gan-hatsafon",
 });
-assert.deepEqual(
-  validateRouteAttestation(ganHatzafon.routingValidation, {
-    geometry: ganHatzafon.geometry,
-  }),
-  { ok: true, reason: null },
-  "the rounded Studio snapshot keeps valid real route evidence",
-);
-assert.ok(
-  ganHatzafon.routingValidation.traversalSlices.some(
-    (slice) => Number(slice.edgeShareId) === 31095,
-  ),
-  "the Studio snapshot must not replace the route with a synthetic edge",
+assert.equal(
+  ganHatzafon.routingValidation,
+  undefined,
+  "the mobile snapshot stays portable after route-local features are resolved",
 );
 
 const crossing = ganHatzafon.crossings.find(

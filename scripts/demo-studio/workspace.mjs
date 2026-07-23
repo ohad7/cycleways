@@ -14,9 +14,9 @@ export function validateDemoId(id) {
   return id;
 }
 
-export function assertNarrowDemoPath(path) {
+export function assertNarrowDemoPath(path, workspaceRoot = DEMO_WORKSPACE_ROOT) {
   const target = resolve(path);
-  const root = DEMO_WORKSPACE_ROOT;
+  const root = resolve(workspaceRoot);
   const rel = relative(root, target);
   if (!rel || rel.startsWith("..") || isAbsolute(rel) || target === parse(target).root) {
     throw new Error(`unsafe demo-studio target: ${target}`);
@@ -35,10 +35,19 @@ export async function writeJsonAtomic(path, value) {
   await writeAtomic(path, `${JSON.stringify(value, null, 2)}\n`);
 }
 
-export async function createProjectWorkspace({ id, sourcePath = null, csvPath = null, routeValue = null, directory = null, at } = {}) {
+export async function createProjectWorkspace({
+  id,
+  sourcePath = null,
+  csvPath = null,
+  routeValue = null,
+  directory = null,
+  workspaceRoot = DEMO_WORKSPACE_ROOT,
+  at,
+} = {}) {
   validateDemoId(id);
-  const projectDirectory = directory ? resolve(directory) : join(DEMO_WORKSPACE_ROOT, id);
-  assertNarrowDemoPath(projectDirectory);
+  const root = resolve(workspaceRoot);
+  const projectDirectory = directory ? resolve(directory) : join(root, id);
+  assertNarrowDemoPath(projectDirectory, root);
   if (existsSync(projectDirectory)) throw new Error(`project already exists: ${projectDirectory}`);
   await mkdir(dirname(projectDirectory), { recursive: true });
   await mkdir(projectDirectory, { recursive: false });
